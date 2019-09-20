@@ -28,11 +28,13 @@ class CrowdSimEnv(gym.Env):
         self.humans = None
         self.global_time = None
         self.human_times = None
+
         # reward function
         self.success_reward = None
         self.collision_penalty = None
         self.discomfort_dist = None
         self.discomfort_penalty_factor = None
+
         # simulation configuration
         self.config = None
         self.case_capacity = None
@@ -44,10 +46,14 @@ class CrowdSimEnv(gym.Env):
         self.square_width = None
         self.circle_radius = None
         self.human_num = None
+
         # for visualization
         self.states = None
         self.action_values = None
         self.attention_weights = None
+
+        # observation space
+        self.use_image = False
 
     def configure(self, config):
         self.config = config
