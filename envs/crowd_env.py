@@ -55,6 +55,14 @@ class CrowdSimEnv(gym.Env):
         # observation space
         self.use_image = False
 
+    @property
+    def observation_space(self):
+        import ipdb; ipdb.set_trace()
+
+    @property
+    def action_space(self):
+        import ipdb; ipdb.set_trace()
+
     def configure(self, config):
         self.config = config
         self.time_limit = config.getint('env', 'time_limit')
@@ -323,6 +331,8 @@ class CrowdSimEnv(gym.Env):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
         """
+
+        import ipdb; ipdb.set_trace()
         human_actions = []
         for human in self.humans:
             # observation for humans is always coordinates

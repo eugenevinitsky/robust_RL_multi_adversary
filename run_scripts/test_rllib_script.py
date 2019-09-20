@@ -10,6 +10,7 @@ from ray.tune import run
 from ray.tune.registry import register_env
 
 from envs.crowd_env import CrowdSimEnv
+from envs.policy.policy_factory import policy_factory
 from envs.utils.robot import Robot
 
 
@@ -29,9 +30,16 @@ def env_creator(passed_config):
     robot = Robot(temp_config, 'robot')
     env.set_robot(robot)
 
+    # configure policy
     policy_config = configparser.RawConfigParser()
     policy_config.read(args.policy_config)
-    policy.configure(policy_config)
+    policy = policy_factory[args.policy](policy_config)
+    if not policy.trainable:
+        parser.error('Policy has to be trainable')
+    if args.policy_config is None:
+        parser.error('Policy config has to be specified for a trainable network')
+
+    robot.set_policy(policy)
     return env
 
 
@@ -39,6 +47,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser('Parse configuration file')
     parser.add_argument('--env_config', type=str, default=os.path.abspath('../configs/env.config'))
     parser.add_argument('--policy_config', type=str, default=os.path.abspath('../configs/policy.config'))
+    parser.add_argument('--policy', type=str, default='cadrl')
     parser.add_argument('--train_config', type=str, default='../configs/train.config')
     parser.add_argument('--debug', default=False, action='store_true')
 
@@ -53,7 +62,8 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     env = env_creator({'config_path': args.env_config})
-    env.step(None)
+    import ipdb; ipdb.set_trace()
+    env.reset(phase='train')
     register_env("CrowdSim", env_creator)
 
     alg_run, config = setup_exps(args)
