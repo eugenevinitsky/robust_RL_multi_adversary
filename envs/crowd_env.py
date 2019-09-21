@@ -2,6 +2,7 @@
 
 import logging
 import gym
+from gym.spaces import Box
 import matplotlib.lines as mlines
 import numpy as np
 import rvo2
@@ -54,6 +55,22 @@ class CrowdSimEnv(gym.Env):
 
         # observation space
         self.use_image = False
+        self.obs_norm = 100.0
+
+    @property
+    def observation_space(self):
+        human_num = self.human_num
+        # TODO(@evinitsky) clean this the heck up. This initialization should be done elsewhere!! ABSTRACTION BREAK
+        self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
+        self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
+        temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
+        return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0], ))
+
+
+    @property
+    def action_space(self):
+        # TODO(@evinitsky) what are the rught bounds
+        return Box(low=-2.0, high=2.0, shape=(2, ))
 
     def configure(self, config):
         self.config = config
@@ -303,14 +320,10 @@ class CrowdSimEnv(gym.Env):
             agent.policy.time_step = self.time_step
 
         self.states = list()
-        if hasattr(self.robot.policy, 'action_values'):
-            self.action_values = list()
-        if hasattr(self.robot.policy, 'get_attention_weights'):
-            self.attention_weights = list()
 
         # get current observation
         if self.robot.sensor == 'coordinates':
-            ob = [human.get_observable_state() for human in self.humans]
+            ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
         elif self.robot.sensor == 'RGB':
             raise NotImplementedError
 
@@ -323,6 +336,7 @@ class CrowdSimEnv(gym.Env):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
         """
+
         human_actions = []
         for human in self.humans:
             # observation for humans is always coordinates
@@ -338,11 +352,13 @@ class CrowdSimEnv(gym.Env):
             px = human.px - self.robot.px
             py = human.py - self.robot.py
             if self.robot.kinematics == 'holonomic':
-                vx = human.vx - action.vx
-                vy = human.vy - action.vy
+                robot_vx, robot_vy = action
+                vx = human.vx - robot_vx
+                vy = human.vy - robot_vy
             else:
-                vx = human.vx - action.v * np.cos(action.r + self.robot.theta)
-                vy = human.vy - action.v * np.sin(action.r + self.robot.theta)
+                r, v = action
+                vx = human.vx - v * np.cos(r + self.robot.theta)
+                vy = human.vy - v * np.sin(r + self.robot.theta)
             ex = px + vx * self.time_step
             ey = py + vy * self.time_step
             # closest distance between boundaries of two agents
@@ -395,10 +411,6 @@ class CrowdSimEnv(gym.Env):
         if update:
             # store state, action value and attention weights
             self.states.append([self.robot.get_full_state(), [human.get_full_state() for human in self.humans]])
-            if hasattr(self.robot.policy, 'action_values'):
-                self.action_values.append(self.robot.policy.action_values)
-            if hasattr(self.robot.policy, 'get_attention_weights'):
-                self.attention_weights.append(self.robot.policy.get_attention_weights())
 
             # update all agents
             self.robot.step(action)
@@ -412,16 +424,17 @@ class CrowdSimEnv(gym.Env):
 
             # compute the observation
             if self.robot.sensor == 'coordinates':
-                ob = [human.get_observable_state() for human in self.humans]
+                ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
         else:
             if self.robot.sensor == 'coordinates':
-                ob = [human.get_next_observable_state(action) for human, action in zip(self.humans, human_actions)]
+                ob = np.concatenate([human.get_next_observable_state(action).as_array()
+                                 for human, action in zip(self.humans, human_actions)]) / self.obs_norm
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
 
-        return ob, reward, done, info
+        return ob, reward, done, {}
 
     def render(self, mode='human', output_file=None):
         from matplotlib import animation

@@ -102,20 +102,20 @@ class Agent(object):
         return
 
     def check_validity(self, action):
-        if self.kinematics == 'holonomic':
-            assert isinstance(action, ActionXY)
-        else:
-            assert isinstance(action, ActionRot)
+        pass
+        # assert action.shape[0] == 2, "Actions don't have shape 2"
 
     def compute_position(self, action, delta_t):
         self.check_validity(action)
         if self.kinematics == 'holonomic':
-            px = self.px + action.vx * delta_t
-            py = self.py + action.vy * delta_t
+            vx, vy = action
+            px = self.px + vx * delta_t
+            py = self.py + vy * delta_t
         else:
-            theta = self.theta + action.r
-            px = self.px + np.cos(theta) * action.v * delta_t
-            py = self.py + np.sin(theta) * action.v * delta_t
+            r, v = action
+            theta = self.theta + r
+            px = self.px + np.cos(theta) * v * delta_t
+            py = self.py + np.sin(theta) * v * delta_t
 
         return px, py
 
@@ -127,12 +127,14 @@ class Agent(object):
         pos = self.compute_position(action, self.time_step)
         self.px, self.py = pos
         if self.kinematics == 'holonomic':
-            self.vx = action.vx
-            self.vy = action.vy
+            vx, vy = action
+            self.vx = vx
+            self.vy = vy
         else:
-            self.theta = (self.theta + action.r) % (2 * np.pi)
-            self.vx = action.v * np.cos(self.theta)
-            self.vy = action.v * np.sin(self.theta)
+            r, v = action
+            self.theta = (self.theta + r) % (2 * np.pi)
+            self.vx = v * np.cos(self.theta)
+            self.vy = v * np.sin(self.theta)
 
     def reached_destination(self):
         return norm(np.array(self.get_position()) - np.array(self.get_goal_position())) < self.radius
