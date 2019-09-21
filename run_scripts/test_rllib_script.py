@@ -62,7 +62,6 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     env = env_creator({'config_path': args.env_config})
-    import ipdb; ipdb.set_trace()
     env.reset(phase='train')
     register_env("CrowdSim", env_creator)
 
