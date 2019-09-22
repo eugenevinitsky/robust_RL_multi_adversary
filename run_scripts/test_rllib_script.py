@@ -32,8 +32,8 @@ def env_creator(passed_config):
 
     # configure policy
     policy_config = configparser.RawConfigParser()
-    policy_config.read(args.policy_config)
-    policy = policy_factory[args.policy](policy_config)
+    policy_config.read(passed_config['policy_config'])
+    policy = policy_factory[passed_config['policy']](policy_config)
     if not policy.trainable:
         parser.error('Policy has to be trainable')
     if args.policy_config is None:
@@ -57,16 +57,23 @@ if __name__=="__main__":
     parser.add_argument('--multi_node', action='store_true', help='Set to true if this will '
                                                                   'be run in cluster mode')
     parser.add_argument("--num_iters", type=int, default=350)
-    parser.add_argument("--checkpoint_freq", type=int, default=50)
+    parser.add_argument("--checkpoint_freq", type=int, default=1)
     parser.add_argument("--num_samples", type=int, default=1)
     args = parser.parse_args()
 
-    env = env_creator({'config_path': args.env_config})
+    env = env_creator({'config_path': args.env_config, 'policy_config': args.policy_config,
+                            'policy': args.policy})
     env.reset(phase='train')
     register_env("CrowdSim", env_creator)
 
     alg_run, config = setup_exps(args)
-    config['env_config'] = {'config_path': args.env_config}
+
+    # save the relevant params for replay
+    config['env_config'] = {'config_path': args.env_config, 'policy_config': args.policy_config,
+                            'policy': args.policy}
+    config['env_config']['replay_params'] = vars(args)
+    config['env_config']['run'] = alg_run
+
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
@@ -76,7 +83,7 @@ if __name__=="__main__":
     config['env'] = "CrowdSim"
     exp_dict = {
             'name': args.exp_title,
-            'run_or_experiment': 'PPO',
+            'run_or_experiment': alg_run,
             'checkpoint_freq': args.checkpoint_freq,
             'stop': {
                 'training_iteration': args.num_iters
