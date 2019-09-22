@@ -1,13 +1,17 @@
 """This code is adapted from https://github.com/vita-epfl/CrowdNav"""
 
 import logging
+
 import gym
 from gym.spaces import Box
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.lines as mlines
-import numpy as np
-import rvo2
 from matplotlib import patches
+import numpy as np
 from numpy.linalg import norm
+import rvo2
+
 from envs.utils.human import Human
 from envs.utils.info import *
 from envs.utils.utils import point_to_segment_dist

@@ -7,6 +7,7 @@ import sys
 
 import gym
 import numpy as np
+import ray
 from ray.rllib.agents.registry import get_agent_class
 from ray.cloudpickle import cloudpickle
 from ray.rllib.env import MultiAgentEnv
@@ -15,6 +16,7 @@ from ray.rllib.env.base_env import _DUMMY_AGENT_ID
 from ray.rllib.evaluation.episode import _flatten_action
 from ray.tune.registry import register_env
 
+from envs.crowd_env import CrowdSimEnv
 from envs.policy.policy_factory import policy_factory
 from envs.utils.robot import Robot
 from envs.policy.orca import ORCA
@@ -27,29 +29,31 @@ class DefaultMapping(collections.defaultdict):
         self[key] = value = self.default_factory(key)
         return value
 
-def default_policy_agent_mapping(self, unused_agent_id):
+
+def default_policy_agent_mapping(unused_agent_id):
     return DEFAULT_POLICY_ID
 
 
 def create_env(config):
+    # TODO(@evinitsky) clean this up you are mixing configs
     policy_config = configparser.RawConfigParser()
-    policy_config.read(config['policy_config'])
+    policy_config.read(config['replay_params']['policy_config'])
     policy = policy_factory[config['policy']](policy_config)
 
     # configure environment
     env_config = configparser.RawConfigParser()
-    env_config.read(env_config['policy_config'])
-    env = gym.make('CrowdSim-v0')
+    env_config.read(config['replay_params']['env_config'])
+    env = CrowdSimEnv()
     env.configure(env_config)
-    if config['square']:
+    if config['replay_params'].get('square', False):
         env.test_sim = 'square_crossing'
-    if config['circle']:
+    if config['replay_params'].get('circle', False):
         env.test_sim = 'circle_crossing'
     robot = Robot(env_config, 'robot')
     robot.set_policy(policy)
     env.set_robot(robot)
 
-    policy.set_phase(config['phase'])
+    policy.set_phase(config['replay_params']['phase'])
     # set safety space for ORCA in non-cooperative simulation
     # TODO(@evinitsky) wtf is this
     if isinstance(robot.policy, ORCA):
@@ -69,6 +73,7 @@ def main():
     parser.add_argument(
         'result_dir', type=str, help='Directory containing results')
     parser.add_argument('checkpoint_num', type=str, help='Checkpoint number.')
+    parser.add_argument('--num_cpus', type=int, default=1, help='Number of cpus to run experiment with')
     parser.add_argument('--run', type=str, help='RL algorithm that is run')
     parser.add_argument('--visualize', default=False, action='store_true')
     parser.add_argument('--phase', type=str, default='test')
@@ -118,6 +123,7 @@ def main():
         sys.exit(1)
 
     # configure the env
+    # TOO @(evinitsky) overwrite replay params with arg params
     env_config = rllib_config['env_config']['replay_params']
     if args.circle:
         env_config['circle'] = True
@@ -132,6 +138,7 @@ def main():
     agent = agent_cls(env=env_name, config=rllib_config)
     checkpoint = args.result_dir + '/checkpoint_' + args.checkpoint_num
     checkpoint = checkpoint + '/checkpoint-' + args.checkpoint_num
+    ray.init(num_cpus=args.num_cpus)
     agent.restore(checkpoint)
 
     policy_agent_mapping = default_policy_agent_mapping
