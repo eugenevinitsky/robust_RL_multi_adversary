@@ -7,3 +7,4 @@ To install the code with anaconda run
 - `conda activate sim2real`
 - `python setup.py develop` 
 - Then go follow the install instructions at: https://github.com/sybrenstuvel/Python-RVO2 (TBD if this is necessary)
+- If you want to run videos make sure to install ffmpeg. If you have brew you can run `brew install ffmpeg`.
