@@ -6,6 +6,8 @@ import gym
 from gym.spaces import Box
 import matplotlib
 matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+from matplotlib import animation
 import matplotlib.lines as mlines
 from matplotlib import patches
 import numpy as np
@@ -441,9 +443,6 @@ class CrowdSimEnv(gym.Env):
         return ob, reward, done, {}
 
     def render(self, mode='human', output_file=None):
-        from matplotlib import animation
-        import matplotlib.pyplot as plt
-        plt.rcParams['animation.ffmpeg_path'] = '/usr/bin/ffmpeg'
 
         x_offset = 0.11
         y_offset = 0.11
