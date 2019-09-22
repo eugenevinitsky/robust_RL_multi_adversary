@@ -222,7 +222,10 @@ def main():
     if args.traj:
         env.render('traj', args.video_file)
     else:
-        env.render('video', args.video_file)
+        output_path = args.video_file
+        if not output_path[-4:] == '.mp4':
+            output_path += '.mp4'
+        env.render('video', output_path)
 
     logging.info('It takes %.2f seconds to finish. Final status is %s', env.global_time, info)
     if env.robot.visible and info == 'reach goal':
