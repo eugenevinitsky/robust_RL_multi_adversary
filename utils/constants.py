@@ -1,0 +1,3 @@
+ROBOT_COLOR = [0, 0, 0]
+HUMAN_COLOR = [204, 0, 204]
+GOAL_COLOR = [0, 255, 0]
