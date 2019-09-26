@@ -2,6 +2,7 @@
 
 import logging
 
+import cv2
 import gym
 from gym.spaces import Box
 import matplotlib
@@ -13,10 +14,12 @@ from matplotlib import patches
 import numpy as np
 from numpy.linalg import norm
 import rvo2
+import skimage.measure
 
 from envs.utils.human import Human
 from envs.utils.info import *
 from envs.utils.utils import point_to_segment_dist
+from utils.constants import ROBOT_COLOR, GOAL_COLOR, HUMAN_COLOR
 
 
 class CrowdSimEnv(gym.Env):
@@ -53,6 +56,15 @@ class CrowdSimEnv(gym.Env):
         self.square_width = None
         self.circle_radius = None
         self.human_num = None
+        self.train_on_images = None
+        self.show_images = False
+        self.discretization = None  # How much to downsample images
+        # TODO(@evinitsky) remove the magic numbers
+        self.grid = None
+        # How many grid points the robot/humans occupy
+        self.robot_grid_size = None
+        # The image used to represent the robot positions
+        self.image = None
 
         # for visualization
         self.states = None
@@ -60,27 +72,42 @@ class CrowdSimEnv(gym.Env):
         self.attention_weights = None
 
         # observation space
-        self.use_image = False
         self.obs_norm = 100.0
+        self.num_stacked_frames = None
+        self.observed_image = None  # The stacked images we will observe
 
     @property
     def observation_space(self):
-        human_num = self.human_num
-        # TODO(@evinitsky) clean this the heck up. This initialization should be done elsewhere!! ABSTRACTION BREAK
-        self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
-        self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
-        temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
-        return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0], ))
+        if not self.train_on_images:
+            human_num = self.human_num
+            # TODO(@evinitsky) clean this the heck up. This initialization should be done elsewhere!! ABSTRACTION BREAK
+            self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
+            self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
+            temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
+            return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0], ))
+        else:
+            img_shape = self.image.shape
+            new_tuple = (img_shape[0], img_shape[1], img_shape[2] * self.num_stacked_frames)
+            return Box(low=-1.0, high=1.0, shape=new_tuple)
 
 
     @property
     def action_space(self):
-        # TODO(@evinitsky) what are the rught bounds
+        # TODO(@evinitsky) what are the right bounds
         return Box(low=-2.0, high=2.0, shape=(2, ))
 
     def configure(self, config):
         self.config = config
+
+        # Training details
+        self.num_stacked_frames = config.getint('train_details', 'num_stacked_frames')
+
         self.time_limit = config.getint('env', 'time_limit')
+        self.discretization = config.getint('env', 'discretization')
+        self.grid = np.linspace([-6, -6], [6, 6], self.discretization)
+        self.robot_grid_size = np.maximum(int(0.1 / np.abs(self.grid[0, 0] - self.grid[1, 0])), 2)
+        self.image = np.ones((self.discretization, self.discretization, 3)) * 255
+        self.observed_image = np.ones((self.discretization, self.discretization, 3 * self.num_stacked_frames)) * 255
         self.time_step = config.getfloat('env', 'time_step')
         self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
         self.success_reward = config.getfloat('reward', 'success_reward')
@@ -333,6 +360,22 @@ class CrowdSimEnv(gym.Env):
         elif self.robot.sensor == 'RGB':
             raise NotImplementedError
 
+        # TODO(@evinitsky) don't overwrite the ob, just calculate ob only once
+        if self.train_on_images:
+            # TODO(@evinitsky) don't recreate this every time
+            self.image = np.ones((self.discretization, self.discretization, 3)) * 255
+            self.image_state_space()
+            ob = np.rot90(self.image)
+            # if needed, render the ob for visualization
+            if self.show_images:
+                cv2.namedWindow("image", cv2.WINDOW_NORMAL)
+                cv2.resizeWindow('image', 1000, 1000)
+                cv2.imshow("image", ob)
+                cv2.waitKey(2)
+            self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
+            self.observed_image[:, :, 0: 3] = ob
+            ob = (self.observed_image - 128.0) / 255.0
+
         return ob
 
     def onestep_lookahead(self, action):
@@ -371,7 +414,7 @@ class CrowdSimEnv(gym.Env):
             closest_dist = point_to_segment_dist(px, py, ex, ey, 0, 0) - human.radius - self.robot.radius
             if closest_dist < 0:
                 collision = True
-                # logging.debug("Collision: distance between robot and p{} is {:.2E}".format(i, closest_dist))
+                logging.debug("Collision: distance between robot and p{} is {:.2E}".format(i, closest_dist))
                 break
             elif closest_dist < dmin:
                 dmin = closest_dist
@@ -417,7 +460,6 @@ class CrowdSimEnv(gym.Env):
         if update:
             # store state, action value and attention weights
             self.states.append([self.robot.get_full_state(), [human.get_full_state() for human in self.humans]])
-
             # update all agents
             self.robot.step(action)
             for i, human_action in enumerate(human_actions):
@@ -440,7 +482,80 @@ class CrowdSimEnv(gym.Env):
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
 
+        # TODO(@evinitsky) don't overwrite the ob, just calculate ob only once
+        if self.train_on_images:
+            # TODO(@evinitsky) don't recreate this every time
+            self.image = np.ones((self.discretization, self.discretization, 3)) * 255
+            self.image_state_space()
+            ob = np.rot90(self.image)
+            # if needed, render the ob for visualization
+            if self.show_images:
+                cv2.namedWindow("image", cv2.WINDOW_NORMAL)
+                cv2.resizeWindow('image', 1000, 1000)
+                cv2.imshow("image", ob)
+                cv2.waitKey(2)
+            self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
+            self.observed_image[:, :, 0: 3] = ob
+            ob = (self.observed_image - 128.0) / 255.0
+
         return ob, reward, done, {}
+
+    def image_state_space(self):
+        """Take the current state and render it as an image
+
+        Returns
+        =======
+        None
+        """
+        # Fill in the robot position
+        robot_pos = self.robot.get_full_state().position
+        self.fill_grid(self.pos_to_coord(robot_pos), self.robot_grid_size, ROBOT_COLOR)
+
+        # Fill in the human position
+        for human in self.humans:
+            pos = human.get_full_state().position
+            self.fill_grid(self.pos_to_coord(pos), self.robot_grid_size, HUMAN_COLOR)
+
+        # Fill in the goal image
+        goal_pos = self.robot.get_goal_position()
+        self.fill_grid(self.pos_to_coord(goal_pos), self.robot_grid_size, GOAL_COLOR)
+
+    def pos_to_coord(self, pos):
+        """Convert a position into a coordinate in the image
+
+        Parameters
+        ==========
+        pos: np.ndarray w/ shape (2,)
+
+        Returns
+        =======
+        coordinates: list of length 2
+        """
+        # TODO (@evinitsky) remove magic numbers
+        # find the coordinates of the closest grid point
+        min_idx = np.argmin(np.abs(self.grid - pos), axis=0)
+        return min_idx
+
+    def fill_grid(self, coordinate, radius, color):
+        """Fill in the grid with a square of length 2 * radius
+
+        Parameters
+        ==========
+        coordinate: np.ndarray w/ shape (2,)
+            the center coordinate in the grid
+        radius: int
+            half of the length of the square we fill in around the pos
+        color: np.ndarray (3,)
+            The color to fill in
+
+        Returns
+        =======
+        None
+
+        """
+        x_left, x_right = np.maximum(coordinate[0] - radius, 0), np.minimum(coordinate[0] + radius, self.grid.shape[0])
+        y_left, y_right = np.maximum(coordinate[1] - radius, 0), np.minimum(coordinate[1] + radius, self.grid.shape[0])
+        self.image[x_left: x_right, y_left: y_right, :] = color
 
     def render(self, mode='human', output_file=None):
 

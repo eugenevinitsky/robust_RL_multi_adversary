@@ -3,9 +3,9 @@ import configparser
 from datetime import datetime
 import os
 
-import gym
 import ray
 import ray.rllib.agents.ppo as ppo
+from ray.rllib.models import ModelCatalog
 from ray.tune import run
 from ray.tune.registry import register_env
 
@@ -27,6 +27,10 @@ def env_creator(passed_config):
     temp_config.read(config_path)
     env = CrowdSimEnv()
     env.configure(temp_config)
+    # additional configuration
+    env.show_images = passed_config['show_images']
+    env.train_on_images = passed_config['train_on_images']
+
     robot = Robot(temp_config, 'robot')
     env.set_robot(robot)
 
@@ -56,31 +60,45 @@ if __name__=="__main__":
     parser.add_argument('--num_cpus', type=int, default=1, help='Number of cpus to run experiment with')
     parser.add_argument('--multi_node', action='store_true', help='Set to true if this will '
                                                                   'be run in cluster mode')
-    parser.add_argument("--num_iters", type=int, default=350)
-    parser.add_argument("--checkpoint_freq", type=int, default=1)
-    parser.add_argument("--num_samples", type=int, default=1)
+    parser.add_argument('--num_iters', type=int, default=350)
+    parser.add_argument('--checkpoint_freq', type=int, default=1)
+    parser.add_argument('--num_samples', type=int, default=1)
+
+    # Env configs
+    parser.add_argument('--show_images', action='store_true', help='Whether to display the observations')
+    parser.add_argument('--train_on_images', action='store_true', help='Whether to train on images')
+
     args = parser.parse_args()
 
-    env = env_creator({'config_path': args.env_config, 'policy_config': args.policy_config,
-                            'policy': args.policy})
-    env.reset(phase='train')
-    register_env("CrowdSim", env_creator)
+    register_env('CrowdSim', env_creator)
 
     alg_run, config = setup_exps(args)
 
     # save the relevant params for replay
     config['env_config'] = {'config_path': args.env_config, 'policy_config': args.policy_config,
-                            'policy': args.policy}
+                            'policy': args.policy, 'show_images': args.show_images, 'train_on_images': args.train_on_images}
     config['env_config']['replay_params'] = vars(args)
     config['env_config']['run'] = alg_run
+
+    # pick out the right model
+    if args.train_on_images:
+        # register the custom model
+        conv_filters = [
+                [32, [3, 3], 2],
+                [32, [3, 3], 2],
+            ]
+        config['model'] = {'conv_activation': 'relu', 'use_lstm': True,
+                           'lstm_cell_size': 128, 'conv_filters': conv_filters}
+        config['vf_share_layers'] = True
+        config['train_batch_size']: 500  # TODO(@evinitsky) change this it's just for testing
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
         ray.init()
-    s3_string = "s3://eugene.experiments/sim2real/" \
-                + datetime.now().strftime("%m-%d-%Y") + '/' + args.exp_title
-    config['env'] = "CrowdSim"
+    s3_string = 's3://eugene.experiments/sim2real/' \
+                + datetime.now().strftime('%m-%d-%Y') + '/' + args.exp_title
+    config['env'] = 'CrowdSim'
     exp_dict = {
             'name': args.exp_title,
             'run_or_experiment': alg_run,
