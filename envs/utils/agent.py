@@ -19,6 +19,10 @@ class Agent(object):
         self.policy = policy_factory[config.get(section, 'policy')]()
         self.sensor = config.get(section, 'sensor')
         self.kinematics = self.policy.kinematics if self.policy is not None else None
+
+        self.friction = config.get('transfer', 'friction')
+        self.friction_coef = config.getfloat('transfer', 'friction_coef')
+
         self.px = None
         self.py = None
         self.gx = None
@@ -108,33 +112,31 @@ class Agent(object):
     def compute_position(self, action, delta_t):
         self.check_validity(action)
         if self.kinematics == 'holonomic':
-            vx, vy = action
-            px = self.px + vx * delta_t
-            py = self.py + vy * delta_t
+            ax, ay = action
         else:
-            r, v = action
-            theta = self.theta + r
-            px = self.px + np.cos(theta) * v * delta_t
-            py = self.py + np.sin(theta) * v * delta_t
+            theta_dot, v_accel = action
+            # TODO(@evinitsky) what's the right way to do this, presumably the rotation doesn't happen first
+            self.theta = (self.theta + theta_dot * delta_t) % (2 * np.pi)
+            ax = v_accel * np.cos(self.theta)
+            ay = v_accel * np.sin(self.theta)
 
-        return px, py
+        if self.friction:
+            self.vx = self.vx + ax * delta_t - 2 * self.friction_coef * self.vx * delta_t
+            self.vy = self.vy + ay * delta_t - 2 * self.friction_coef * self.vy * delta_t
+        else:
+            self.vx = self.vx + ax * delta_t
+            self.vy = self.vy + ay * delta_t
+
+        self.px = self.px + self.vx * delta_t + 0.5 * ax * (delta_t ** 2)
+        self.py = self.py + self.vy * delta_t + 0.5 * ay * (delta_t ** 2)
+
 
     def step(self, action):
         """
         Perform an action and update the state
         """
         self.check_validity(action)
-        pos = self.compute_position(action, self.time_step)
-        self.px, self.py = pos
-        if self.kinematics == 'holonomic':
-            vx, vy = action
-            self.vx = vx
-            self.vy = vy
-        else:
-            r, v = action
-            self.theta = (self.theta + r) % (2 * np.pi)
-            self.vx = v * np.cos(self.theta)
-            self.vy = v * np.sin(self.theta)
+        self.compute_position(action, self.time_step)
 
     def reached_destination(self):
         return norm(np.array(self.get_position()) - np.array(self.get_goal_position())) < self.radius

@@ -43,6 +43,11 @@ def create_env(config):
     # configure environment
     env_config = configparser.RawConfigParser()
     env_config.read(config['replay_params']['env_config'])
+
+    # update a few params in the config
+    env_config.set('transfer', 'change_colors_mode', config['replay_params']['change_colors_mode'])
+    env_config.set('transfer', 'friction', config['replay_params']['friction'])
+
     env = CrowdSimEnv()
     env.configure(env_config)
     if config['replay_params'].get('square', False):
@@ -82,6 +87,15 @@ def main():
     parser.add_argument('--circle', default=False, action='store_true')
     parser.add_argument('--video_file', type=str, default=None)
     parser.add_argument('--traj', default=False, action='store_true')
+
+    # Arguments for transfer tests
+    parser.add_argument('--change_colors_mode', type=str, default='no_change',
+                        help='If mode `every_step`, the colors will be swapped '
+                             'at each step. If mode `first_step` the colors will'
+                             'be swapped only once')
+    # TODO(@evinitsky) add
+    parser.add_argument('--add_friction', action='store_true', help='If true, there is friction in the dynamics with'
+                                                                    'a coefficient of 0.5')
     args = parser.parse_args()
 
     # configure logging and device
@@ -129,8 +143,10 @@ def main():
         env_config['circle'] = True
     if args.square:
         env_config['square'] = True
+    env_config['change_color_mode'] = args.change_color_mode
+    env_config['friction'] = args.friction
     env_config['phase'] = args.phase
-    env_name ='CrowdSim-v0'
+    env_name = 'CrowdSim-v0'
     register_env(env_name, create_env)
 
     # Instantiate the agent
@@ -160,7 +176,6 @@ def main():
         env = create_env(rllib_config['env_config'])
         multiagent = False
         use_lstm = {DEFAULT_POLICY_ID: False}
-
 
     # actually do the rollout
     if args.traj is not None:
@@ -231,7 +246,6 @@ def main():
     if env.robot.visible and info == 'reach goal':
         human_times = env.get_human_times()
         logging.info('Average time for humans to reach goal: %.2f', sum(human_times) / len(human_times))
-
 
 
 if __name__ == '__main__':
