@@ -105,8 +105,21 @@ class Agent(object):
         pass
         # assert action.shape[0] == 2, "Actions don't have shape 2"
 
+    def check_valid_action(self, new_px, new_py):
+        """
+        Instating bounds
+        """
+        dist = np.linalg.norm((new_px, new_py))
+        # print(dist)
+        if dist > 4: # TODO hardcoded, 4 should be circle radius
+            return False
+        return True
+
+
     def compute_position(self, action, delta_t):
-        self.check_validity(action)
+        # if not self.check_validity(action):
+        #     return self.px, self.py
+
         if self.kinematics == 'holonomic':
             vx, vy = action
             px = self.px + vx * delta_t
@@ -116,6 +129,9 @@ class Agent(object):
             theta = self.theta + r
             px = self.px + np.cos(theta) * v * delta_t
             py = self.py + np.sin(theta) * v * delta_t
+
+        if not self.check_valid_action(px, py):
+            return self.px, self.py
 
         return px, py
 
