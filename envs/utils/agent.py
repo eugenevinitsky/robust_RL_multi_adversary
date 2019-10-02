@@ -105,6 +105,21 @@ class Agent(object):
         pass
         # assert action.shape[0] == 2, "Actions don't have shape 2"
 
+    def check_valid_action(self, new_px, new_py, world_dim):
+        """
+        Check if action will take the agent out of the grid space
+        :param new_px: new x position
+        :param new_py: new y position
+        :param world_dim: size of the world in one dimension
+        :return: True if valid, False otherwise
+        """
+
+        dist=np.linalg.norm((new_px, new_py))
+        if dist > world_dim: #size of world
+            return False
+
+        return True
+
     def compute_position(self, action, delta_t):
         self.check_validity(action)
         if self.kinematics == 'holonomic':
@@ -117,6 +132,8 @@ class Agent(object):
             px = self.px + np.cos(theta) * v * delta_t
             py = self.py + np.sin(theta) * v * delta_t
 
+        if not self.check_valid_action(px,py):
+            return self.px, self.py
         return px, py
 
     def step(self, action):

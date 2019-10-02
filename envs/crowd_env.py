@@ -14,7 +14,6 @@ from matplotlib import patches
 import numpy as np
 from numpy.linalg import norm
 import rvo2
-import skimage.measure
 
 from envs.utils.human import Human
 from envs.utils.info import *
@@ -65,6 +64,8 @@ class CrowdSimEnv(gym.Env):
         self.robot_grid_size = None
         # The image used to represent the robot positions
         self.image = None
+
+        self.render_train = False
 
         # for visualization
         self.states = None
@@ -392,6 +393,7 @@ class CrowdSimEnv(gym.Env):
             ob = [other_human.get_observable_state() for other_human in self.humans if other_human != human]
             if self.robot.visible:
                 ob += [self.robot.get_observable_state()]
+                human.set_goal([self.robot.px, self.robot.py])
             human_actions.append(human.act(ob))
 
         # collision detection
@@ -497,6 +499,10 @@ class CrowdSimEnv(gym.Env):
             self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
             self.observed_image[:, :, 0: 3] = ob
             ob = (self.observed_image - 128.0) / 255.0
+
+        # TODO: Fix this visualization code
+        #if self.global_time.is_integer():
+        #    self.render(mode='video')
 
         return ob, reward, done, {}
 
@@ -740,6 +746,9 @@ class CrowdSimEnv(gym.Env):
                 writer = ffmpeg_writer(fps=8, metadata=dict(artist='Me'), bitrate=1800)
                 anim.save(output_file, writer=writer)
             else:
-                plt.show()
+                #TODO: Fix this visualization code
+                plt.show(block=False)
+                plt.pause(3)
+                plt.close()
         else:
             raise NotImplementedError
