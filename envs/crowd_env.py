@@ -327,7 +327,10 @@ class CrowdSimEnv(gym.Env):
         else:
             counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
                               'val': 0, 'test': self.case_capacity['val']}
+
             self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
+            new_goal = (np.random.rand(2) - 0.5)*2*self.circle_radius #TODO change this to grid size
+            self.robot.set_goal(new_goal)
             if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
                 if phase in ['train', 'val']:
@@ -393,7 +396,7 @@ class CrowdSimEnv(gym.Env):
             ob = [other_human.get_observable_state() for other_human in self.humans if other_human != human]
             if self.robot.visible:
                 ob += [self.robot.get_observable_state()]
-                human.set_goal([self.robot.px, self.robot.py])
+                human.set_goal([self.robot.px, self.robot.py]) #update goal of human to where robot is
             human_actions.append(human.act(ob))
 
         # collision detection
@@ -446,8 +449,12 @@ class CrowdSimEnv(gym.Env):
             info = Collision()
         elif reaching_goal:
             reward = self.success_reward
-            done = True
-            info = ReachGoal()
+            new_goal = (np.random.rand(2) - 0.5)*2*self.circle_radius #TODO change this to grid size
+            self.robot.set_goal(new_goal)
+            print("New Goal", self.robot.get_goal_position())
+            done=False
+            #done = True
+            #info = ReachGoal()
         elif dmin < self.discomfort_dist:
             # only penalize agent for getting too close if it's visible
             # adjust the reward based on FPS
@@ -633,7 +640,9 @@ class CrowdSimEnv(gym.Env):
 
             # add robot and its goal
             robot_positions = [state[0].position for state in self.states]
-            goal = mlines.Line2D([0], [4], color=goal_color, marker='*', linestyle='None', markersize=15, label='Goal')
+            goal_positions = [state[0].goal_position for state in self.states]
+
+            goal = plt.Circle(goal_positions[0], radius=self.robot.radius, color=goal_color, fill=True, label='Goal')
             robot = plt.Circle(robot_positions[0], self.robot.radius, fill=True, color=robot_color)
             ax.add_artist(robot)
             ax.add_artist(goal)
@@ -690,6 +699,7 @@ class CrowdSimEnv(gym.Env):
                 nonlocal arrows
                 global_step = frame_num
                 robot.center = robot_positions[frame_num]
+                goal.center = goal_positions[frame_num]
                 for i, human in enumerate(humans):
                     human.center = human_positions[frame_num][i]
                     human_numbers[i].set_position((human.center[0] - x_offset, human.center[1] - y_offset))

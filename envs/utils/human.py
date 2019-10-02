@@ -16,11 +16,4 @@ class Human(Agent):
         action = self.policy.predict(state)
         return action
 
-    def set_goal(self, goal):
-        """
-        Set goal of human agent
-        :param goal: Tuple of (gx,gy) for goal x and y positions
-        :return: None
-        """
-        self.gx = goal[0]
-        self.gy = goal[1]
+
