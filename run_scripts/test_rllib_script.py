@@ -46,7 +46,6 @@ def env_creator(passed_config):
     robot.set_policy(policy)
     return env
 
-
 if __name__=="__main__":
     parser = argparse.ArgumentParser('Parse configuration file')
     parser.add_argument('--env_config', type=str, default=os.path.abspath('../configs/env.config'))
@@ -63,6 +62,10 @@ if __name__=="__main__":
     parser.add_argument('--num_iters', type=int, default=350)
     parser.add_argument('--checkpoint_freq', type=int, default=1)
     parser.add_argument('--num_samples', type=int, default=1)
+
+    # TODO: Fix this visualization code
+    parser.add_argument('--render', type=str, default=False)
+
 
     # Env configs
     parser.add_argument('--show_images', action='store_true', help='Whether to display the observations')
