@@ -54,6 +54,7 @@ class CrowdSimEnv(gym.Env):
         self.test_sim = None
         self.square_width = None
         self.circle_radius = None
+        self.accessible_space = None
         self.human_num = None
         self.train_on_images = None
         self.show_images = False
@@ -123,6 +124,7 @@ class CrowdSimEnv(gym.Env):
             self.test_sim = config.get('sim', 'test_sim')
             self.square_width = config.getfloat('sim', 'square_width')
             self.circle_radius = config.getfloat('sim', 'circle_radius')
+            self.accessible_space = config.getfloat('sim', 'accessible_space')
             self.human_num = config.getint('sim', 'human_num')
         else:
             raise NotImplementedError
@@ -327,10 +329,8 @@ class CrowdSimEnv(gym.Env):
         else:
             counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
                               'val': 0, 'test': self.case_capacity['val']}
-
-            self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
-            new_goal = (np.random.rand(2) - 0.5)*2*self.circle_radius #TODO change this to grid size
-            self.robot.set_goal(new_goal)
+            random_goal = (np.random.rand(2) - 0.5)*2*self.accessible_space
+            self.robot.set(0, 0, random_goal[0], random_goal[1], 0, 0, np.pi / 2)
             if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
                 if phase in ['train', 'val']:
@@ -449,12 +449,12 @@ class CrowdSimEnv(gym.Env):
             info = Collision()
         elif reaching_goal:
             reward = self.success_reward
-            new_goal = (np.random.rand(2) - 0.5)*2*self.circle_radius #TODO change this to grid size
+            new_goal = (np.random.rand(2) - 0.5)*2*self.accessible_space
             self.robot.set_goal(new_goal)
             print("New Goal", self.robot.get_goal_position())
-            done=False
+            done = False
             #done = True
-            #info = ReachGoal()
+            info = ReachGoal()
         elif dmin < self.discomfort_dist:
             # only penalize agent for getting too close if it's visible
             # adjust the reward based on FPS
@@ -633,8 +633,8 @@ class CrowdSimEnv(gym.Env):
         elif mode == 'video':
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.tick_params(labelsize=16)
-            ax.set_xlim(-6, 6)
-            ax.set_ylim(-6, 6)
+            ax.set_xlim(-self.accessible_space, self.accessible_space)
+            ax.set_ylim(-self.accessible_space, self.accessible_space)
             ax.set_xlabel('x(m)', fontsize=16)
             ax.set_ylabel('y(m)', fontsize=16)
 
