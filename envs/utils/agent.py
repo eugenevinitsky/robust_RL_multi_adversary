@@ -27,6 +27,7 @@ class Agent(object):
         self.vy = None
         self.theta = None
         self.time_step = None
+        self.accessible_space = config.getfloat('sim', 'accessible_space')
 
     def print_info(self):
         logging.info('Agent is {} and has {} kinematic constraint'.format(
@@ -120,13 +121,8 @@ class Agent(object):
         :param new_px: new x position
         :param new_py: new y position
         :param world_dim: size of the world in one dimension
-        :return: True if valid, False otherwise
+        :return: Valid px, py
         """
-
-        #dist=np.linalg.norm((new_px, new_py))
-        #if dist > world_dim: #size of world
-        #    return False
-
         if np.abs(new_px) > world_dim:
             new_px = cur_px
         if np.abs(new_py) > world_dim:
@@ -146,7 +142,7 @@ class Agent(object):
             px = self.px + np.cos(theta) * v * delta_t
             py = self.py + np.sin(theta) * v * delta_t
 
-        return  self.check_valid_action(px,py, self.px, self.py, 6)
+        return  self.check_valid_action(px,py, self.px, self.py, self.accessible_space) #TODO: Fix hard coded constraint
 
     def step(self, action):
         """
