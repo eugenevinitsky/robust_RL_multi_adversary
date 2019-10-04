@@ -48,11 +48,12 @@ def env_creator(passed_config):
 
 
 if __name__=="__main__":
+    script_path = os.path.dirname(os.path.abspath(__file__))
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--env_config', type=str, default=os.path.abspath('../configs/env.config'))
-    parser.add_argument('--policy_config', type=str, default=os.path.abspath('../configs/policy.config'))
+    parser.add_argument('--env_config', type=str, default=os.path.abspath(os.path.join(script_path,'../configs/env.config')))
+    parser.add_argument('--policy_config', type=str, default=os.path.abspath(os.path.join(script_path,'../configs/policy.config')))
     parser.add_argument('--policy', type=str, default='cadrl')
-    parser.add_argument('--train_config', type=str, default='../configs/train.config')
+    parser.add_argument('--train_config', type=str, default=os.path.join(script_path,'../configs/train.config'))
     parser.add_argument('--debug', default=False, action='store_true')
 
     parser.add_argument('exp_title', type=str, help='Informative experiment title to help distinguish results')
@@ -65,8 +66,8 @@ if __name__=="__main__":
     parser.add_argument('--num_samples', type=int, default=1)
 
     # Env configs
-    parser.add_argument('--show_images', action='store_true', help='Whether to display the observations')
-    parser.add_argument('--train_on_images', action='store_true', help='Whether to train on images')
+    parser.add_argument('--show_images', action='store_true', default=False, help='Whether to display the observations')
+    parser.add_argument('--train_on_images', action='store_true', default=False, help='Whether to train on images')
 
     args = parser.parse_args()
 
