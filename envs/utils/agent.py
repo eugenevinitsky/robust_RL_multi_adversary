@@ -142,7 +142,7 @@ class Agent(object):
             px = self.px + np.cos(theta) * v * delta_t
             py = self.py + np.sin(theta) * v * delta_t
 
-        return  self.check_valid_action(px,py, self.px, self.py, self.accessible_space) #TODO: Fix hard coded constraint
+        return self.check_valid_action(px,py, self.px, self.py, self.accessible_space)
 
     def step(self, action):
         """
