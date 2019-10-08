@@ -1,5 +1,5 @@
 # An unique identifier for the head node and workers of this cluster.
-cluster_name: default
+cluster_name: adversarial_sim2real
 
 # The minimum number of workers nodes to launch in addition to the head
 # node. This number should be >= 0.
@@ -112,9 +112,8 @@ setup_commands:
     # Note: if you're developing Ray, you probably want to create an AMI that
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
-    - cd adversarial_sim2real
-    - git remote remove origin; git remote add origin git@github.com:eugenevinitsky/adversarial_sim2real.git # remove https remote and add ssh remote
-    - git fetch origin; git checkout origin/master
+    - cd ~/adversarial_sim2real && git remote remove origin && git remote add origin git@github.com:eugenevinitsky/adversarial_sim2real.git # remove https remote and add ssh remote
+    - cd ~/adversarial_sim2real && git fetch origin; git checkout origin/master
     - echo 'export PATH="$HOME/anaconda3/envs/tensorflow_p36/bin:$PATH"' >> ~/.bashrc
     # - pip install -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.8.0.dev2-cp27-cp27mu-manylinux1_x86_64.whl
     # - pip install -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.8.0.dev2-cp35-cp35m-manylinux1_x86_64.whl
