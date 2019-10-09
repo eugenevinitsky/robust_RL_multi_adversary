@@ -110,10 +110,13 @@ class CrowdSimEnv(gym.Env):
         self.observed_image = np.ones((self.discretization, self.discretization, 3 * self.num_stacked_frames)) * 255
         self.time_step = config.getfloat('env', 'time_step')
         self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
+        self.gaussian_noise_state = config.getfloat('env', 'gaussian_noise_state')
+        self.gaussian_noise_action = config.getfloat('env', 'gaussian_noise_action')
         self.success_reward = config.getfloat('reward', 'success_reward')
         self.collision_penalty = config.getfloat('reward', 'collision_penalty')
         self.discomfort_dist = config.getfloat('reward', 'discomfort_dist')
         self.discomfort_penalty_factor = config.getfloat('reward', 'discomfort_penalty_factor')
+        
         if self.config.get('humans', 'policy') == 'orca':
             self.case_capacity = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
             self.case_size = {'train': np.iinfo(np.uint32).max - 2000, 'val': config.getint('env', 'val_size'),
@@ -376,6 +379,9 @@ class CrowdSimEnv(gym.Env):
             self.observed_image[:, :, 0: 3] = ob
             ob = (self.observed_image - 128.0) / 255.0
 
+        if self.gaussian_noise_state:
+            ob = self.gaussian_noise_state * ob
+
         return ob
 
     def onestep_lookahead(self, action):
@@ -385,6 +391,8 @@ class CrowdSimEnv(gym.Env):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
         """
+        if self.gaussian_noise_action:
+            action = action * self.gaussian_noise_action
 
         human_actions = []
         for human in self.humans:
@@ -497,6 +505,9 @@ class CrowdSimEnv(gym.Env):
             self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
             self.observed_image[:, :, 0: 3] = ob
             ob = (self.observed_image - 128.0) / 255.0
+
+        if self.gaussian_noise_state:
+            ob = self.gaussian_noise_state * ob
 
         return ob, reward, done, {}
 
