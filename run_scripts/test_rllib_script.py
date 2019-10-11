@@ -5,13 +5,11 @@ import os
 
 import ray
 import ray.rllib.agents.ppo as ppo
-from ray.rllib.models import ModelCatalog
 from ray.tune import run
 from ray.tune.registry import register_env
 
 from envs.crowd_env import CrowdSimEnv
 from envs.policy.policy_factory import policy_factory
-from envs.utils.robot import Robot
 
 
 def setup_exps(args):
@@ -26,7 +24,7 @@ def env_creator(passed_config):
     temp_config = configparser.RawConfigParser()
     temp_config.read(config_path)
     env = CrowdSimEnv(temp_config, train_on_images=passed_config['train_on_images'],
-                      show_images= passed_config['show_images'])
+                      show_images=passed_config['show_images'])
 
     # configure policy
     policy_config = configparser.RawConfigParser()
@@ -41,7 +39,7 @@ def env_creator(passed_config):
     return env
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     parser = argparse.ArgumentParser('Parse configuration file')
     parser.add_argument('--env_config', type=str, default=os.path.abspath('../configs/env.config'))
     parser.add_argument('--policy_config', type=str, default=os.path.abspath('../configs/policy.config'))
@@ -49,7 +47,8 @@ if __name__=="__main__":
     parser.add_argument('--train_config', type=str, default='../configs/train.config')
     parser.add_argument('--debug', default=False, action='store_true')
 
-    parser.add_argument('exp_title', type=str, help='Informative experiment title to help distinguish results')
+    parser.add_argument('exp_title', type=str, help='Informative experiment title to help distinguish '
+                                                    'results')
     parser.add_argument('--use_s3', action='store_true', help='If true, upload results to s3')
     parser.add_argument('--num_cpus', type=int, default=1, help='Number of cpus to run experiment with')
     parser.add_argument('--multi_node', action='store_true', help='Set to true if this will '
@@ -70,7 +69,8 @@ if __name__=="__main__":
 
     # save the relevant params for replay
     config['env_config'] = {'config_path': args.env_config, 'policy_config': args.policy_config,
-                            'policy': args.policy, 'show_images': args.show_images, 'train_on_images': args.train_on_images}
+                            'policy': args.policy, 'show_images': args.show_images,
+                            'train_on_images': args.train_on_images}
     config['env_config']['replay_params'] = vars(args)
     config['env_config']['run'] = alg_run
 
@@ -78,11 +78,11 @@ if __name__=="__main__":
     if args.train_on_images:
         # register the custom model
         conv_filters = [
-                [32, [3, 3], 2],
-                [32, [3, 3], 2],
-                [32, [3, 3], 2],
-            ]
-        config['model'] = {'conv_activation': 'relu', 'use_lstm': False, # # TODO(@evinitsky) change this it's just for testing should be True,
+            [32, [3, 3], 2],
+            [32, [3, 3], 2],
+            [32, [3, 3], 2],
+        ]
+        config['model'] = {'conv_activation': 'relu', 'use_lstm': True,
                            'lstm_cell_size': 128, 'conv_filters': conv_filters}
         config['vf_share_layers'] = False
         config['train_batch_size'] = 500  # TODO(@evinitsky) change this it's just for testing
@@ -96,15 +96,15 @@ if __name__=="__main__":
 
     config['env'] = 'CrowdSim'
     exp_dict = {
-            'name': args.exp_title,
-            'run_or_experiment': alg_run,
-            'checkpoint_freq': args.checkpoint_freq,
-            'stop': {
-                'training_iteration': args.num_iters
-            },
-            'config': config,
-            'num_samples': args.num_samples,
-        }
+        'name': args.exp_title,
+        'run_or_experiment': alg_run,
+        'checkpoint_freq': args.checkpoint_freq,
+        'stop': {
+            'training_iteration': args.num_iters
+        },
+        'config': config,
+        'num_samples': args.num_samples,
+    }
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
 

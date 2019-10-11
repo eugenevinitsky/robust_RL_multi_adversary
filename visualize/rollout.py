@@ -5,8 +5,6 @@ import logging
 import os
 import sys
 
-import gym
-import numpy as np
 import ray
 from ray.rllib.agents.registry import get_agent_class
 from ray.cloudpickle import cloudpickle
@@ -18,7 +16,6 @@ from ray.tune.registry import register_env
 
 from envs.crowd_env import CrowdSimEnv
 from envs.policy.policy_factory import policy_factory
-from envs.utils.robot import Robot
 from envs.policy.orca import ORCA
 
 
