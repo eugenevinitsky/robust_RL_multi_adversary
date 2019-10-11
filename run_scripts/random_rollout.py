@@ -19,7 +19,8 @@ parser.add_argument("--show_images", action="store_true", help="Whether to displ
 parser.add_argument('--train_on_images', action='store_true', help='Whether to train on images')
 
 # Arguments for transfer tests
-parser.add_argument('--add_friction', action='store_true', help='If true, there is `friction` in the dynamics')
+parser.add_argument('--add_friction', action='store_true', help='If true, there is `friction` in the '
+                                                                'dynamics')
 parser.add_argument('--change_colors_mode', type=str, default='no_change',
                     help='If mode `every_step`, the colors will be swapped '
                          'at each step. If mode `first_step` the colors will'
@@ -28,7 +29,8 @@ parser.add_argument('--change_colors_mode', type=str, default='no_change',
 args = parser.parse_args()
 
 passed_config = {'config_path': args.env_config, 'policy_config': args.policy_config,
-                 'policy': args.policy, 'show_images': args.show_images, 'train_on_images': args.train_on_images}
+                 'policy': args.policy, 'show_images': args.show_images,
+                 'train_on_images': args.train_on_images}
 
 config_path = passed_config['config_path']
 temp_config = configparser.RawConfigParser()
