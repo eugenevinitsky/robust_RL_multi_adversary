@@ -11,7 +11,6 @@ class Agent(object):
     def __init__(self, config, section):
         """
         Base class for robot and human. Have the physical attributes of an agent.
-
         """
         self.visible = config.getboolean(section, 'visible')
         self.v_pref = config.getfloat(section, 'v_pref')
@@ -19,10 +18,6 @@ class Agent(object):
         self.policy = policy_factory[config.get(section, 'policy')]()
         self.sensor = config.get(section, 'sensor')
         self.kinematics = self.policy.kinematics if self.policy is not None else None
-
-        self.friction = config.get('transfer', 'friction')
-        self.friction_coef = config.getfloat('transfer', 'friction_coef')
-
         self.px = None
         self.py = None
         self.gx = None
@@ -31,6 +26,10 @@ class Agent(object):
         self.vy = None
         self.theta = None
         self.time_step = None
+
+        # If true all of the actions will be slightly less than intended by a constant factor
+        self.friction = config.getboolean('transfer', 'friction')
+        self.friction_coef = config.getfloat('transfer', 'friction_coef')
 
     def print_info(self):
         logging.info('Agent is {} and has {} kinematic constraint'.format(
@@ -101,7 +100,6 @@ class Agent(object):
     def act(self, ob):
         """
         Compute state using received observation and pass it to policy
-
         """
         return
 
@@ -112,32 +110,39 @@ class Agent(object):
     def compute_position(self, action, delta_t):
         self.check_validity(action)
         if self.kinematics == 'holonomic':
-            ax, ay = action
+            vx, vy = action
+            if self.friction:
+                vx = vx - (self.friction_coef * vx)
+                vy = vy - (self.friction_coef * vy)
+            px = self.px + vx * delta_t
+            py = self.py + vy * delta_t
         else:
-            theta_dot, v_accel = action
-            # TODO(@evinitsky) what's the right way to do this, presumably the rotation doesn't happen first
-            self.theta = (self.theta + theta_dot * delta_t) % (2 * np.pi)
-            ax = v_accel * np.cos(self.theta)
-            ay = v_accel * np.sin(self.theta)
+            r, v = action
+            if self.friction:
+                r = r - (np.pi / 2) * self.friction_coef * r
+                v = v - self.friction_coef * v
+            theta = self.theta + r
+            px = self.px + np.cos(theta) * v * delta_t
+            py = self.py + np.sin(theta) * v * delta_t
 
-        if self.friction:
-            self.vx = self.vx + ax * delta_t - 2 * self.friction_coef * self.vx * delta_t
-            self.vy = self.vy + ay * delta_t - 2 * self.friction_coef * self.vy * delta_t
-        else:
-            self.vx = self.vx + ax * delta_t
-            self.vy = self.vy + ay * delta_t
-
-        self.px = self.px + self.vx * delta_t + 0.5 * ax * (delta_t ** 2)
-        self.py = self.py + self.vy * delta_t + 0.5 * ay * (delta_t ** 2)
-
+        return px, py
 
     def step(self, action):
         """
         Perform an action and update the state
         """
         self.check_validity(action)
-        self.compute_position(action, self.time_step)
+        pos = self.compute_position(action, self.time_step)
+        self.px, self.py = pos
+        if self.kinematics == 'holonomic':
+            vx, vy = action
+            self.vx = vx
+            self.vy = vy
+        else:
+            r, v = action
+            self.theta = (self.theta + r) % (2 * np.pi)
+            self.vx = v * np.cos(self.theta)
+            self.vy = v * np.sin(self.theta)
 
     def reached_destination(self):
         return norm(np.array(self.get_position()) - np.array(self.get_goal_position())) < self.radius
-

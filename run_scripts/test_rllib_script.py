@@ -25,14 +25,8 @@ def env_creator(passed_config):
     config_path = passed_config['config_path']
     temp_config = configparser.RawConfigParser()
     temp_config.read(config_path)
-    env = CrowdSimEnv()
-    env.configure(temp_config)
-    # additional configuration
-    env.show_images = passed_config['show_images']
-    env.train_on_images = passed_config['train_on_images']
-
-    robot = Robot(temp_config, 'robot')
-    env.set_robot(robot)
+    env = CrowdSimEnv(temp_config, train_on_images=passed_config['train_on_images'],
+                      show_images= passed_config['show_images'])
 
     # configure policy
     policy_config = configparser.RawConfigParser()
@@ -43,7 +37,7 @@ def env_creator(passed_config):
     if args.policy_config is None:
         parser.error('Policy config has to be specified for a trainable network')
 
-    robot.set_policy(policy)
+    env.robot.set_policy(policy)
     return env
 
 
@@ -86,11 +80,12 @@ if __name__=="__main__":
         conv_filters = [
                 [32, [3, 3], 2],
                 [32, [3, 3], 2],
+                [32, [3, 3], 2],
             ]
-        config['model'] = {'conv_activation': 'relu', 'use_lstm': True,
+        config['model'] = {'conv_activation': 'relu', 'use_lstm': False, # # TODO(@evinitsky) change this it's just for testing should be True,
                            'lstm_cell_size': 128, 'conv_filters': conv_filters}
-        config['vf_share_layers'] = True
-        config['train_batch_size']: 500  # TODO(@evinitsky) change this it's just for testing
+        config['vf_share_layers'] = False
+        config['train_batch_size'] = 500  # TODO(@evinitsky) change this it's just for testing
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
@@ -98,6 +93,7 @@ if __name__=="__main__":
         ray.init()
     s3_string = 's3://eugene.experiments/sim2real/' \
                 + datetime.now().strftime('%m-%d-%Y') + '/' + args.exp_title
+
     config['env'] = 'CrowdSim'
     exp_dict = {
             'name': args.exp_title,
