@@ -44,32 +44,33 @@ def create_env(config):
     env_config = configparser.RawConfigParser()
     env_config.read(config['replay_params']['env_config'])
 
-    # update a few params in the config
+    # update the transfer params in the config
     env_config.set('transfer', 'change_colors_mode', config['replay_params']['change_colors_mode'])
-    env_config.set('transfer', 'friction', config['replay_params']['friction'])
+    if config['replay_params']['friction']:
+        friction = 'true'
+    else:
+        friction = 'false'
+    env_config.set('transfer', 'friction', friction)
 
-    env = CrowdSimEnv()
-    env.configure(env_config)
-    if config['replay_params'].get('square', False):
-        env.test_sim = 'square_crossing'
-    if config['replay_params'].get('circle', False):
-        env.test_sim = 'circle_crossing'
-    robot = Robot(env_config, 'robot')
-    robot.set_policy(policy)
-    env.set_robot(robot)
+    env = CrowdSimEnv(env_config, config['replay_params']['train_on_images'], config['replay_params']['show_images'])
+    env.robot.set_policy(policy)
+
+    # additional configuration
+    env.show_images = config['replay_params']['show_images']
+    env.train_on_images = config['replay_params']['train_on_images']
 
     policy.set_phase(config['replay_params']['phase'])
     # set safety space for ORCA in non-cooperative simulation
     # TODO(@evinitsky) wtf is this
-    if isinstance(robot.policy, ORCA):
-        if robot.visible:
-            robot.policy.safety_space = 0
+    if isinstance(env.robot.policy, ORCA):
+        if env.robot.visible:
+            env.robot.policy.safety_space = 0
         else:
-            robot.policy.safety_space = 0
-        logging.info('ORCA agent buffer: %f', robot.policy.safety_space)
+            env.robot.policy.safety_space = 0
+        logging.info('ORCA agent buffer: %f', env.robot.policy.safety_space)
 
     policy.set_env(env)
-    robot.print_info()
+    env.robot.print_info()
     return env
 
 
@@ -87,15 +88,16 @@ def main():
     parser.add_argument('--circle', default=False, action='store_true')
     parser.add_argument('--video_file', type=str, default=None)
     parser.add_argument('--traj', default=False, action='store_true')
+    parser.add_argument('--show_images', action='store_true', help='display images while you roll out')
 
     # Arguments for transfer tests
     parser.add_argument('--change_colors_mode', type=str, default='no_change',
                         help='If mode `every_step`, the colors will be swapped '
                              'at each step. If mode `first_step` the colors will'
                              'be swapped only once')
+
     # TODO(@evinitsky) add
-    parser.add_argument('--add_friction', action='store_true', help='If true, there is friction in the dynamics with'
-                                                                    'a coefficient of 0.5')
+    parser.add_argument('--add_friction', action='store_true', help='If true, there is `friction` in the dynamics')
     args = parser.parse_args()
 
     # configure logging and device
@@ -137,14 +139,15 @@ def main():
         sys.exit(1)
 
     # configure the env
-    # TOO @(evinitsky) overwrite replay params with arg params
+    # TODO @(evinitsky) overwrite replay params with arg params
     env_config = rllib_config['env_config']['replay_params']
     if args.circle:
         env_config['circle'] = True
     if args.square:
         env_config['square'] = True
-    env_config['change_color_mode'] = args.change_color_mode
-    env_config['friction'] = args.friction
+    env_config['show_images'] = args.show_images
+    env_config['change_colors_mode'] = args.change_colors_mode
+    env_config['friction'] = args.add_friction
     env_config['phase'] = args.phase
     env_name = 'CrowdSim-v0'
     register_env(env_name, create_env)
@@ -232,7 +235,7 @@ def main():
         if args.traj is not None:
             rollout.append([obs, action, next_obs, reward, done])
         obs = next_obs
-        print("Episode reward", reward_total)
+    print("Episode reward", reward_total)
 
     if args.traj:
         env.render('traj', args.video_file)

@@ -6,6 +6,7 @@ import cv2
 import gym
 from gym.spaces import Box
 import matplotlib
+
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib import animation
@@ -16,100 +17,50 @@ from numpy.linalg import norm
 import rvo2
 import skimage.measure
 
-from envs.utils.human import Human
 from envs.utils.info import *
+from envs.utils.human import Human
+from envs.utils.robot import Robot
 from envs.utils.utils import point_to_segment_dist
-from utils.constants import ROBOT_COLOR, GOAL_COLOR, HUMAN_COLOR
+from utils.constants import ROBOT_COLOR, GOAL_COLOR, HUMAN_COLOR, COLOR_LIST, BACKGROUND_COLOR
 
 
 class CrowdSimEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self):
+    def __init__(self, config, train_on_images=False, show_images=False):
         """
         Movement simulation for n+1 agents
         Agent can either be human or robot.
         humans are controlled by a unknown and fixed policy.
         robot is controlled by a known and learnable policy.
+
+        Parameters
+        ==========
+        config: config file
+        train_on_images: bool
+            If true, the observations will be images of the scene
+        show_images: bool
+            If true, we will render the images during the rllout
         """
-        self.time_limit = None
-        self.time_step = None
-        self.robot = None
-        self.humans = None
-        self.global_time = None
-        self.human_times = None
 
-        # reward function
-        self.success_reward = None
-        self.collision_penalty = None
-        self.discomfort_dist = None
-        self.discomfort_penalty_factor = None
-
-        # simulation configuration
-        self.config = None
-        self.case_capacity = None
-        self.case_size = None
-        self.case_counter = None
-        self.randomize_attributes = None
-        self.train_val_sim = None
-        self.test_sim = None
-        self.square_width = None
-        self.circle_radius = None
-        self.human_num = None
-        self.train_on_images = None
-        self.show_images = False
-        self.discretization = None  # How much to downsample images
-        self.grid = None
-        # How many grid points the robot/humans occupy
-        self.robot_grid_size = None
-        # The image used to represent the robot positions
-        self.image = None
-
-        # for visualization
-        self.states = None
-        self.action_values = None
-        self.attention_weights = None
-
-        # observation space
-        self.obs_norm = 100.0
-        self.num_stacked_frames = None
-        self.observed_image = None  # The stacked images we will observe
-
-        # transfer test parameters
-        self.change_colors_mode = None
-        self.friction = False
-
-    @property
-    def observation_space(self):
-        if not self.train_on_images:
-            human_num = self.human_num
-            # TODO(@evinitsky) clean this the heck up. This initialization should be done elsewhere!! ABSTRACTION BREAK
-            self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
-            self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
-            temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
-            return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0], ))
-        else:
-            img_shape = self.image.shape
-            new_tuple = (img_shape[0], img_shape[1], img_shape[2] * self.num_stacked_frames)
-            return Box(low=-1.0, high=1.0, shape=new_tuple)
-
-
-    @property
-    def action_space(self):
-        # TODO(@evinitsky) what are the right bounds
-        return Box(low=-2.0, high=2.0, shape=(2, ))
-
-    def configure(self, config):
         self.config = config
+        self.train_on_images = train_on_images
+        self.show_images = show_images
 
         # Training details
         self.num_stacked_frames = config.getint('train_details', 'num_stacked_frames')
 
         self.time_limit = config.getint('env', 'time_limit')
         self.discretization = config.getint('env', 'discretization')
-        self.grid = np.linspace([-6, -6], [6, 6], self.discretization)
+        self.grid_limit = config.getfloat('train_details', 'grid_limit')
+        self.grid = np.linspace([-self.grid_limit, -self.grid_limit],
+                                [self.grid_limit, self.grid_limit], self.discretization)
         self.robot_grid_size = np.maximum(int(0.1 / np.abs(self.grid[0, 0] - self.grid[1, 0])), 2)
+
+        # The current image
         self.image = np.ones((self.discretization, self.discretization, 3)) * 255
+
+        # This is used to stack frames
         self.observed_image = np.ones((self.discretization, self.discretization, 3 * self.num_stacked_frames)) * 255
         self.time_step = config.getfloat('env', 'time_step')
         self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
@@ -132,7 +83,6 @@ class CrowdSimEnv(gym.Env):
 
         # Transfer test details
         self.change_colors_mode = config.get('transfer', 'change_colors_mode')
-        self.friction = config.getboolean('transfer', 'friction')
 
         logging.info('human number: {}'.format(self.human_num))
         if self.randomize_attributes:
@@ -142,8 +92,33 @@ class CrowdSimEnv(gym.Env):
         logging.info('Training simulation: {}, test simulation: {}'.format(self.train_val_sim, self.test_sim))
         logging.info('Square width: {}, circle width: {}'.format(self.square_width, self.circle_radius))
 
-    def set_robot(self, robot):
-        self.robot = robot
+        # observation space
+        self.obs_norm = 100.0
+
+        # Instantiate the Robot
+        self.robot = Robot(config, 'robot')
+        self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
+
+        # Initialize the humans so that the observation space has something to work with
+        self.humans = []
+        for i in range(self.human_num):
+            self.humans.append(self.generate_square_crossing_human())
+
+
+    @property
+    def observation_space(self):
+        if not self.train_on_images:
+            temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
+            return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0],))
+        else:
+            img_shape = self.image.shape
+            new_tuple = (img_shape[0], img_shape[1], img_shape[2] * self.num_stacked_frames)
+            return Box(low=-1.0, high=1.0, shape=new_tuple)
+
+    @property
+    def action_space(self):
+        # TODO(@evinitsky) what are the right bounds
+        return Box(low=-2.0, high=2.0, shape=(2,))
 
     def generate_random_human_position(self, human_num, rule):
         """
@@ -196,7 +171,8 @@ class CrowdSimEnv(gym.Env):
                         py = (np.random.random() - 0.5) * height
                         collide = False
                         for agent in [self.robot] + self.humans:
-                            if norm((px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
+                            if norm((
+                                    px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
                                 collide = True
                                 break
                         if not collide:
@@ -315,6 +291,12 @@ class CrowdSimEnv(gym.Env):
         Set px, py, gx, gy, vx, vy, theta for robot and humans
         :return:
         """
+        # Set up the colors
+        self.robot_color = ROBOT_COLOR
+        self.human_color = HUMAN_COLOR
+        self.goal_color = GOAL_COLOR
+        self.background_color = BACKGROUND_COLOR
+
         if self.robot is None:
             raise AttributeError('robot has to be set!')
         assert phase in ['train', 'val', 'test']
@@ -328,32 +310,29 @@ class CrowdSimEnv(gym.Env):
         if not self.robot.policy.multiagent_training:
             self.train_val_sim = 'circle_crossing'
 
-        if self.config.get('humans', 'policy') == 'trajnet':
-            raise NotImplementedError
-        else:
-            counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
-                              'val': 0, 'test': self.case_capacity['val']}
-            self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
-            if self.case_counter[phase] >= 0:
-                np.random.seed(counter_offset[phase] + self.case_counter[phase])
-                if phase in ['train', 'val']:
-                    human_num = self.human_num if self.robot.policy.multiagent_training else 1
-                    self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
-                else:
-                    self.generate_random_human_position(human_num=self.human_num, rule=self.test_sim)
-                # case_counter is always between 0 and case_size[phase]
-                self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
+        counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
+                          'val': 0, 'test': self.case_capacity['val']}
+        self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
+        if self.case_counter[phase] >= 0:
+            np.random.seed(counter_offset[phase] + self.case_counter[phase])
+            if phase in ['train', 'val']:
+                human_num = self.human_num if self.robot.policy.multiagent_training else 1
+                self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
             else:
-                assert phase == 'test'
-                if self.case_counter[phase] == -1:
-                    # for debugging purposes
-                    self.human_num = 3
-                    self.humans = [Human(self.config, 'humans') for _ in range(self.human_num)]
-                    self.humans[0].set(0, -6, 0, 5, 0, 0, np.pi / 2)
-                    self.humans[1].set(-5, -5, -5, 5, 0, 0, np.pi / 2)
-                    self.humans[2].set(5, -5, 5, 5, 0, 0, np.pi / 2)
-                else:
-                    raise NotImplementedError
+                self.generate_random_human_position(human_num=self.human_num, rule=self.test_sim)
+            # case_counter is always between 0 and case_size[phase]
+            self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
+        else:
+            assert phase == 'test'
+            if self.case_counter[phase] == -1:
+                # for debugging purposes
+                self.human_num = 3
+                self.humans = [Human(self.config, 'humans') for _ in range(self.human_num)]
+                self.humans[0].set(0, -6, 0, 5, 0, 0, np.pi / 2)
+                self.humans[1].set(-5, -5, -5, 5, 0, 0, np.pi / 2)
+                self.humans[2].set(5, -5, 5, 5, 0, 0, np.pi / 2)
+            else:
+                raise NotImplementedError
 
         for agent in [self.robot] + self.humans:
             agent.time_step = self.time_step
@@ -370,15 +349,15 @@ class CrowdSimEnv(gym.Env):
         # TODO(@evinitsky) don't overwrite the ob, just calculate ob only once
         if self.train_on_images:
             # TODO(@evinitsky) don't recreate this every time
-            self.image = np.ones((self.discretization, self.discretization, 3)) * 255
+            bg_color = np.array(self.background_color)[np.newaxis, np.newaxis, :]
+            self.image = np.ones((self.discretization, self.discretization, 3)) * bg_color
 
             # should we shift the colors?
             change_colors = False
-            if self.change_colors_mode == 'every_step':
+            if self.change_colors_mode != 'no_change':
                 change_colors = True
             self.image_state_space(update_colors=change_colors)
 
-            self.image_state_space()
             ob = np.rot90(self.image)
             # if needed, render the ob for visualization
             if self.show_images:
@@ -386,8 +365,13 @@ class CrowdSimEnv(gym.Env):
                 cv2.resizeWindow('image', 1000, 1000)
                 cv2.imshow("image", ob)
                 cv2.waitKey(2)
+
+            # The last axis is represented as {s_{t}, ..., s_{t - num_stacked_frames + 2},
+            #                                  s_{t - num_stacked_frames + 1}}
+            # where each of these states is three channels wide.
+            # We roll it forward so that we can overwrite the oldest frame
             self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
-            self.observed_image[:, :, 0: 3] = ob
+            self.observed_image[:, :, 0:3] = ob
             ob = (self.observed_image - 128.0) / 255.0
 
         return ob
@@ -414,14 +398,10 @@ class CrowdSimEnv(gym.Env):
         for i, human in enumerate(self.humans):
             px = human.px - self.robot.px
             py = human.py - self.robot.py
-            if self.robot.kinematics == 'holonomic':
-                robot_vx, robot_vy = action
-                vx = human.vx - robot_vx
-                vy = human.vy - robot_vy
-            else:
-                r, v = action
-                vx = human.vx - v * np.cos(r + self.robot.theta)
-                vy = human.vy - v * np.sin(r + self.robot.theta)
+
+            vx = human.vx - self.robot.vx
+            vy = human.vy - self.robot.vy
+
             ex = px + vx * self.time_step
             ey = py + vy * self.time_step
             # closest distance between boundaries of two agents
@@ -492,18 +472,19 @@ class CrowdSimEnv(gym.Env):
         else:
             if self.robot.sensor == 'coordinates':
                 ob = np.concatenate([human.get_next_observable_state(action).as_array()
-                                 for human, action in zip(self.humans, human_actions)]) / self.obs_norm
+                                     for human, action in zip(self.humans, human_actions)]) / self.obs_norm
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
 
-        # TODO(@evinitsky) don't overwrite the ob, just calculate ob only once
         if self.train_on_images:
-            # TODO(@evinitsky) don't recreate this every time
-            self.image = np.ones((self.discretization, self.discretization, 3)) * 255
+            # TODO(@evinitsky) move this into a function since it is duplicated across reset
+            bg_color = np.array(self.background_color)[np.newaxis, np.newaxis, :]
+            self.image = np.ones((self.discretization, self.discretization, 3)) * bg_color
+            print(self.image[0, 0])
 
             # should we shift the colors?
             change_colors = False
-            if self.change_colors_mode != 'no_change':
+            if self.change_colors_mode == 'every_step':
                 change_colors = True
             self.image_state_space(update_colors=change_colors)
 
@@ -514,13 +495,18 @@ class CrowdSimEnv(gym.Env):
                 cv2.resizeWindow('image', 1000, 1000)
                 cv2.imshow("image", ob)
                 cv2.waitKey(2)
+
+            # The last axis is represented as {s_{t}, ..., s_{t - num_stacked_frames + 2},
+            #                                  s_{t - num_stacked_frames + 1}}
+            # where each of these states is three channels wide.
+            # We roll it forward so that we can overwrite the oldest frame
             self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
             self.observed_image[:, :, 0: 3] = ob
             ob = (self.observed_image - 128.0) / 255.0
 
         return ob, reward, done, {}
 
-    def image_state_space(self, update_colors=False):
+    def image_state_space(self, update_colors):
         """Take the current state and render it as an image
 
         Parameters
@@ -533,25 +519,25 @@ class CrowdSimEnv(gym.Env):
         None
         """
         # TODO(@evinitsky) bad.
-        global ROBOT_COLOR, HUMAN_COLOR, GOAL_COLOR
 
         if update_colors:
-            ROBOT_COLOR = np.random.randint(low=0, high=255.0, size=3).tolist()
-            HUMAN_COLOR = np.random.randint(low=0, high=255.0, size=3).tolist()
-            GOAL_COLOR = np.random.randint(low=0, high=255.0, size=3).tolist()
+            self.robot_color = COLOR_LIST[np.random.randint(len(COLOR_LIST))]
+            self.human_color = COLOR_LIST[np.random.randint(len(COLOR_LIST))]
+            self.goal_color = COLOR_LIST[np.random.randint(len(COLOR_LIST))]
+            self.background_color = COLOR_LIST[np.random.randint(len(COLOR_LIST))]
 
         # Fill in the robot position
         robot_pos = self.robot.get_full_state().position
-        self.fill_grid(self.pos_to_coord(robot_pos), self.robot_grid_size, ROBOT_COLOR)
+        self.fill_grid(self.pos_to_coord(robot_pos), self.robot_grid_size, self.robot_color)
 
         # Fill in the human position
         for human in self.humans:
             pos = human.get_full_state().position
-            self.fill_grid(self.pos_to_coord(pos), self.robot_grid_size, HUMAN_COLOR)
+            self.fill_grid(self.pos_to_coord(pos), self.robot_grid_size, self.human_color)
 
         # Fill in the goal image
         goal_pos = self.robot.get_goal_position()
-        self.fill_grid(self.pos_to_coord(goal_pos), self.robot_grid_size, GOAL_COLOR)
+        self.fill_grid(self.pos_to_coord(goal_pos), self.robot_grid_size, self.goal_color)
 
     def pos_to_coord(self, pos):
         """Convert a position into a coordinate in the image
@@ -704,7 +690,8 @@ class CrowdSimEnv(gym.Env):
                             agent_state = state[1][i - 1]
                         theta = np.arctan2(agent_state.vy, agent_state.vx)
                         orientation.append(((agent_state.px, agent_state.py), (agent_state.px + radius * np.cos(theta),
-                                             agent_state.py + radius * np.sin(theta))))
+                                                                               agent_state.py + radius * np.sin(
+                                                                                   theta))))
                     orientations.append(orientation)
             arrows = [patches.FancyArrowPatch(*orientation[0], color=arrow_color, arrowstyle=arrow_style)
                       for orientation in orientations]
