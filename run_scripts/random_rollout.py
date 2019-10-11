@@ -25,6 +25,8 @@ parser.add_argument('--change_colors_mode', type=str, default='no_change',
                     help='If mode `every_step`, the colors will be swapped '
                          'at each step. If mode `first_step` the colors will'
                          'be swapped only once')
+parser.add_argument('--kinematics', type='str', default='holonomic',
+                    help='Type of action space. Options are holonomic and unicycle')
 
 args = parser.parse_args()
 
@@ -50,6 +52,8 @@ env.change_colors_mode = args.change_colors_mode
 policy_config = configparser.RawConfigParser()
 policy_config.read(passed_config['policy_config'])
 policy = policy_factory[passed_config['policy']](policy_config)
+# Update the transfer params in the policy
+policy.set('action_space', 'kinematics', args.kinematics)
 if not policy.trainable:
     parser.error('Policy has to be trainable')
 if args.policy_config is None:

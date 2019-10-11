@@ -85,7 +85,8 @@ class ORCA(Policy):
         Python-RVO2 API: https://github.com/sybrenstuvel/Python-RVO2/blob/master/src/rvo2.pyx
         How simulation is done in RVO2: https://github.com/sybrenstuvel/Python-RVO2/blob/master/src/Agent.cpp
 
-        Agent doesn't stop moving after it reaches the goal, because once it stops moving, the reciprocal rule is broken
+        Agent doesn't stop moving after it reaches the goal, because once it stops moving, the reciprocal
+        rule is broken
 
         :param state:
         :return:

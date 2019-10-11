@@ -49,6 +49,9 @@ def create_env(config):
         friction = 'false'
     env_config.set('transfer', 'friction', friction)
 
+    # Update the transfer params in the policy
+    policy.set('action_space', 'kinematics', config['replay_params']['kinematics'])
+
     env = CrowdSimEnv(env_config, config['replay_params']['train_on_images'], config['replay_params']['show_images'])
     env.robot.set_policy(policy)
 
@@ -92,9 +95,9 @@ def main():
                         help='If mode `every_step`, the colors will be swapped '
                              'at each step. If mode `first_step` the colors will'
                              'be swapped only once')
-
-    # TODO(@evinitsky) add
     parser.add_argument('--add_friction', action='store_true', help='If true, there is `friction` in the dynamics')
+    parser.add_argument('--kinematics', type='str', default='holonomic',
+                        help='Type of action space. Options are holonomic and unicycle')
     args = parser.parse_args()
 
     # configure logging and device
@@ -143,6 +146,7 @@ def main():
     if args.square:
         env_config['square'] = True
     env_config['show_images'] = args.show_images
+    env_config['kinematics'] = args.kinematics
     env_config['change_colors_mode'] = args.change_colors_mode
     env_config['friction'] = args.add_friction
     env_config['phase'] = args.phase

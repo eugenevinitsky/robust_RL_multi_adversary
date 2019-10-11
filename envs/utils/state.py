@@ -2,6 +2,7 @@ from functools import reduce
 
 import numpy as np
 
+
 class FullState(object):
     def __init__(self, px, py, vx, vy, radius, gx, gy, v_pref, theta):
         self.px = px
@@ -65,5 +66,4 @@ class JointState(object):
 
     def num_elements(self):
         num_human_elem = reduce(lambda x, y: x + y, [state.num_elements() for state in self.human_states])
-        num_elem = self.self_state.num_elements() + num_human_elem
         return num_human_elem

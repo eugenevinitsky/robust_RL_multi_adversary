@@ -3,7 +3,6 @@ from numpy.linalg import norm
 import abc
 import logging
 from envs.policy.policy_factory import policy_factory
-from envs.utils.action import ActionXY, ActionRot
 from envs.utils.state import ObservableState, FullState
 
 

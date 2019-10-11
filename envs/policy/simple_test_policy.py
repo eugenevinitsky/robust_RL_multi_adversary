@@ -3,7 +3,7 @@ import itertools
 import logging
 from envs.policy.policy import Policy
 from envs.utils.action import ActionRot, ActionXY
-from envs.utils.state import ObservableState, FullState
+
 
 class CADRL(Policy):
     def __init__(self, config):
@@ -121,7 +121,9 @@ class CADRL(Policy):
         py1 = py1.reshape((batch, -1))
         radius1 = state[:, 13].reshape((batch, -1))
         radius_sum = radius + radius1
-        da = np.linalg.norm(np.concatenate([(state[:, 0] - state[:, 9]).reshape((batch, -1)), (state[:, 1] - state[:, 10]).
-                                  reshape((batch, -1))], dim=1), 2, dim=1, keepdim=True)
-        new_state = np.concatenate([dg, v_pref, theta, radius, vx, vy, px1, py1, vx1, vy1, radius1, da, radius_sum], dim=1)
+        da = np.linalg.norm(np.concatenate([(state[:, 0] - state[:, 9]).reshape((batch, -1)),
+                                            (state[:, 1] - state[:, 10]).
+                                           reshape((batch, -1))], dim=1), 2, dim=1, keepdim=True)
+        new_state = np.concatenate([dg, v_pref, theta, radius, vx, vy, px1, py1, vx1, vy1, radius1, da,
+                                    radius_sum], dim=1)
         return new_state
