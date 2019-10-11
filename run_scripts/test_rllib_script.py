@@ -5,6 +5,7 @@ import os
 
 import ray
 import ray.rllib.agents.ppo as ppo
+from ray.rllib.models import ModelCatalog
 from ray.tune import run
 from ray.tune.registry import register_env
 
@@ -41,10 +42,10 @@ def env_creator(passed_config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--env_config', type=str, default=os.path.abspath('../configs/env.config'))
-    parser.add_argument('--policy_config', type=str, default=os.path.abspath('../configs/policy.config'))
+    parser.add_argument('--env_config', type=str, default=os.path.abspath(os.path.join(script_path,'../configs/env.config')))
+    parser.add_argument('--policy_config', type=str, default=os.path.abspath(os.path.join(script_path,'../configs/policy.config')))
     parser.add_argument('--policy', type=str, default='cadrl')
-    parser.add_argument('--train_config', type=str, default='../configs/train.config')
+    parser.add_argument('--train_config', type=str, default=os.path.join(script_path,'../configs/train.config'))
     parser.add_argument('--debug', default=False, action='store_true')
 
     parser.add_argument('exp_title', type=str, help='Informative experiment title to help distinguish '

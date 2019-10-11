@@ -14,6 +14,7 @@ from matplotlib import patches
 import numpy as np
 from numpy.linalg import norm
 import rvo2
+import skimage.measure
 
 from envs.utils.info import *
 from envs.utils.human import Human
@@ -47,6 +48,7 @@ class CrowdSimEnv(gym.Env):
 
         # Training details
         self.num_stacked_frames = config.getint('train_details', 'num_stacked_frames')
+
 
         self.time_limit = config.getint('env', 'time_limit')
         self.discretization = config.getint('env', 'discretization')
@@ -480,7 +482,7 @@ class CrowdSimEnv(gym.Env):
             self.image = np.ones((self.discretization, self.discretization, 3)) * bg_color
             print(self.image[0, 0])
 
-            # should we shift the colors?
+            # test if we should  shift the colors?
             change_colors = False
             if self.change_colors_mode == 'every_step':
                 change_colors = True
@@ -516,7 +518,6 @@ class CrowdSimEnv(gym.Env):
         =======
         None
         """
-        # TODO(@evinitsky) bad.
 
         if update_colors:
             self.robot_color = COLOR_LIST[np.random.randint(len(COLOR_LIST))]
