@@ -10,7 +10,7 @@ def point_to_segment_dist(x1, y1, x2, y2, x3, y3):
     py = y2 - y1
 
     if px == 0 and py == 0:
-        return np.linalg.norm((x3-x1, y3-y1))
+        return np.linalg.norm((x3 - x1, y3 - y1))
 
     u = ((x3 - x1) * px + (y3 - y1) * py) / (px * px + py * py)
 
@@ -23,4 +23,4 @@ def point_to_segment_dist(x1, y1, x2, y2, x3, y3):
     x = x1 + u * px
     y = y1 + u * py
 
-    return np.linalg.norm((x - x3, y-y3))
+    return np.linalg.norm((x - x3, y - y3))

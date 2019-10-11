@@ -12,5 +12,4 @@ dependencies:
         - opencv-python==4.1.1
         - requests==2.22.0
         - matplotlib==3.0.0
-        - scikit-image
         - setproctitle==1.1.10
