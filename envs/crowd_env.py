@@ -1,5 +1,4 @@
 """This code is adapted from https://github.com/vita-epfl/CrowdNav"""
-
 import logging
 
 import cv2
@@ -14,9 +13,7 @@ from matplotlib import patches
 import numpy as np
 from numpy.linalg import norm
 import rvo2
-import skimage.measure
 
-from envs.utils.info import *
 from envs.utils.human import Human
 from envs.utils.robot import Robot
 from envs.utils.utils import point_to_segment_dist
@@ -48,8 +45,6 @@ class CrowdSimEnv(gym.Env):
 
         # Training details
         self.num_stacked_frames = config.getint('train_details', 'num_stacked_frames')
-
-
         self.time_limit = config.getint('env', 'time_limit')
         self.discretization = config.getint('env', 'discretization')
         self.grid_limit = config.getfloat('train_details', 'grid_limit')
@@ -103,7 +98,6 @@ class CrowdSimEnv(gym.Env):
         self.humans = []
         for i in range(self.human_num):
             self.humans.append(self.generate_square_crossing_human())
-
 
     @property
     def observation_space(self):
@@ -431,25 +425,20 @@ class CrowdSimEnv(gym.Env):
         if self.global_time >= self.time_limit - 1:
             reward = 0
             done = True
-            info = Timeout()
         elif collision:
             reward = self.collision_penalty
             done = True
-            info = Collision()
         elif reaching_goal:
             reward = self.success_reward
             done = True
-            info = ReachGoal()
         elif dmin < self.discomfort_dist:
             # only penalize agent for getting too close if it's visible
             # adjust the reward based on FPS
             reward = (dmin - self.discomfort_dist) * self.discomfort_penalty_factor * self.time_step
             done = False
-            info = Danger(dmin)
         else:
             reward = 0
             done = False
-            info = Nothing()
 
         if update:
             # store state, action value and attention weights
