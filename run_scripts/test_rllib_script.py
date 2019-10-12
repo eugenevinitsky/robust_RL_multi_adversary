@@ -86,9 +86,10 @@ if __name__ == "__main__":
             [32, [3, 3], 2],
         ]
         config['model'] = {'conv_activation': 'relu', 'use_lstm': True,
-                           'lstm_cell_size': 128, 'conv_filters': conv_filters}
-        config['vf_share_layers'] = False
-        config['train_batch_size'] = 500  # TODO(@evinitsky) change this it's just for testing
+                           'lstm_cell_size': 128, 'conv_filters': conv_filters,
+                           'lstm_use_prev_action_reward': True}
+        config['train_batch_size'] = 1000
+        config['vf_share_layers'] = True
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')

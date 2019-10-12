@@ -469,7 +469,6 @@ class CrowdSimEnv(gym.Env):
             # TODO(@evinitsky) move this into a function since it is duplicated across reset
             bg_color = np.array(self.background_color)[np.newaxis, np.newaxis, :]
             self.image = np.ones((self.discretization, self.discretization, 3)) * bg_color
-            print(self.image[0, 0])
 
             # test if we should  shift the colors?
             change_colors = False
