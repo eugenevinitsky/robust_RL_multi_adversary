@@ -110,8 +110,10 @@ class CrowdSimEnv(gym.Env):
         self.observed_image = np.ones((self.discretization, self.discretization, 3 * self.num_stacked_frames)) * 255
         self.time_step = config.getfloat('env', 'time_step')
         self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
-        self.gaussian_noise_state = config.getfloat('env', 'gaussian_noise_state')
-        self.gaussian_noise_action = config.getfloat('env', 'gaussian_noise_action')
+        self.gauss_noise_state_stddev = config.getfloat('env', 'gaussian_noise_state_stddev')
+        self.gauss_noise_action_stddev = config.getfloat('env', 'gaussian_noise_action_stddev')
+        self.add_gauss_noise_state = config.getboolean('env', 'add_gaussian_noise_state')
+        self.add_gauss_noise_action = config.getboolean('env', 'add_gaussian_noise_action_stddev')
         self.success_reward = config.getfloat('reward', 'success_reward')
         self.collision_penalty = config.getfloat('reward', 'collision_penalty')
         self.discomfort_dist = config.getfloat('reward', 'discomfort_dist')
@@ -379,8 +381,8 @@ class CrowdSimEnv(gym.Env):
             self.observed_image[:, :, 0: 3] = ob
             ob = (self.observed_image - 128.0) / 255.0
 
-        if self.gaussian_noise_state:
-            ob = self.gaussian_noise_state * ob
+        if self.add_gauss_noise_state:
+            ob = np.random.normal(scale=self.gauss_noise_state_stddev, size=ob.shape) + ob
 
         return ob
 
@@ -391,8 +393,8 @@ class CrowdSimEnv(gym.Env):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
         """
-        if self.gaussian_noise_action:
-            action = action * self.gaussian_noise_action
+        if self.add_gauss_noise_action:
+            action = action + np.random.normal(scale=self.gauss_noise_action_stddev, size=action.shape)
 
         human_actions = []
         for human in self.humans:
@@ -506,8 +508,8 @@ class CrowdSimEnv(gym.Env):
             self.observed_image[:, :, 0: 3] = ob
             ob = (self.observed_image - 128.0) / 255.0
 
-        if self.gaussian_noise_state:
-            ob = self.gaussian_noise_state * ob
+        if self.add_gauss_noise_state:
+            ob = np.random.normal(scale=self.gauss_noise_state_stddev, size=ob.shape) + ob
 
         return ob, reward, done, {}
 
