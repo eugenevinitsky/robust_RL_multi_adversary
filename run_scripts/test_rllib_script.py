@@ -38,7 +38,6 @@ def env_creator(passed_config):
     env.robot.set_policy(policy)
     return env
 
-
 if __name__ == "__main__":
     script_path = os.path.dirname(os.path.abspath(__file__))
     parser = argparse.ArgumentParser('Parse configuration file')

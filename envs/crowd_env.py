@@ -62,7 +62,10 @@ class CrowdSimEnv(gym.Env):
         self.success_reward = config.getfloat('reward', 'success_reward')
         self.collision_penalty = config.getfloat('reward', 'collision_penalty')
         self.discomfort_dist = config.getfloat('reward', 'discomfort_dist')
+        self.edge_discomfort_dist = config.getfloat('reward', 'edge_discomfort_dist')
         self.discomfort_penalty_factor = config.getfloat('reward', 'discomfort_penalty_factor')
+        self.edge_penalty = config.getfloat('reward', 'edge_penalty')
+        self.closer_goal = config.getfloat('reward', 'closer_goal')
         if self.config.get('humans', 'policy') == 'orca':
             self.case_capacity = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
             self.case_size = {'train': np.iinfo(np.uint32).max - 2000, 'val': config.getint('env', 'val_size'),
@@ -71,6 +74,8 @@ class CrowdSimEnv(gym.Env):
             self.test_sim = config.get('sim', 'test_sim')
             self.square_width = config.getfloat('sim', 'square_width')
             self.circle_radius = config.getfloat('sim', 'circle_radius')
+            self.accessible_space = config.getfloat('sim', 'accessible_space')
+            self.goal_region = config.getfloat('sim', 'goal_region')
             self.human_num = config.getint('sim', 'human_num')
         else:
             raise NotImplementedError
@@ -384,6 +389,7 @@ class CrowdSimEnv(gym.Env):
             ob = [other_human.get_observable_state() for other_human in self.humans if other_human != human]
             if self.robot.visible:
                 ob += [self.robot.get_observable_state()]
+                human.set_goal([self.robot.px, self.robot.py]) #update goal of human to where robot is
             human_actions.append(human.act(ob))
 
         # collision detection
@@ -420,7 +426,9 @@ class CrowdSimEnv(gym.Env):
 
         # check if reaching the goal
         end_position = np.array(self.robot.compute_position(action, self.time_step))
-        reaching_goal = norm(end_position - np.array(self.robot.get_goal_position())) < self.robot.radius
+        cur_dist_to_goal = norm(self.robot.get_position() - np.array(self.robot.get_goal_position()))
+        next_dist_to_goal = norm(end_position - np.array(self.robot.get_goal_position()))
+        reaching_goal = next_dist_to_goal < self.robot.radius
 
         if self.global_time >= self.time_limit - 1:
             reward = 0
@@ -430,7 +438,10 @@ class CrowdSimEnv(gym.Env):
             done = True
         elif reaching_goal:
             reward = self.success_reward
-            done = True
+            new_goal = (np.random.rand(2) - 0.5)*2*self.goal_region
+            self.robot.set_goal(new_goal)
+            print("New Goal", self.robot.get_goal_position())
+            done = False
         elif dmin < self.discomfort_dist:
             # only penalize agent for getting too close if it's visible
             # adjust the reward based on FPS
@@ -439,6 +450,13 @@ class CrowdSimEnv(gym.Env):
         else:
             reward = 0
             done = False
+
+        #if too close to the edge, add penalty
+        if (np.abs(np.abs(end_position) - self.accessible_space) < self.edge_discomfort_dist).any():
+            reward += self.edge_penalty
+        #if getting closer to goal, add reward
+        if cur_dist_to_goal - next_dist_to_goal > 0.1:
+            reward += self.closer_goal
 
         if update:
             # store state, action value and attention weights
@@ -491,6 +509,10 @@ class CrowdSimEnv(gym.Env):
             self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
             self.observed_image[:, :, 0: 3] = ob
             ob = (self.observed_image - 128.0) / 255.0
+
+        # TODO: Fix this visualization code
+        #if self.global_time.is_integer():
+        #    self.render(mode='video')
 
         return ob, reward, done, {}
 
@@ -626,14 +648,16 @@ class CrowdSimEnv(gym.Env):
         elif mode == 'video':
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.tick_params(labelsize=16)
-            ax.set_xlim(-6, 6)
-            ax.set_ylim(-6, 6)
+            ax.set_xlim(-self.accessible_space, self.accessible_space)
+            ax.set_ylim(-self.accessible_space, self.accessible_space)
             ax.set_xlabel('x(m)', fontsize=16)
             ax.set_ylabel('y(m)', fontsize=16)
 
             # add robot and its goal
             robot_positions = [state[0].position for state in self.states]
-            goal = mlines.Line2D([0], [4], color=goal_color, marker='*', linestyle='None', markersize=15, label='Goal')
+            goal_positions = [state[0].goal_position for state in self.states]
+
+            goal = plt.Circle(goal_positions[0], radius=self.robot.radius, color=goal_color, fill=True, label='Goal')
             robot = plt.Circle(robot_positions[0], self.robot.radius, fill=True, color=robot_color)
             ax.add_artist(robot)
             ax.add_artist(goal)
@@ -691,6 +715,7 @@ class CrowdSimEnv(gym.Env):
                 nonlocal arrows
                 global_step = frame_num
                 robot.center = robot_positions[frame_num]
+                goal.center = goal_positions[frame_num]
                 for i, human in enumerate(humans):
                     human.center = human_positions[frame_num][i]
                     human_numbers[i].set_position((human.center[0] - x_offset, human.center[1] - y_offset))
@@ -747,6 +772,9 @@ class CrowdSimEnv(gym.Env):
                 writer = ffmpeg_writer(fps=8, metadata=dict(artist='Me'), bitrate=1800)
                 anim.save(output_file, writer=writer)
             else:
-                plt.show()
+                #TODO: Fix this visualization code
+                plt.show(block=False)
+                plt.pause(3)
+                plt.close()
         else:
             raise NotImplementedError
