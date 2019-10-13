@@ -20,7 +20,7 @@ To install the code with anaconda run
 - Create a new branch for experiments
 - Modify `ray_autoscale.yaml`
     - Head & Worker Instance Type: m4.16xlarge or c4.4xlarge
-    - Set max workers if you want to parallelize
+    - Set init_workers=min_workers=max_workers to the number of parallel nodes that you want
     - Change `master` to your branch name`
 
 Executing the run script as follows:
