@@ -27,6 +27,7 @@ class Agent(object):
         self.vy = None
         self.theta = None
         self.time_step = None
+        self.reward = 0
         self.accessible_space = config.getfloat('sim', 'accessible_space')
 
     def print_info(self):
@@ -163,4 +164,11 @@ class Agent(object):
 
     def reached_destination(self):
         return norm(np.array(self.get_position()) - np.array(self.get_goal_position())) < self.radius
+
+    def get_reward(self):
+        return self.reward
+
+    def set_reward(self, reward):
+        self.reward = reward
+
 

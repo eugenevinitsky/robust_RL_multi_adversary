@@ -339,6 +339,7 @@ class CrowdSimEnv(gym.Env):
                               'val': 0, 'test': self.case_capacity['val']}
             random_goal = (np.random.rand(2) - 0.5)*2*self.goal_region
             self.robot.set(0, 0, random_goal[0], random_goal[1], 0, 0, np.pi / 2)
+
             if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
                 if phase in ['train', 'val']:
@@ -455,7 +456,8 @@ class CrowdSimEnv(gym.Env):
             info = Timeout()
         elif collision:
             reward = self.collision_penalty
-            done = True
+            done = False
+            #done = True
             info = Collision()
         elif reaching_goal:
             reward = self.success_reward

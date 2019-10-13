@@ -18,6 +18,7 @@ def setup_exps(args):
     alg_run = 'PPO'
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = args.num_cpus
+    config['gamma'] = 0.99
     return alg_run, config
 
 
@@ -90,16 +91,19 @@ if __name__=="__main__":
                 [32, [3, 3], 2],
                 [32, [3, 3], 2],
             ]
-        config['model'] = {'conv_activation': 'relu', 'use_lstm': True,
+        config['model'] = {'conv_activation': 'relu', 'use_lstm': True, "lstm_use_prev_action_reward": True,
                            'lstm_cell_size': 128, 'conv_filters': conv_filters}
         config['vf_share_layers'] = True
         config['train_batch_size']: 500  # TODO(@evinitsky) change this it's just for testing
+    else:
+        config['model'] = {'use_lstm': True, "lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
+        config['vf_share_layers'] = True
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
         ray.init()
-    s3_string = 's3://eugene.experiments/sim2real/' \
+    s3_string = 's3://sim2real/' \
                 + datetime.now().strftime('%m-%d-%Y') + '/' + args.exp_title
     config['env'] = 'CrowdSim'
     exp_dict = {
@@ -116,3 +120,5 @@ if __name__=="__main__":
         exp_dict['upload_dir'] = s3_string
 
     run(**exp_dict, queue_trials=False)
+
+
