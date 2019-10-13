@@ -19,6 +19,7 @@ def setup_exps(args):
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = args.num_cpus
     config['gamma'] = 0.99
+    config['train_batch_size'] = 10000
     return alg_run, config
 
 
