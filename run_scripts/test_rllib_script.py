@@ -97,9 +97,9 @@ if __name__=="__main__":
                            'lstm_cell_size': 128, 'conv_filters': conv_filters}
         config['vf_share_layers'] = True
         config['train_batch_size']: 500  # TODO(@evinitsky) change this it's just for testing
-    else:
-        config['model'] = {'use_lstm': True, "lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
-        config['vf_share_layers'] = True
+    #else:
+    #    config['model'] = {'use_lstm': True, "lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
+    #    config['vf_share_layers'] = True
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
