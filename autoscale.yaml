@@ -67,7 +67,7 @@ auth:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
-    InstanceType: c4.4xlarge
+    InstanceType: m4.16xlarge
     ImageId: ami-001cdda01d8d7eaea # Adversarial Sim2Real AMI
 
     # You can provision additional disk space with a conf as follows
