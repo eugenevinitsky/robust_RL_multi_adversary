@@ -84,7 +84,7 @@ class CrowdSimEnv(gym.Env):
             self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
             self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
             temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
-            return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0], ))
+            return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0] + 4, ))
         else:
             img_shape = self.image.shape
             new_tuple = (img_shape[0], img_shape[1], img_shape[2] * self.num_stacked_frames)
@@ -357,6 +357,8 @@ class CrowdSimEnv(gym.Env):
         # get current observation
         if self.robot.sensor == 'coordinates':
             ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
+            ob = np.concatenate((ob, list(self.robot.get_position()), list(self.robot.get_goal_position())))
+
         elif self.robot.sensor == 'RGB':
             raise NotImplementedError
 
@@ -473,6 +475,7 @@ class CrowdSimEnv(gym.Env):
             # compute the observation
             if self.robot.sensor == 'coordinates':
                 ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
+                ob = np.concatenate((ob, list(self.robot.get_position()), list(self.robot.get_goal_position())))
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
         else:
