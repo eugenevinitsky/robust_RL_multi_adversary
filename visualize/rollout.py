@@ -35,14 +35,17 @@ def default_policy_agent_mapping(unused_agent_id):
 
 
 def create_env(config):
-    # TODO(@evinitsky) clean this up you are mixing configs
+    script_path = os.path.dirname(os.path.abspath(__file__))
+    env_config_path = os.path.abspath(os.path.join(script_path, '../configs/env.config'))
+    policy_config_path = os.path.abspath(os.path.join(script_path, '../configs/policy.config'))
+
     policy_config = configparser.RawConfigParser()
-    policy_config.read(config['replay_params']['policy_config'])
+    policy_config.read(policy_config_path)
     policy = policy_factory[config['policy']](policy_config)
 
     # configure environment
     env_config = configparser.RawConfigParser()
-    env_config.read(config['replay_params']['env_config'])
+    env_config.read(env_config_path)
     env = CrowdSimEnv()
     env.configure(env_config)
     if config['replay_params'].get('square', False):
