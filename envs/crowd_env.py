@@ -370,7 +370,7 @@ class CrowdSimEnv(gym.Env):
         # get current observation
         if self.robot.sensor == 'coordinates':
             ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
-            ob = np.concatenate((ob, list(self.robot.get_position()), list(self.robot.get_goal_position())))
+            ob = np.concatenate((ob, list(self.robot.get_position()/self.accessible_space), list(self.robot.get_goal_position()/self.accessible_space)))
 
         elif self.robot.sensor == 'RGB':
             raise NotImplementedError
@@ -503,7 +503,7 @@ class CrowdSimEnv(gym.Env):
             # compute the observation
             if self.robot.sensor == 'coordinates':
                 ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
-                ob = np.concatenate((ob, list(self.robot.get_position()), list(self.robot.get_goal_position())))
+                ob = np.concatenate((ob, list(self.robot.get_position()/self.accessible_space), list(self.robot.get_goal_position()/self.accessible_space)))
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
         else:
