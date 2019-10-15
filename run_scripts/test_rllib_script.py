@@ -76,8 +76,8 @@ if __name__=="__main__":
     alg_run, config = setup_exps(args)
 
     # save the relevant params for replay
-    config['env_config'] = {'config_path': args.env_config, 'policy_config': args.policy_config,
-                            'policy': args.policy, 'show_images': args.show_images, 'train_on_images': args.train_on_images}
+    config['env_config'] = {'policy': args.policy, 'show_images': args.show_images, 'train_on_images': args.train_on_images,
+                            'config_path': args.env_config, 'policy_config': args.policy_config}
     config['env_config']['replay_params'] = vars(args)
     config['env_config']['run'] = alg_run
 

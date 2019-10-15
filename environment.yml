@@ -13,4 +13,4 @@ dependencies:
         - matplotlib==3.0.0
         - opencv-python==4.1.1
         - gym==0.14.0
-        - awscli
+        - awscli==1.16.259
