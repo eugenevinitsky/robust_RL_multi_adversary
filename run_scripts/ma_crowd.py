@@ -57,9 +57,10 @@ def setup_ma_config(config):
         temp_config.read(config_path)
         num_humans = temp_config.getint('sim', 'human_num')
 
+        act_space_size = 2
         obs_space = Box(low=-1.0, high=1.0, shape=(num_humans*5, ))
-        act_space = Box(low=-2.0, high=2.0, shape=(2, ))
-        adv_action_space = Box(low=-1.0, high=1.0, shape=(num_humans*5, ))
+        act_space = Box(low=-2.0, high=2.0, shape=(act_space_size, ))
+        adv_action_space = Box(low=-1.0, high=1.0, shape=(num_humans*5 + act_space_size, ))
 
         policies_to_train = ['robot', 'adversary']
 
@@ -67,10 +68,10 @@ def setup_ma_config(config):
                         'adversary': (None, obs_space, adv_action_space, {})}
 
         def policy_mapping_fn(agent_id):
-            if agent_id != 'robot':
-                return 'adversary'
-            else:
+            if agent_id == 'robot':
                 return agent_id
+            if agent_id.startswith('adversary'):
+                return 'adversary'
         
         policy_ids = list(policy_graphs.keys())
 
