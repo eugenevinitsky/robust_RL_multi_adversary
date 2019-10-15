@@ -1,3 +1,4 @@
+"""This file perturbs the observations of the agent"""
 import argparse
 import configparser
 from datetime import datetime
@@ -9,7 +10,7 @@ from ray import tune
 from ray.tune import run
 from ray.tune.registry import register_env
 
-from gym.spaces import Box
+from gym.spaces import Tuple
 
 from envs.crowd_env import PerturbObsEnv
 from envs.policy.policy_factory import policy_factory
@@ -42,21 +43,14 @@ def env_creator(passed_config):
     return env
 
 def setup_ma_config(config):
-        # Could use suggestions on how we want to store / pass 
-        # these values (KJ)
-        config_path = config['env_config']['config_path']
-        temp_config = configparser.RawConfigParser()
-        temp_config.read(config_path)
-        num_humans = temp_config.getint('sim', 'human_num')
+        temp_env = env_creator(config['env_config'])
 
-        temp_env = env_creator(config)
-
-        adv_action_space = Box(low=-1.0, high=1.0, shape=(num_humans * 5, ))
+        adv_action_space = Tuple(low=-1.0, high=1.0, shape=temp_env.observation_space.shape)
 
         policies_to_train = ['robot', 'adversary']
 
         policy_graphs = {'robot': (None, temp_env.observation_space, temp_env.action_space, {}),
-                        'adversary': (None, temp_env.observation_space, adv_action_space, {})}
+                         'adversary': (None, temp_env.observation_space, adv_action_space, {})}
 
         def policy_mapping_fn(agent_id):
             if agent_id != 'robot':

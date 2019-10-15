@@ -5,16 +5,14 @@ import os
 
 import ray
 import ray.rllib.agents.ppo as ppo
-from ray.rllib.models import ModelCatalog
 from ray import tune
 from ray.tune import run
 from ray.tune.registry import register_env
 
 from gym.spaces import Box
 
-from envs.crowd_env import CrowdSimEnv, MultiAgentCrowdSimEnv
+from envs.crowd_env import PerturbObsEnv
 from envs.policy.policy_factory import policy_factory
-from envs.utils.robot import Robot
 
 
 def setup_exps(args):
@@ -28,14 +26,8 @@ def env_creator(passed_config):
     config_path = passed_config['config_path']
     temp_config = configparser.RawConfigParser()
     temp_config.read(config_path)
-    env = MultiAgentCrowdSimEnv()
-    env.configure(temp_config)
-    # additional configuration
-    env.show_images = passed_config['show_images']
-    env.train_on_images = passed_config['train_on_images']
-
-    robot = Robot(temp_config, 'robot')
-    env.set_robot(robot)
+    env = PerturbObsEnv(temp_config, train_on_images=passed_config['train_on_images'],
+                        show_images=passed_config['show_images'])
 
     # configure policy
     policy_config = configparser.RawConfigParser()
@@ -46,7 +38,7 @@ def env_creator(passed_config):
     if args.policy_config is None:
         parser.error('Policy config has to be specified for a trainable network')
 
-    robot.set_policy(policy)
+    env.robot.set_policy(policy)
     return env
 
 def setup_ma_config(config):
@@ -57,14 +49,14 @@ def setup_ma_config(config):
         temp_config.read(config_path)
         num_humans = temp_config.getint('sim', 'human_num')
 
-        obs_space = Box(low=-1.0, high=1.0, shape=(num_humans*5, ))
-        act_space = Box(low=-2.0, high=2.0, shape=(2, ))
-        adv_action_space = Box(low=-1.0, high=1.0, shape=(num_humans*5, ))
+        temp_env = env_creator(config)
+
+        adv_action_space = Box(low=-1.0, high=1.0, shape=(num_humans * 5, ))
 
         policies_to_train = ['robot', 'adversary']
 
-        policy_graphs = {'robot': (None, obs_space, act_space, {}),
-                        'adversary': (None, obs_space, adv_action_space, {})}
+        policy_graphs = {'robot': (None, temp_env.observation_space, temp_env.action_space, {}),
+                        'adversary': (None, temp_env.observation_space, adv_action_space, {})}
 
         def policy_mapping_fn(agent_id):
             if agent_id != 'robot':
