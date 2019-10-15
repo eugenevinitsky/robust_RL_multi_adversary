@@ -12,6 +12,7 @@ import matplotlib.lines as mlines
 from matplotlib import patches
 import numpy as np
 from numpy.linalg import norm
+from ray.rllib.env.multi_agent_env import MultiAgentEnv
 import rvo2
 
 from envs.utils.human import Human
@@ -778,3 +779,41 @@ class CrowdSimEnv(gym.Env):
                 plt.close()
         else:
             raise NotImplementedError
+
+
+class PerturbObsEnv(CrowdSimEnv, MultiAgentEnv):
+
+    def adv_action_space(self):
+        """
+        Simple action space for an adversary that can perturb
+        every element of the agent's observation space.
+
+        Therefore, its action space is the same size as the agent's
+        observation space.
+        """
+        return super().observation_space
+
+    def step(self, action, update=True):
+        """Perturb the robot observation"""
+        adversary_action = action['adversary']
+        robot_action = action['robot']
+
+        ob, reward, curr_done, info = super(CrowdSimEnv, self).step(robot_action)
+
+        adversary_action = adversary_action * 0.1
+        av_ob = adversary_action + ob
+        ob = {'robot': av_ob, 'adversary': ob}
+        reward = {'robot': reward, 'adversary': -reward}
+        done = {'robot': curr_done, 'adversary': curr_done, '__all__': curr_done}
+
+        return ob, reward, done, {}
+
+    def reset(self, phase='test', test_case=None):
+        """
+        Set px, py, gx, gy, vx, vy, theta for robot and humans
+        :return:
+        """
+
+        ob = super().reset(phase, test_case)
+        return {'robot': ob, 'adversary': ob}
+        
