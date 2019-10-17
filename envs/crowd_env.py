@@ -122,7 +122,7 @@ class CrowdSimEnv(gym.Env):
         self.gauss_noise_state_stddev = config.getfloat('env', 'gaussian_noise_state_stddev')
         self.gauss_noise_action_stddev = config.getfloat('env', 'gaussian_noise_action_stddev')
         self.add_gauss_noise_state = config.getboolean('env', 'add_gaussian_noise_state')
-        self.add_gauss_noise_action = config.getboolean('env', 'add_gaussian_noise_action_stddev')
+        self.add_gauss_noise_action = config.getboolean('env', 'add_gaussian_noise_action')
         self.success_reward = config.getfloat('reward', 'success_reward')
         self.collision_penalty = config.getfloat('reward', 'collision_penalty')
         self.discomfort_dist = config.getfloat('reward', 'discomfort_dist')
