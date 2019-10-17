@@ -460,8 +460,7 @@ class CrowdSimEnv(gym.Env):
             info = Timeout()
         elif collision:
             reward = self.collision_penalty
-            done = False
-            #done = True
+            done = True
             info = Collision()
         elif reaching_goal:
             reward = self.success_reward
