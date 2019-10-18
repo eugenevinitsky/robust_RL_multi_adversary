@@ -12,7 +12,7 @@ max_workers: 2
 # The initial number of worker nodes to launch in addition to the head
 # node. When the cluster is first brought up (or when it is refreshed with a
 # subsequent `ray up`) this number of nodes will be started.
-initial_workers: 0
+initial_workers: 2
 
 # Whether or not to autoscale aggressively. If this is enabled, if at any point
 #   we would start more workers, we start at least enough to bring us to
@@ -67,7 +67,7 @@ auth:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
-    InstanceType: c4.4xlarge
+    InstanceType: m4.16xlarge
     ImageId: ami-001cdda01d8d7eaea # Adversarial Sim2Real AMI
 
     # You can provision additional disk space with a conf as follows
@@ -113,7 +113,7 @@ setup_commands:
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
     - cd ~/adversarial_sim2real && git remote remove origin && git remote add origin git@github.com:eugenevinitsky/adversarial_sim2real.git # remove https remote and add ssh remote
-    - cd ~/adversarial_sim2real && git fetch origin; git checkout kparvate/ami_env_changes
+    - cd ~/adversarial_sim2real && git fetch origin; git checkout yuqing_baseline
     - echo 'export PATH="$HOME/anaconda3/envs/tensorflow_p36/bin:$PATH"' >> ~/.bashrc
     # - pip uninstall boto3
     - pip install awscli
