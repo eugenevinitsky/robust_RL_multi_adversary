@@ -751,6 +751,7 @@ class CrowdSimEnv(gym.Env):
 
 class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
+    @property
     def adv_action_space(self):
         """
         Simple action space for an adversary that can perturb
@@ -759,7 +760,10 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         Therefore, its action space is the same size as the agent's
         observation space.
         """
-        return super().observation_space
+        obs_size = super().observation_space.shape[0]
+        act_size = super().action_space.shape[0]
+        box = Box(low=-1.0, high=1.0, shape=(obs_size+act_size,))
+        return box
 
     
     def step(self, action, update=True):

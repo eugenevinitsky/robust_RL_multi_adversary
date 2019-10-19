@@ -50,22 +50,10 @@ def env_creator(passed_config):
     return env
 
 def setup_ma_config(config):
-        # Could use suggestions on how we want to store / pass 
-        # these values (KJ)
-        config_path = config['env_config']['config_path']
-        temp_config = configparser.RawConfigParser()
-        temp_config.read(config_path)
-        num_humans = temp_config.getint('sim', 'human_num')
-
-        act_space_size = 2
-        obs_space = Box(low=-1.0, high=1.0, shape=(num_humans*5, ))
-        act_space = Box(low=-2.0, high=2.0, shape=(act_space_size, ))
-        adv_action_space = Box(low=-1.0, high=1.0, shape=(num_humans*5 + act_space_size, ))
-
+        env = env_creator(config['env_config'])
         policies_to_train = ['robot', 'adversary']
-
-        policy_graphs = {'robot': (None, obs_space, act_space, {}),
-                        'adversary': (None, obs_space, adv_action_space, {})}
+        policy_graphs = {'robot': (None, env.observation_space, env.action_space, {}),
+                        'adversary': (None, env.observation_space, env.adv_action_space, {})}
 
         def policy_mapping_fn(agent_id):
             if agent_id == 'robot':
