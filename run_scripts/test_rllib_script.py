@@ -18,6 +18,8 @@ def setup_exps(args):
     alg_run = 'PPO'
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = args.num_cpus
+    config['gamma'] = 0.99
+    config['train_batch_size'] = 10000
     return alg_run, config
 
 
@@ -46,7 +48,6 @@ def env_creator(passed_config):
     robot.set_policy(policy)
     return env
 
-
 if __name__=="__main__":
     script_path = os.path.dirname(os.path.abspath(__file__))
     parser = argparse.ArgumentParser('Parse configuration file')
@@ -65,6 +66,10 @@ if __name__=="__main__":
     parser.add_argument('--checkpoint_freq', type=int, default=1)
     parser.add_argument('--num_samples', type=int, default=1)
 
+    # TODO: Fix this visualization code
+    parser.add_argument('--render', type=str, default=False)
+
+
     # Env configs
     parser.add_argument('--show_images', action='store_true', default=False, help='Whether to display the observations')
     parser.add_argument('--train_on_images', action='store_true', default=False, help='Whether to train on images')
@@ -76,8 +81,8 @@ if __name__=="__main__":
     alg_run, config = setup_exps(args)
 
     # save the relevant params for replay
-    config['env_config'] = {'config_path': args.env_config, 'policy_config': args.policy_config,
-                            'policy': args.policy, 'show_images': args.show_images, 'train_on_images': args.train_on_images}
+    config['env_config'] = {'policy': args.policy, 'show_images': args.show_images, 'train_on_images': args.train_on_images,
+                            'config_path': args.env_config, 'policy_config': args.policy_config}
     config['env_config']['replay_params'] = vars(args)
     config['env_config']['run'] = alg_run
 
@@ -88,16 +93,20 @@ if __name__=="__main__":
                 [32, [3, 3], 2],
                 [32, [3, 3], 2],
             ]
-        config['model'] = {'conv_activation': 'relu', 'use_lstm': True,
+        config['model'] = {'conv_activation': 'relu', 'use_lstm': True, "lstm_use_prev_action_reward": True,
                            'lstm_cell_size': 128, 'conv_filters': conv_filters}
         config['vf_share_layers'] = True
         config['train_batch_size']: 500  # TODO(@evinitsky) change this it's just for testing
+    else:
+        config['model'] = {'use_lstm': True, "lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
+        config['vf_share_layers'] = True
+        config['vf_loss_coeff'] = 1e-4
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
         ray.init()
-    s3_string = 's3://eugene.experiments/sim2real/' \
+    s3_string = 's3://sim2real/' \
                 + datetime.now().strftime('%m-%d-%Y') + '/' + args.exp_title
     config['env'] = 'CrowdSim'
     exp_dict = {
@@ -114,3 +123,5 @@ if __name__=="__main__":
         exp_dict['upload_dir'] = s3_string
 
     run(**exp_dict, queue_trials=False)
+
+
