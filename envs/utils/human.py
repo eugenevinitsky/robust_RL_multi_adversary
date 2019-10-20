@@ -15,6 +15,3 @@ class Human(Agent):
         state = JointState(self.get_full_state(), ob)
         action = self.policy.predict(state)
         return action
-
-    def __repr__(self):
-        return "human"
