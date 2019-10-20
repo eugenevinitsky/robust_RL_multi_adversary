@@ -25,6 +25,8 @@ class Agent(object):
         self.vy = None
         self.theta = None
         self.time_step = None
+        self.reward = 0
+        self.accessible_space = config.getfloat('sim', 'accessible_space')
 
         # If true all of the actions will be slightly less than intended by a constant factor
         self.friction = config.getboolean('transfer', 'friction')
@@ -95,6 +97,15 @@ class Agent(object):
         self.vx = velocity[0]
         self.vy = velocity[1]
 
+    def set_goal(self, goal):
+        """
+        Set goal of agent
+        :param goal: Tuple of (gx,gy) for goal x and y positions
+        :return: None
+        """
+        self.gx = goal[0]
+        self.gy = goal[1]
+
     @abc.abstractmethod
     def act(self, ob):
         """
@@ -105,6 +116,21 @@ class Agent(object):
     def check_validity(self, action):
         pass
         # assert action.shape[0] == 2, "Actions don't have shape 2"
+
+    def check_valid_action(self, new_px, new_py, cur_px, cur_py, world_dim):
+        """
+        Check if action will take the agent out of the grid space
+        :param new_px: new x position
+        :param new_py: new y position
+        :param world_dim: size of the world in one dimension
+        :return: Valid px, py
+        """
+        if np.abs(new_px) > world_dim:
+            new_px = cur_px
+        if np.abs(new_py) > world_dim:
+            new_py = cur_py
+
+        return new_px, new_py
 
     def compute_position(self, action, delta_t):
         self.check_validity(action)
@@ -124,7 +150,7 @@ class Agent(object):
             px = self.px + np.cos(theta) * v * delta_t
             py = self.py + np.sin(theta) * v * delta_t
 
-        return px, py
+        return self.check_valid_action(px,py, self.px, self.py, self.accessible_space)
 
     def step(self, action):
         """
@@ -145,3 +171,9 @@ class Agent(object):
 
     def reached_destination(self):
         return norm(np.array(self.get_position()) - np.array(self.get_goal_position())) < self.radius
+
+    def get_reward(self):
+        return self.reward
+
+    def set_reward(self, reward):
+        self.reward = reward

@@ -16,6 +16,8 @@ def setup_exps(args):
     alg_run = 'PPO'
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = args.num_cpus
+    config['gamma'] = 0.99
+    config['train_batch_size'] = 10000
     return alg_run, config
 
 
@@ -39,7 +41,7 @@ def env_creator(passed_config):
     return env
 
 
-if __name__ == "__main__":
+if __name__=="__main__":
     script_path = os.path.dirname(os.path.abspath(__file__))
     parser = argparse.ArgumentParser('Parse configuration file')
     parser.add_argument('--env_config', type=str,
@@ -59,6 +61,10 @@ if __name__ == "__main__":
     parser.add_argument('--num_iters', type=int, default=350)
     parser.add_argument('--checkpoint_freq', type=int, default=1)
     parser.add_argument('--num_samples', type=int, default=1)
+
+    # TODO: Fix this visualization code
+    parser.add_argument('--render', type=str, default=False)
+
 
     # Env configs
     parser.add_argument('--show_images', action='store_true', default=False, help='Whether to display the observations')
@@ -81,20 +87,24 @@ if __name__ == "__main__":
     if args.train_on_images:
         # register the custom model
         conv_filters = [
-            [32, [3, 3], 2],
-            [32, [3, 3], 2],
-            [32, [3, 3], 2],
-        ]
-        config['model'] = {'conv_activation': 'relu', 'use_lstm': True,
+                [32, [3, 3], 2],
+                [32, [3, 3], 2],
+            ]
+        config['model'] = {'conv_activation': 'relu', 'use_lstm': True, "lstm_use_prev_action_reward": True,
                            'lstm_cell_size': 128, 'conv_filters': conv_filters}
         config['vf_share_layers'] = True
-        config['train_batch_size'] = 500  # TODO(@evinitsky) change this it's just for testing
+        config['vf_loss_coeff'] = 1e-4
+        config['train_batch_size']: 500  # TODO(@evinitsky) change this it's just for testing
+    else:
+        config['model'] = {'use_lstm': True, "lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
+        config['vf_share_layers'] = True
+        config['vf_loss_coeff'] = 1e-4
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
         ray.init()
-    s3_string = 's3://eugene.experiments/sim2real/' \
+    s3_string = 's3://sim2real/' \
                 + datetime.now().strftime('%m-%d-%Y') + '/' + args.exp_title
 
     config['env'] = 'CrowdSim'
@@ -112,3 +122,5 @@ if __name__ == "__main__":
         exp_dict['upload_dir'] = s3_string
 
     run(**exp_dict, queue_trials=False)
+
+
