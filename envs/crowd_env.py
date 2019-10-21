@@ -88,17 +88,18 @@ class CrowdSimEnv(gym.Env):
 
     @property
     def observation_space(self):
-        if not self.train_on_images:
-            human_num = self.human_num
-            # TODO(@evinitsky) clean this the heck up. This initialization should be done elsewhere!! ABSTRACTION BREAK
-            self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
-            self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
-            temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
-            return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0] + 4, ))
-        else:
-            img_shape = self.image.shape
-            new_tuple = (img_shape[0], img_shape[1], img_shape[2] * self.num_stacked_frames)
-            return Box(low=-1.0, high=1.0, shape=new_tuple)
+        return Box(low=-1.0, high=1.0, shape=(self.human_num*5+4,))
+        # if not self.train_on_images:
+        #     human_num = self.human_num
+        #     # TODO(@evinitsky) clean this the heck up. This initialization should be done elsewhere!! ABSTRACTION BREAK
+        #     self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
+        #     self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
+        #     temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
+        #     return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0] + 4, ))
+        # else:
+        #     img_shape = self.image.shape
+        #     new_tuple = (img_shape[0], img_shape[1], img_shape[2] * self.num_stacked_frames)
+        #     return Box(low=-1.0, high=1.0, shape=new_tuple)
 
 
     @property
@@ -838,11 +839,13 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         """
         action_perturbation = action['adversary'][:2] * self.adversary_scaling
         state_perturbation = action['adversary'][2:] * self.adversary_scaling
-        robot_action = action['robot']
-        robot_action += action_perturbation
+        robot_action = action['robot'] + action_perturbation
         ob, reward, done, info = super().step(robot_action, update)
 
-        ob = {'robot': ob + state_perturbation, 'adversary': ob}
+        ob = {'robot': np.clip(ob + state_perturbation,
+                               a_min=self.observation_space.low[0],
+                               a_max=self.observation_space.high[0]),
+                               'adversary': ob}
         reward = {'robot': reward, 'adversary': -reward}
         done = {'__all__': done}
         
