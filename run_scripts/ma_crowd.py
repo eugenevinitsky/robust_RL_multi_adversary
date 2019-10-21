@@ -1,4 +1,5 @@
 import argparse
+import random
 import configparser
 from datetime import datetime
 import os
@@ -51,15 +52,22 @@ def env_creator(passed_config):
 
 def setup_ma_config(config):
         env = env_creator(config['env_config'])
-        policies_to_train = ['robot', 'adversary']
-        policy_graphs = {'robot': (None, env.observation_space, env.action_space, {}),
-                        'adversary': (None, env.observation_space, env.adv_action_space, {})}
+    
+        policies_to_train = ['robot']
+        policy_graphs = {'robot': (None, env.observation_space, env.action_space, {})}
+        
+        num_adversaries = 3
+        adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
+        policies_to_train += adv_policies
+
+        for adv in adv_policies:
+            policy_graphs[adv] = (None, env.observation_space, env.adv_action_space, {})
 
         def policy_mapping_fn(agent_id):
             if agent_id == 'robot':
                 return agent_id
             if agent_id.startswith('adversary'):
-                return 'adversary'
+                return random.choice(adv_policies)
         
         policy_ids = list(policy_graphs.keys())
 
