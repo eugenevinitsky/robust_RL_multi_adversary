@@ -811,7 +811,7 @@ class CrowdSimEnv(gym.Env):
                 plt.close()
         else:
             raise NotImplementedError
-
+            
     def generate_random_goals(self):
         return (np.random.rand(2) - 0.5) * 2 * self.goal_region
 
