@@ -121,11 +121,12 @@ class CrowdSimEnv(gym.Env):
         self.observed_image = np.ones((self.discretization, self.discretization, 3 * self.num_stacked_frames)) * 255
         self.time_step = config.getfloat('env', 'time_step')
         self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
-        self.adversary_scaling = config.getfloat('env', 'adversary_scaling')
         self.gauss_noise_state_stddev = config.getfloat('env', 'gaussian_noise_state_stddev')
         self.gauss_noise_action_stddev = config.getfloat('env', 'gaussian_noise_action_stddev')
         self.add_gauss_noise_state = config.getboolean('env', 'add_gaussian_noise_state')
         self.add_gauss_noise_action = config.getboolean('env', 'add_gaussian_noise_action')
+        self.adversary_scaling = config.getfloat('env', 'adversary_scaling')
+        self.perturb_humans = config.getboolean('env', 'perturb_humans')
         self.success_reward = config.getfloat('reward', 'success_reward')
         self.collision_penalty = config.getfloat('reward', 'collision_penalty')
         self.discomfort_dist = config.getfloat('reward', 'discomfort_dist')
@@ -434,6 +435,14 @@ class CrowdSimEnv(gym.Env):
             if self.chase_robot:
                 human.set_goal([self.robot.px, self.robot.py]) #update goal of human to where robot is
             human_actions.append(human.act(ob))
+
+        if self.perturb_humans:
+            for i, human_action in enumerate(human_actions):
+                vx, vy = human_action
+                d_vx, d_vy = self.human_perturbation[i*2:i*2+2]
+                human_action = human_action._replace(vx=vx + d_vx)
+                human_action = human_action._replace(vy=vy + d_vy)
+                human_actions[i] = human_action
 
         # collision detection
         dmin = float('inf')
@@ -833,6 +842,12 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         box = Box(low=-1.0, high=1.0, shape=(obs_size+act_size,))
         return box
 
+    @property
+    def human_adv_action_space(self):
+        # TODO KJ change low, high? maybe consider tuning
+        box = Box(low=-0.1, high=0.1, shape=(self.human_num*2,))
+        return box
+
     
     def step(self, action, update=True):
         """
@@ -841,16 +856,22 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         action_perturbation = action['adversary'][:2] * self.adversary_scaling
         state_perturbation = action['adversary'][2:] * self.adversary_scaling
         robot_action = action['robot'] + action_perturbation
-        ob, reward, done, info = super().step(robot_action, update)
-
-        ob = {'robot': np.clip(ob + state_perturbation,
-                               a_min=self.observation_space.low[0],
-                               a_max=self.observation_space.high[0]),
-                               'adversary': ob}
-        reward = {'robot': reward, 'adversary': -reward}
+        if self.perturb_humans:
+            self.human_perturbation = action['human_adversary']
+        ob, rew, done, info = super().step(robot_action, update)
+        robot_ob = np.clip(ob + state_perturbation,
+                           a_min=self.observation_space.low[0],
+                           a_max=self.observation_space.high[0])
+        
+        observation = {'robot': robot_ob,
+                       'adversary': ob}
+        reward = {'robot': rew, 'adversary': -rew}
+        if self.perturb_humans:
+            observation['human_adversary'] = ob
+            reward['human_adversary'] = -rew
         done = {'__all__': done}
         
-        return ob, reward, done, info
+        return observation, reward, done, info
 
     def reset(self, phase='test', test_case=None):
         """
@@ -859,5 +880,5 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         """
 
         ob = super().reset(phase, test_case)
-        return {'robot': ob, 'adversary': ob}
-        
+        return {'robot': ob, 'adversary': ob, 'human_adversary': ob}
+    

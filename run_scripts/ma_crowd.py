@@ -51,15 +51,13 @@ def env_creator(passed_config):
 
 def setup_ma_config(config):
         env = env_creator(config['env_config'])
-        policies_to_train = ['robot', 'adversary']
+        policies_to_train = ['robot', 'adversary', 'human_adversary']
         policy_graphs = {'robot': (None, env.observation_space, env.action_space, {}),
-                        'adversary': (None, env.observation_space, env.adv_action_space, {})}
+                        'adversary': (None, env.observation_space, env.adv_action_space, {}),
+                        'human_adversary': (None, env.observation_space, env.human_adv_action_space, {})}
 
         def policy_mapping_fn(agent_id):
-            if agent_id == 'robot':
-                return agent_id
-            if agent_id.startswith('adversary'):
-                return 'adversary'
+            return agent_id    
         
         policy_ids = list(policy_graphs.keys())
 
