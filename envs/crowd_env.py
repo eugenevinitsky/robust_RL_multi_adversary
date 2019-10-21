@@ -43,7 +43,10 @@ class CrowdSimEnv(gym.Env):
         self.success_reward = None
         self.collision_penalty = None
         self.discomfort_dist = None
+        self.edge_discomfort_dist = None
         self.discomfort_penalty_factor = None
+        self.edge_penalty = None
+        self.closer_goal = None
 
         # simulation configuration
         self.config = None
@@ -55,8 +58,13 @@ class CrowdSimEnv(gym.Env):
         self.test_sim = None
         self.square_width = None
         self.circle_radius = None
+        self.accessible_space = None
+        self.goal_region = None
         self.human_num = None
         self.train_on_images = None
+        self.randomize_goals = None
+        self.update_goals = None
+        self.chase_robot = None
         self.show_images = False
         self.discretization = None  # How much to downsample images
         # TODO(@evinitsky) remove the magic numbers
@@ -65,6 +73,8 @@ class CrowdSimEnv(gym.Env):
         self.robot_grid_size = None
         # The image used to represent the robot positions
         self.image = None
+
+        self.render_train = False
 
         # for visualization
         self.states = None
@@ -84,7 +94,7 @@ class CrowdSimEnv(gym.Env):
             self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
             self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
             temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
-            return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0], ))
+            return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0] + 4, ))
         else:
             img_shape = self.image.shape
             new_tuple = (img_shape[0], img_shape[1], img_shape[2] * self.num_stacked_frames)
@@ -111,10 +121,21 @@ class CrowdSimEnv(gym.Env):
         self.time_step = config.getfloat('env', 'time_step')
         self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
         self.adversary_scaling = config.getfloat('env', 'adversary_scaling')
+        self.gauss_noise_state_stddev = config.getfloat('env', 'gaussian_noise_state_stddev')
+        self.gauss_noise_action_stddev = config.getfloat('env', 'gaussian_noise_action_stddev')
+        self.add_gauss_noise_state = config.getboolean('env', 'add_gaussian_noise_state')
+        self.add_gauss_noise_action = config.getboolean('env', 'add_gaussian_noise_action')
         self.success_reward = config.getfloat('reward', 'success_reward')
         self.collision_penalty = config.getfloat('reward', 'collision_penalty')
         self.discomfort_dist = config.getfloat('reward', 'discomfort_dist')
+        self.edge_discomfort_dist = config.getfloat('reward', 'edge_discomfort_dist')
         self.discomfort_penalty_factor = config.getfloat('reward', 'discomfort_penalty_factor')
+        self.edge_penalty = config.getfloat('reward', 'edge_penalty')
+        self.closer_goal = config.getfloat('reward', 'closer_goal')
+        self.randomize_goals = config.getboolean('sim', 'randomize_goals')
+        self.update_goals = config.getboolean('sim', 'update_goals')
+        self.chase_robot = config.getboolean('humans', 'chase_robot')
+
         if self.config.get('humans', 'policy') == 'orca':
             self.case_capacity = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
             self.case_size = {'train': np.iinfo(np.uint32).max - 2000, 'val': config.getint('env', 'val_size'),
@@ -123,6 +144,8 @@ class CrowdSimEnv(gym.Env):
             self.test_sim = config.get('sim', 'test_sim')
             self.square_width = config.getfloat('sim', 'square_width')
             self.circle_radius = config.getfloat('sim', 'circle_radius')
+            self.accessible_space = config.getfloat('sim', 'accessible_space')
+            self.goal_region = config.getfloat('sim', 'goal_region')
             self.human_num = config.getint('sim', 'human_num')
         else:
             raise NotImplementedError
@@ -327,7 +350,12 @@ class CrowdSimEnv(gym.Env):
         else:
             counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
                               'val': 0, 'test': self.case_capacity['val']}
-            self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
+            if self.randomize_goals:
+                random_goal = self.generate_random_goals()
+                self.robot.set(0, 0, random_goal[0], random_goal[1], 0, 0, np.pi / 2)
+            else:
+                self.robot.set(0, 0, 0, self.circle_radius, 0, 0, np.pi / 2) #default goal is directly above robot
+
             if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
                 if phase in ['train', 'val']:
@@ -358,6 +386,10 @@ class CrowdSimEnv(gym.Env):
         # get current observation
         if self.robot.sensor == 'coordinates':
             ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
+            normalized_pos =  np.asarray(self.robot.get_position())/self.accessible_space
+            normalized_goal =  np.asarray(self.robot.get_goal_position())/self.accessible_space
+            ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
+
         elif self.robot.sensor == 'RGB':
             raise NotImplementedError
 
@@ -377,6 +409,9 @@ class CrowdSimEnv(gym.Env):
             self.observed_image[:, :, 0: 3] = ob
             ob = (self.observed_image - 128.0) / 255.0
 
+        if self.add_gauss_noise_state:
+            ob = np.random.normal(scale=self.gauss_noise_state_stddev, size=ob.shape) + ob
+
         return ob
 
     def onestep_lookahead(self, action):
@@ -386,6 +421,8 @@ class CrowdSimEnv(gym.Env):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
         """
+        if self.add_gauss_noise_action:
+            action = action + np.random.normal(scale=self.gauss_noise_action_stddev, size=action.shape)
 
         human_actions = []
         for human in self.humans:
@@ -393,6 +430,8 @@ class CrowdSimEnv(gym.Env):
             ob = [other_human.get_observable_state() for other_human in self.humans if other_human != human]
             if self.robot.visible:
                 ob += [self.robot.get_observable_state()]
+            if self.chase_robot:
+                human.set_goal([self.robot.px, self.robot.py]) #update goal of human to where robot is
             human_actions.append(human.act(ob))
 
         # collision detection
@@ -433,7 +472,9 @@ class CrowdSimEnv(gym.Env):
 
         # check if reaching the goal
         end_position = np.array(self.robot.compute_position(action, self.time_step))
-        reaching_goal = norm(end_position - np.array(self.robot.get_goal_position())) < self.robot.radius
+        cur_dist_to_goal = norm(self.robot.get_position() - np.array(self.robot.get_goal_position()))
+        next_dist_to_goal = norm(end_position - np.array(self.robot.get_goal_position()))
+        reaching_goal = next_dist_to_goal < self.robot.radius
 
         if self.global_time >= self.time_limit - 1:
             reward = 0
@@ -445,7 +486,14 @@ class CrowdSimEnv(gym.Env):
             info = Collision()
         elif reaching_goal:
             reward = self.success_reward
-            done = True
+            if self.randomize_goals:
+                new_goal = self.generate_random_goals()
+                self.robot.set_goal(new_goal)
+                print("New Goal", self.robot.get_goal_position())
+            if self.update_goals:
+                done = False
+            else:
+                done = True
             info = ReachGoal()
         elif dmin < self.discomfort_dist:
             # only penalize agent for getting too close if it's visible
@@ -457,6 +505,13 @@ class CrowdSimEnv(gym.Env):
             reward = 0
             done = False
             info = Nothing()
+
+        #if too close to the edge, add penalty
+        if (np.abs(np.abs(end_position) - self.accessible_space) < self.edge_discomfort_dist).any():
+            reward += self.edge_penalty
+        #if getting closer to goal, add reward
+        if cur_dist_to_goal - next_dist_to_goal > 0.1:
+            reward += self.closer_goal
 
         if update:
             # store state, action value and attention weights
@@ -474,6 +529,9 @@ class CrowdSimEnv(gym.Env):
             # compute the observation
             if self.robot.sensor == 'coordinates':
                 ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
+                normalized_pos = np.asarray(self.robot.get_position()) / self.accessible_space
+                normalized_goal = np.asarray(self.robot.get_goal_position()) / self.accessible_space
+                ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
         else:
@@ -498,6 +556,9 @@ class CrowdSimEnv(gym.Env):
             self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
             self.observed_image[:, :, 0: 3] = ob
             ob = (self.observed_image - 128.0) / 255.0
+
+        if self.add_gauss_noise_state:
+            ob = np.random.normal(scale=self.gauss_noise_state_stddev, size=ob.shape) + ob
 
         return ob, reward, done, {}
 
@@ -621,14 +682,16 @@ class CrowdSimEnv(gym.Env):
         elif mode == 'video':
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.tick_params(labelsize=16)
-            ax.set_xlim(-6, 6)
-            ax.set_ylim(-6, 6)
+            ax.set_xlim(-self.accessible_space, self.accessible_space)
+            ax.set_ylim(-self.accessible_space, self.accessible_space)
             ax.set_xlabel('x(m)', fontsize=16)
             ax.set_ylabel('y(m)', fontsize=16)
 
             # add robot and its goal
             robot_positions = [state[0].position for state in self.states]
-            goal = mlines.Line2D([0], [4], color=goal_color, marker='*', linestyle='None', markersize=15, label='Goal')
+            goal_positions = [state[0].goal_position for state in self.states]
+
+            goal = plt.Circle(goal_positions[0], radius=self.robot.radius, color=goal_color, fill=True, label='Goal')
             robot = plt.Circle(robot_positions[0], self.robot.radius, fill=True, color=robot_color)
             ax.add_artist(robot)
             ax.add_artist(goal)
@@ -685,6 +748,7 @@ class CrowdSimEnv(gym.Env):
                 nonlocal arrows
                 global_step = frame_num
                 robot.center = robot_positions[frame_num]
+                goal.center = goal_positions[frame_num]
                 for i, human in enumerate(humans):
                     human.center = human_positions[frame_num][i]
                     human_numbers[i].set_position((human.center[0] - x_offset, human.center[1] - y_offset))
@@ -748,7 +812,10 @@ class CrowdSimEnv(gym.Env):
         else:
             raise NotImplementedError
 
+    def generate_random_goals(self):
+        return (np.random.rand(2) - 0.5) * 2 * self.goal_region
 
+        
 class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
     @property
