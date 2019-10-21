@@ -19,6 +19,7 @@ from envs.utils.human import Human
 from envs.utils.info import *
 from envs.utils.utils import point_to_segment_dist
 from utils.constants import ROBOT_COLOR, GOAL_COLOR, HUMAN_COLOR
+from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 
 class CrowdSimEnv(gym.Env):
@@ -87,17 +88,18 @@ class CrowdSimEnv(gym.Env):
 
     @property
     def observation_space(self):
-        if not self.train_on_images:
-            human_num = self.human_num
-            # TODO(@evinitsky) clean this the heck up. This initialization should be done elsewhere!! ABSTRACTION BREAK
-            self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
-            self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
-            temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
-            return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0] + 4, ))
-        else:
-            img_shape = self.image.shape
-            new_tuple = (img_shape[0], img_shape[1], img_shape[2] * self.num_stacked_frames)
-            return Box(low=-1.0, high=1.0, shape=new_tuple)
+        return Box(low=-1.0, high=1.0, shape=(self.human_num*5+4,))
+        # if not self.train_on_images:
+        #     human_num = self.human_num
+        #     # TODO(@evinitsky) clean this the heck up. This initialization should be done elsewhere!! ABSTRACTION BREAK
+        #     self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
+        #     self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
+        #     temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
+        #     return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0] + 4, ))
+        # else:
+        #     img_shape = self.image.shape
+        #     new_tuple = (img_shape[0], img_shape[1], img_shape[2] * self.num_stacked_frames)
+        #     return Box(low=-1.0, high=1.0, shape=new_tuple)
 
 
     @property
@@ -119,6 +121,7 @@ class CrowdSimEnv(gym.Env):
         self.observed_image = np.ones((self.discretization, self.discretization, 3 * self.num_stacked_frames)) * 255
         self.time_step = config.getfloat('env', 'time_step')
         self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
+        self.adversary_scaling = config.getfloat('env', 'adversary_scaling')
         self.gauss_noise_state_stddev = config.getfloat('env', 'gaussian_noise_state_stddev')
         self.gauss_noise_action_stddev = config.getfloat('env', 'gaussian_noise_action_stddev')
         self.add_gauss_noise_state = config.getboolean('env', 'add_gaussian_noise_state')
@@ -809,6 +812,51 @@ class CrowdSimEnv(gym.Env):
                 plt.close()
         else:
             raise NotImplementedError
-
+            
     def generate_random_goals(self):
         return (np.random.rand(2) - 0.5) * 2 * self.goal_region
+
+class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
+
+    @property
+    def adv_action_space(self):
+        """
+        Simple action space for an adversary that can perturb
+        every element of the agent's observation space.
+
+        Therefore, its action space is the same size as the agent's
+        observation space.
+        """
+        obs_size = super().observation_space.shape[0]
+        act_size = super().action_space.shape[0]
+        box = Box(low=-1.0, high=1.0, shape=(obs_size+act_size,))
+        return box
+
+    
+    def step(self, action, update=True):
+        """
+        Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
+        """
+        action_perturbation = action['adversary'][:2] * self.adversary_scaling
+        state_perturbation = action['adversary'][2:] * self.adversary_scaling
+        robot_action = action['robot'] + action_perturbation
+        ob, reward, done, info = super().step(robot_action, update)
+
+        ob = {'robot': np.clip(ob + state_perturbation,
+                               a_min=self.observation_space.low[0],
+                               a_max=self.observation_space.high[0]),
+                               'adversary': ob}
+        reward = {'robot': reward, 'adversary': -reward}
+        done = {'__all__': done}
+        
+        return ob, reward, done, info
+
+    def reset(self, phase='test', test_case=None):
+        """
+        Set px, py, gx, gy, vx, vy, theta for robot and humans
+        :return:
+        """
+
+        ob = super().reset(phase, test_case)
+        return {'robot': ob, 'adversary': ob}
+        
