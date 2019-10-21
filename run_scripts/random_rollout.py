@@ -23,12 +23,18 @@ def main():
 
     args = parser.parse_args()
 
-    passed_config = {'config_path': args.env_config, 'policy_config': args.policy_config,
+    with open(args.env_config, 'r') as file:
+        env_config = file.read()
+
+    with open(args.policy_config, 'r') as file:
+        policy_config = file.read()
+
+    passed_config = {'env_config': env_config, 'policy_config': policy_config,
                                 'policy': args.policy, 'show_images': args.show_images, 'train_on_images': args.train_on_images}
 
-    config_path = passed_config['config_path']
+    config_path = passed_config['env_config']
     temp_config = configparser.RawConfigParser()
-    temp_config.read(config_path)
+    temp_config.read_string(config_path)
     env = CrowdSimEnv()
     env.configure(temp_config)
     # additional configuration
@@ -40,7 +46,7 @@ def main():
 
     # configure policy
     policy_config = configparser.RawConfigParser()
-    policy_config.read(passed_config['policy_config'])
+    policy_config.read_string(passed_config['policy_config'])
     policy = policy_factory[passed_config['policy']](policy_config)
     if not policy.trainable:
         parser.error('Policy has to be trainable')
