@@ -22,13 +22,22 @@ def main():
 
     args = parser.parse_args()
 
-    temp_config = configparser.RawConfigParser()
-    temp_config.read(args.config_path)
-    env = CrowdSimEnv(temp_config)
+    with open(args.env_config, 'r') as file:
+        env_config = file.read()
 
-    # additional configuration. We could overwrite the config instead but that's a little grosser
-    env.show_images = args.show_images
-    env.train_on_images = args.train_on_images
+    with open(args.policy_config, 'r') as file:
+        policy_config = file.read()
+
+    passed_config = {'env_config': env_config, 'policy_config': policy_config,
+                                'policy': args.policy, 'show_images': args.show_images, 'train_on_images': args.train_on_images}
+
+    config_path = passed_config['env_config']
+    temp_config = configparser.RawConfigParser()
+    temp_config.read_string(config_path)
+    env = CrowdSimEnv(temp_config)
+    # additional configuration
+    env.show_images = passed_config['show_images']
+    env.train_on_images = passed_config['train_on_images']
 
     robot = Robot(temp_config, 'robot')
     env.set_robot(robot)
@@ -37,6 +46,7 @@ def main():
     policy_config = configparser.RawConfigParser()
     policy_config.read(args.policy_config)
     policy = policy_factory[args.policy](policy_config)
+
     if not policy.trainable:
         parser.error('Policy has to be trainable')
     if args.policy_config is None:
