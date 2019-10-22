@@ -84,6 +84,9 @@ class CrowdSimEnv(gym.Env):
         logging.info('Training simulation: {}, test simulation: {}'.format(self.train_val_sim, self.test_sim))
         logging.info('Square width: {}, circle width: {}'.format(self.square_width, self.circle_radius))
 
+        # generate a set of humans so we have something in the observation space
+        self.generate_random_human_position(self.human_num, rule=self.train_val_sim)
+
 
     @property
     def observation_space(self):
