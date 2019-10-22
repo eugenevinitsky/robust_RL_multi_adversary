@@ -27,8 +27,7 @@ def env_creator(passed_config):
     config_path = passed_config['config_path']
     temp_config = configparser.RawConfigParser()
     temp_config.read(config_path)
-    env = CrowdSimEnv()
-    env.configure(temp_config)
+    env = CrowdSimEnv(temp_config)
     # additional configuration
     env.show_images = passed_config['show_images']
     env.train_on_images = passed_config['train_on_images']
