@@ -24,9 +24,9 @@ def setup_exps(args):
 
 
 def env_creator(passed_config):
-    config_path = passed_config['config_path']
+    config_path = passed_config['env_config']
     temp_config = configparser.RawConfigParser()
-    temp_config.read(config_path)
+    temp_config.read_string(config_path)
     env = CrowdSimEnv()
     env.configure(temp_config)
     # additional configuration
@@ -38,7 +38,7 @@ def env_creator(passed_config):
 
     # configure policy
     policy_config = configparser.RawConfigParser()
-    policy_config.read(passed_config['policy_config'])
+    policy_config.read_string(passed_config['policy_config'])
     policy = policy_factory[passed_config['policy']](policy_config)
     if not policy.trainable:
         parser.error('Policy has to be trainable')
@@ -80,9 +80,15 @@ if __name__=="__main__":
 
     alg_run, config = setup_exps(args)
 
+    with open(args.env_config, 'r') as file:
+        env_config = file.read()
+
+    with open(args.policy_config, 'r') as file:
+        policy_config = file.read()
+
     # save the relevant params for replay
     config['env_config'] = {'policy': args.policy, 'show_images': args.show_images, 'train_on_images': args.train_on_images,
-                            'config_path': args.env_config, 'policy_config': args.policy_config}
+                            'env_config': env_config, 'policy_config': policy_config}
     config['env_config']['replay_params'] = vars(args)
     config['env_config']['run'] = alg_run
 
