@@ -17,31 +17,26 @@ def main():
     parser.add_argument('--env_config', type=str, default=os.path.abspath(os.path.join(script_path,'../configs/env.config')))
     parser.add_argument('--policy_config', type=str, default=os.path.abspath(os.path.join(script_path,'../configs/policy.config')))
     parser.add_argument('--policy', type=str, default='cadrl')
-    parser.add_argument('--train_config', type=str, default=os.path.join(script_path,'../configs/train.config'))
     parser.add_argument("--show_images", action="store_true", default=False, help="Whether to display the observations")
     parser.add_argument('--train_on_images', action='store_true', default=False, help='Whether to train on images')
 
     args = parser.parse_args()
 
-    passed_config = {'config_path': args.env_config, 'policy_config': args.policy_config,
-                                'policy': args.policy, 'show_images': args.show_images, 'train_on_images': args.train_on_images}
-
-    config_path = passed_config['config_path']
     temp_config = configparser.RawConfigParser()
-    temp_config.read(config_path)
-    env = CrowdSimEnv()
-    env.configure(temp_config)
-    # additional configuration
-    env.show_images = passed_config['show_images']
-    env.train_on_images = passed_config['train_on_images']
+    temp_config.read(args.config_path)
+    env = CrowdSimEnv(temp_config)
+
+    # additional configuration. We could overwrite the config instead but that's a little grosser
+    env.show_images = args.show_images
+    env.train_on_images = args.train_on_images
 
     robot = Robot(temp_config, 'robot')
     env.set_robot(robot)
 
     # configure policy
     policy_config = configparser.RawConfigParser()
-    policy_config.read(passed_config['policy_config'])
-    policy = policy_factory[passed_config['policy']](policy_config)
+    policy_config.read(args.policy_config)
+    policy = policy_factory[args.policy](policy_config)
     if not policy.trainable:
         parser.error('Policy has to be trainable')
     if args.policy_config is None:
@@ -50,8 +45,11 @@ def main():
     robot.set_policy(policy)
 
     ob = env.reset()
+    total_rew = 0
     for i in range(100):
         ob, rew, done, info = env.step(np.random.rand(2))
+        total_rew += rew
+    print('The total reward is {}'.format(total_rew))
 
 if __name__ == "__main__":
     main()    

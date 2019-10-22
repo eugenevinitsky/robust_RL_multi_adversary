@@ -46,8 +46,7 @@ def create_env(config):
     # configure environment
     env_config = configparser.RawConfigParser()
     env_config.read(env_config_path)
-    env = CrowdSimEnv()
-    env.configure(env_config)
+    env = CrowdSimEnv(env_config)
     if config['replay_params'].get('square', False):
         env.test_sim = 'square_crossing'
     if config['replay_params'].get('circle', False):
