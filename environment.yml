@@ -14,3 +14,4 @@ dependencies:
         - opencv-python==4.1.1
         - gym==0.14.0
         - awscli==1.16.259
+        - pytest==5.2.1

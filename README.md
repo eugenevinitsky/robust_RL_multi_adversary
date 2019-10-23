@@ -8,6 +8,7 @@ To install the code with anaconda run
 - `python setup.py develop` 
 - Then go follow the install instructions at: https://github.com/sybrenstuvel/Python-RVO2 (TBD if this is necessary)
 - If you want to run videos make sure to install ffmpeg. If you have brew you can run `brew install ffmpeg`.
+- There is a ray error so once you have set everything up run `python utils.py replace_rnn_sequence.py`
 
 ## Running experiments on EC2
 1. Get AWS account login/credentials from Aboudy / Eugene
@@ -29,3 +30,7 @@ Executing the run script as follows:
 
 - `use_s3` uploads experiment results to `s3://eugene.experiments/sim2real/`
 - `multi_node` enables parallelization across instances in the cluster
+
+## Unit tests
+To run unit tests cd to the outer directory and run `python -m pytest`. Please do this before
+merging any PR. This will be automated later.
