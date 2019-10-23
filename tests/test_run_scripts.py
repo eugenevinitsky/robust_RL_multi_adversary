@@ -24,13 +24,18 @@ class TestRollout(unittest.TestCase):
     def test_run_script(self):
         alg_run, config, exp_dict, args = setup_exps()
 
-        # save the relevant params for replay
-        exp_dict['config']['train_batch_size'] = 500
+        # Run it without images
+        exp_dict['config']['train_batch_size'] = 200
         exp_dict['stop']['training_iteration'] = 1
         exp_dict['config']['env_config'] = {'policy': args.policy, 'show_images': False,
                                             'train_on_images': False,
                                             'config_path': args.env_config, 'policy_config': args.policy_config}
-        run_tune(**exp_dict, queue_trials=False)
+        run_tune(**exp_dict)
+        # Run it with images
+        exp_dict['config']['env_config'] = {'policy': args.policy, 'show_images': False,
+                                            'train_on_images': True,
+                                            'config_path': args.env_config, 'policy_config': args.policy_config}
+        run_tune(**exp_dict)
 
 
 if __name__ == '__main__':

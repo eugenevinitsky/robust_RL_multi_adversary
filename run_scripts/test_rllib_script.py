@@ -54,6 +54,8 @@ def setup_exps():
     s3_string = 's3://sim2real/' \
                 + datetime.now().strftime('%m-%d-%Y') + '/' + args.exp_title
     config['env'] = 'CrowdSim'
+    register_env('CrowdSim', env_creator)
+
     exp_dict = {
         'name': args.exp_title,
         'run_or_experiment': alg_run,
@@ -104,8 +106,6 @@ if __name__=="__main__":
     exp_dict['config']['env_config'] = {'policy': args.policy, 'show_images': args.show_images,
                                         'train_on_images': args.train_on_images,
                                         'config_path': args.env_config, 'policy_config': args.policy_config}
-
-    register_env('CrowdSim-v0', env_creator)
 
     run_tune(**exp_dict, queue_trials=False)
 
