@@ -109,9 +109,9 @@ if __name__=="__main__":
         policy_config = file.read()
 
     # save the relevant params for replay
-    exp_dict['config']['env_config'] = {'policy': args.policy, 'show_images': args.show_images,
+    exp_dict['config']['env_config'].update({'policy': args.policy, 'show_images': args.show_images,
                                         'train_on_images': args.train_on_images,
-                                        'env_config': env_config, 'policy_config': policy_config}
+                                        'env_config': env_config, 'policy_config': policy_config})
 
     run_tune(**exp_dict, queue_trials=False)
 
