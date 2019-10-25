@@ -14,25 +14,24 @@ from utils.parsers import env_parser, init_parser
 
 
 def run(passed_config):
-    config_path = passed_config['env_config']
+    config_path = passed_config['env_params']
     temp_config = configparser.RawConfigParser()
     temp_config.read_string(config_path)
     env = CrowdSimEnv()
     env.configure(temp_config)
     # additional configuration
     env.show_images = passed_config['show_images']
-    env.train_on_images = passed_config['train_on_images']
 
     robot = Robot(temp_config, 'robot')
     env.set_robot(robot)
 
     # configure policy
-    policy_config = configparser.RawConfigParser()
-    policy_config.read_string(passed_config['policy_config'])
-    policy = policy_factory[passed_config['policy']](policy_config)
+    policy_params = configparser.RawConfigParser()
+    policy_params.read_string(passed_config['policy_params'])
+    policy = policy_factory[passed_config['policy']](policy_params)
     if not policy.trainable:
         sys.exit('Policy has to be trainable')
-    if passed_config["policy_config"] is None:
+    if passed_config["policy_params"] is None:
         sys.exit('Policy config has to be specified for a trainable network')
 
     robot.set_policy(policy)
@@ -44,19 +43,24 @@ def run(passed_config):
         total_rew += rew
     print('The total reward is {}'.format(total_rew))
 
-def main():
-
+def setup_random():
     parser = init_parser()
     args = env_parser(parser).parse_args()
-    with open(args.env_config, 'r') as file:
-        env_config = file.read()
+    with open(args.env_params, 'r') as file:
+        env_params = file.read()
 
-    with open(args.policy_config, 'r') as file:
-        policy_config = file.read()
+    with open(args.policy_params, 'r') as file:
+        policy_params = file.read()
 
-    passed_config = {'env_config': env_config, 'policy_config': policy_config,
-                     'policy': args.policy, 'show_images': args.show_images, 'train_on_images': args.train_on_images}
-    run(passed_config)
+    passed_config = {'env_params': env_params, 'policy_params': policy_params,
+                     'policy': args.policy, 'show_images': args.show_images}
+
+    return passed_config
+
+def main():
+    config = setup_random()
+
+    run(config)
 
 
 if __name__ == "__main__":
