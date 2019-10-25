@@ -121,12 +121,27 @@ def env_creator(passed_config):
 
 if __name__=="__main__":
 
+<<<<<<< HEAD
     exp_dict, args = setup_exps(sys.argv[1:])
     
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
         ray.init()
+=======
+    alg_run, config, exp_dict, args = setup_exps()
+
+    with open(args.env_config, 'r') as file:
+        env_config = file.read()
+
+    with open(args.policy_config, 'r') as file:
+        policy_config = file.read()
+
+    # save the relevant params for replay
+    exp_dict['config']['env_config'].update({'policy': args.policy, 'show_images': args.show_images,
+                                        'train_on_images': args.train_on_images,
+                                        'env_config': env_config, 'policy_config': policy_config})
+>>>>>>> remove_config
 
     run_tune(**exp_dict, queue_trials=False)
 
