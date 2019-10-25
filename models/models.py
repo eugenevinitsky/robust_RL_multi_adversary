@@ -8,16 +8,6 @@ from ray.rllib.utils import try_import_tf
 from ray.rllib.utils.annotations import override
 
 tf = try_import_tf()
-
-def calculate_kl_postprocess(policy, sample_batch, other_agent_batches=None, episode=None):
-    assert other_agent_batches is not None, "Other agent batches not specified, is this a multiagent experiment?"
-    # compute KL(agent_policy, other_agent_policy)
-    # append to sample batch
-    return sample_batch
-
-def penalize_kl_multi_adversary_loss(policy, model, dist_class, train_batch):
-    # compute standard loss
-    pass
     
 class ConvLSTM(RecurrentTFModelV2):
     """
@@ -123,10 +113,3 @@ class ConvLSTM(RecurrentTFModelV2):
     @override(ModelV2)
     def value_function(self):
         return tf.reshape(self._value_out, [-1])
-
-# PairwisePenalizedKLPPO = PPOTFPolicy.with_updates(
-#     name="PwPenKL_PPO",
-#     loss_fn=penalize_kl_multi_adversary
-# )
-
-# CCTrainer = PPOTrainer.with_updates(name="PwPenKL_PPO_Trainer", default_policy=CCPPO)
