@@ -2,87 +2,32 @@ import argparse
 import configparser
 from datetime import datetime
 import os
+import sys
 
 import ray
 import ray.rllib.agents.ppo as ppo
 from ray.rllib.models import ModelCatalog
-from ray.tune import run
+from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
 from envs.crowd_env import CrowdSimEnv
 from envs.policy.policy_factory import policy_factory
 from envs.utils.robot import Robot
+from utils.parsers import init_parser, env_parser, ray_parser
 
 
-def setup_exps(args):
+def setup_exps():
+    parser = init_parser()
+    parser = env_parser(parser)
+    parser = ray_parser(parser)
+    args = parser.parse_args()
+
     alg_run = 'PPO'
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = args.num_cpus
     config['gamma'] = 0.99
     config['train_batch_size'] = 10000
-    return alg_run, config
 
-
-def env_creator(passed_config):
-    config_path = passed_config['config_path']
-    temp_config = configparser.RawConfigParser()
-    temp_config.read(config_path)
-    env = CrowdSimEnv()
-    env.configure(temp_config)
-    # additional configuration
-    env.show_images = passed_config['show_images']
-    env.train_on_images = passed_config['train_on_images']
-
-    robot = Robot(temp_config, 'robot')
-    env.set_robot(robot)
-
-    # configure policy
-    policy_config = configparser.RawConfigParser()
-    policy_config.read(passed_config['policy_config'])
-    policy = policy_factory[passed_config['policy']](policy_config)
-    if not policy.trainable:
-        parser.error('Policy has to be trainable')
-    if args.policy_config is None:
-        parser.error('Policy config has to be specified for a trainable network')
-
-    robot.set_policy(policy)
-    return env
-
-if __name__=="__main__":
-    script_path = os.path.dirname(os.path.abspath(__file__))
-    parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--env_config', type=str, default=os.path.abspath(os.path.join(script_path,'../configs/env.config')))
-    parser.add_argument('--policy_config', type=str, default=os.path.abspath(os.path.join(script_path,'../configs/policy.config')))
-    parser.add_argument('--policy', type=str, default='cadrl')
-    parser.add_argument('--train_config', type=str, default=os.path.join(script_path,'../configs/train.config'))
-    parser.add_argument('--debug', default=False, action='store_true')
-
-    parser.add_argument('exp_title', type=str, help='Informative experiment title to help distinguish results')
-    parser.add_argument('--use_s3', action='store_true', help='If true, upload results to s3')
-    parser.add_argument('--num_cpus', type=int, default=1, help='Number of cpus to run experiment with')
-    parser.add_argument('--multi_node', action='store_true', help='Set to true if this will '
-                                                                  'be run in cluster mode')
-    parser.add_argument('--num_iters', type=int, default=350)
-    parser.add_argument('--checkpoint_freq', type=int, default=1)
-    parser.add_argument('--num_samples', type=int, default=1)
-
-    # TODO: Fix this visualization code
-    parser.add_argument('--render', type=str, default=False)
-
-
-    # Env configs
-    parser.add_argument('--show_images', action='store_true', default=False, help='Whether to display the observations')
-    parser.add_argument('--train_on_images', action='store_true', default=False, help='Whether to train on images')
-
-    args = parser.parse_args()
-
-    register_env('CrowdSim', env_creator)
-
-    alg_run, config = setup_exps(args)
-
-    # save the relevant params for replay
-    config['env_config'] = {'policy': args.policy, 'show_images': args.show_images, 'train_on_images': args.train_on_images,
-                            'config_path': args.env_config, 'policy_config': args.policy_config}
     config['env_config']['replay_params'] = vars(args)
     config['env_config']['run'] = alg_run
 
@@ -90,13 +35,13 @@ if __name__=="__main__":
     if args.train_on_images:
         # register the custom model
         conv_filters = [
-                [32, [3, 3], 2],
-                [32, [3, 3], 2],
-            ]
+            [32, [3, 3], 2],
+            [32, [3, 3], 2],
+        ]
         config['model'] = {'conv_activation': 'relu', 'use_lstm': True, "lstm_use_prev_action_reward": True,
                            'lstm_cell_size': 128, 'conv_filters': conv_filters}
         config['vf_share_layers'] = True
-        config['train_batch_size']: 500  # TODO(@evinitsky) change this it's just for testing
+        config['train_batch_size'] = 500  # TODO(@evinitsky) change this it's just for testing
     else:
         config['model'] = {'use_lstm': True, "lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
         config['vf_share_layers'] = True
@@ -109,19 +54,64 @@ if __name__=="__main__":
     s3_string = 's3://sim2real/' \
                 + datetime.now().strftime('%m-%d-%Y') + '/' + args.exp_title
     config['env'] = 'CrowdSim'
+    register_env('CrowdSim', env_creator)
+
     exp_dict = {
-            'name': args.exp_title,
-            'run_or_experiment': alg_run,
-            'checkpoint_freq': args.checkpoint_freq,
-            'stop': {
-                'training_iteration': args.num_iters
-            },
-            'config': config,
-            'num_samples': args.num_samples,
-        }
+        'name': args.exp_title,
+        'run_or_experiment': alg_run,
+        'checkpoint_freq': args.checkpoint_freq,
+        'stop': {
+            'training_iteration': args.num_iters
+        },
+        'config': config,
+        'num_samples': args.num_samples,
+    }
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
 
-    run(**exp_dict, queue_trials=False)
+    return alg_run, config, exp_dict, args
 
+
+def env_creator(passed_config):
+    config_path = passed_config['env_config']
+    temp_config = configparser.RawConfigParser()
+    temp_config.read_string(config_path)
+    env = CrowdSimEnv()
+    env.configure(temp_config)
+    # additional configuration
+    env.show_images = passed_config['show_images']
+    env.train_on_images = passed_config['train_on_images']
+
+    robot = Robot(temp_config, 'robot')
+    env.set_robot(robot)
+
+    # configure policy
+    policy_config = configparser.RawConfigParser()
+    policy_config.read_string(passed_config['policy_config'])
+    policy = policy_factory[passed_config['policy']](policy_config)
+    if not policy.trainable:
+        sys.exit('Policy has to be trainable')
+    if passed_config['policy_config'] is None:
+        sys.exit('Policy config has to be specified for a trainable network')
+
+    robot.set_policy(policy)
+    return env
+
+
+if __name__=="__main__":
+
+    alg_run, config, exp_dict, args = setup_exps()
+
+    with open(args.env_config, 'r') as file:
+        env_config = file.read()
+
+    with open(args.policy_config, 'r') as file:
+        policy_config = file.read()
+
+    # save the relevant params for replay
+    exp_dict['config']['env_config'] = {'policy': args.policy, 'show_images': args.show_images,
+                                        'train_on_images': args.train_on_images,
+                                        'env_config': env_config, 'policy_config': policy_config}
+
+    run_tune(**exp_dict, queue_trials=False)
 
