@@ -85,7 +85,7 @@ class CrowdSimEnv(gym.Env):
         logging.info('Square width: {}, circle width: {}'.format(self.square_width, self.circle_radius))
 
         self.robot = robot
-
+        self.attention_weights = None
         self.obs_norm = 100
 
         # generate a set of humans so we have something in the observation space
@@ -302,6 +302,9 @@ class CrowdSimEnv(gym.Env):
             else:
                 self.robot.set(0, 0, 0, self.circle_radius, 0, 0, np.pi / 2) #default goal is directly above robot
 
+
+            # By setting np.random.seed with essentially the iteration number, they can ensure that the 
+            # 'training cases' are the same each time.
             if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
                 if phase in ['train', 'val']:
@@ -312,6 +315,8 @@ class CrowdSimEnv(gym.Env):
                 # case_counter is always between 0 and case_size[phase]
                 self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
             else:
+                ## this is how they handle 'testing', if you set test_case to -1 it'll set up a specific
+                ## initial configuration
                 assert phase == 'test'
                 if self.case_counter[phase] == -1:
                     # for debugging purposes
