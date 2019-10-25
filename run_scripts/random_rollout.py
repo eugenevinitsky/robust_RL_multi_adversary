@@ -12,18 +12,16 @@ from envs.policy.policy_factory import policy_factory
 from envs.utils.robot import Robot
 from utils.parsers import env_parser, init_parser
 
-
 def run(passed_config):
     config_path = passed_config['env_params']
     temp_config = configparser.RawConfigParser()
     temp_config.read_string(config_path)
-    env = CrowdSimEnv()
-    env.configure(temp_config)
-    # additional configuration
-    env.show_images = passed_config['show_images']
 
     robot = Robot(temp_config, 'robot')
-    env.set_robot(robot)
+
+    env = CrowdSimEnv(temp_config, robot)
+    # additional configuration
+    env.show_images = passed_config['show_images']
 
     # configure policy
     policy_params = configparser.RawConfigParser()

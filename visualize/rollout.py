@@ -44,7 +44,6 @@ class DefaultMapping(collections.defaultdict):
 def default_policy_agent_mapping(unused_agent_id):
     return DEFAULT_POLICY_ID
 
-
 def run_rollout(rllib_config, checkpoint, save_trajectory, video_file):
     rllib_config['num_workers'] = 0
 
