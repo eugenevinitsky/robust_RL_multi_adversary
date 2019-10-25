@@ -8,6 +8,7 @@ import ray
 import ray.rllib.agents.ppo as ppo
 from ray.rllib.models import ModelCatalog
 from ray.tune import run as run_tune
+from ray.tune import grid_search
 from ray.tune.registry import register_env
 
 from envs.crowd_env import CrowdSimEnv
@@ -29,6 +30,7 @@ def setup_exps(args):
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = args.num_cpus
     config['gamma'] = 0.99
+    config['lr'] = grid_search([5e-3, 5e-4, 5e-5, 5e-6])
     config['train_batch_size'] = 10000
 
     config['env_config']['run'] = alg_run
@@ -65,7 +67,6 @@ def setup_exps(args):
         config['model']['custom_model'] = "rnn"
         
         config['vf_share_layers'] = True
-        config['train_batch_size'] = 500  # TODO(@evinitsky) change this it's just for testing
     else:
         config['model'] = {'use_lstm': True, "lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
         config['vf_share_layers'] = True
