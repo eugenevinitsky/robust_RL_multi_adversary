@@ -76,13 +76,12 @@ def env_creator(passed_config):
     config_path = passed_config['env_config']
     temp_config = configparser.RawConfigParser()
     temp_config.read_string(config_path)
-    env = CrowdSimEnv(temp_config)
+
+    robot = Robot(temp_config, 'robot')
+    env = CrowdSimEnv(temp_config, robot)
     # additional configuration
     env.show_images = passed_config['show_images']
     env.train_on_images = passed_config['train_on_images']
-
-    robot = Robot(temp_config, 'robot')
-    env.set_robot(robot)
 
     # configure policy
     policy_config = configparser.RawConfigParser()

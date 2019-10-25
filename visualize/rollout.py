@@ -42,14 +42,15 @@ def create_env(config):
     # configure environment
     env_config = configparser.RawConfigParser()
     env_config.read_string(config['env_config'])
+
+    robot = Robot(env_config, 'robot')
+    robot.set_policy(policy)
     env = CrowdSimEnv(env_config)
     if config['replay_params'].get('square', False):
         env.test_sim = 'square_crossing'
     if config['replay_params'].get('circle', False):
         env.test_sim = 'circle_crossing'
-    robot = Robot(env_config, 'robot')
-    robot.set_policy(policy)
-    env.set_robot(robot)
+
 
     policy.set_phase(config['replay_params']['phase'])
     # set safety space for ORCA in non-cooperative simulation

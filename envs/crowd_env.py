@@ -24,7 +24,7 @@ from utils.constants import ROBOT_COLOR, GOAL_COLOR, HUMAN_COLOR
 class CrowdSimEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, config):
+    def __init__(self, config, robot):
         """
         Movement simulation for n+1 agents
         Agent can either be human or robot.
@@ -35,8 +35,8 @@ class CrowdSimEnv(gym.Env):
 
         # Training details
         self.num_stacked_frames = config.getint('train_details', 'num_stacked_frames')
-        self.train_on_images = config.getint('train_details', 'train_on_images')
-        self.show_images = config.getint('train_details', 'show_images')
+        self.train_on_images = config.getboolean('train_details', 'train_on_images')
+        self.show_images = config.getboolean('train_details', 'show_images')
 
         self.time_limit = config.getint('env', 'time_limit')
         self.discretization = config.getint('env', 'discretization')
@@ -84,6 +84,10 @@ class CrowdSimEnv(gym.Env):
         logging.info('Training simulation: {}, test simulation: {}'.format(self.train_val_sim, self.test_sim))
         logging.info('Square width: {}, circle width: {}'.format(self.square_width, self.circle_radius))
 
+        self.robot = robot
+
+        self.obs_norm = 100
+
         # generate a set of humans so we have something in the observation space
         self.generate_random_human_position(self.human_num, rule=self.train_val_sim)
 
@@ -103,9 +107,6 @@ class CrowdSimEnv(gym.Env):
     def action_space(self):
         # TODO(@evinitsky) what are the right bounds
         return Box(low=-2.0, high=2.0, shape=(2, ))
-
-    def set_robot(self, robot):
-        self.robot = robot
 
     def generate_random_human_position(self, human_num, rule):
         """
@@ -156,7 +157,7 @@ class CrowdSimEnv(gym.Env):
                     while True:
                         px = np.random.random() * width * 0.5 * sign
                         py = (np.random.random() - 0.5) * height
-                        collide = False
+                        collide = False                            
                         for agent in [self.robot] + self.humans:
                             if norm((px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
                                 collide = True
