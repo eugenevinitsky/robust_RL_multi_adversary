@@ -32,6 +32,7 @@ def setup_exps(args):
     config['gamma'] = 0.99
     config['lr'] = grid_search([5e-3, 5e-4, 5e-5, 5e-6])
     config['train_batch_size'] = 10000
+    config['vf_loss_coeff'] = 1e-2
 
     config['env_config']['run'] = alg_run
     config['env_config']['policy'] = args.policy
