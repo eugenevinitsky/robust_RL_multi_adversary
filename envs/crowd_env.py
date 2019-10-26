@@ -25,93 +25,19 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 class CrowdSimEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self):
+    def __init__(self, config, robot):
         """
         Movement simulation for n+1 agents
         Agent can either be human or robot.
         humans are controlled by a unknown and fixed policy.
         robot is controlled by a known and learnable policy.
         """
-        self.time_limit = None
-        self.time_step = None
-        self.robot = None
-        self.humans = None
-        self.global_time = None
-        self.human_times = None
-
-        # reward function
-        self.success_reward = None
-        self.collision_penalty = None
-        self.discomfort_dist = None
-        self.edge_discomfort_dist = None
-        self.discomfort_penalty_factor = None
-        self.edge_penalty = None
-        self.closer_goal = None
-
-        # simulation configuration
-        self.config = None
-        self.case_capacity = None
-        self.case_size = None
-        self.case_counter = None
-        self.randomize_attributes = None
-        self.train_val_sim = None
-        self.test_sim = None
-        self.square_width = None
-        self.circle_radius = None
-        self.accessible_space = None
-        self.goal_region = None
-        self.human_num = None
-        self.train_on_images = None
-        self.randomize_goals = None
-        self.update_goals = None
-        self.chase_robot = None
-        self.show_images = False
-        self.discretization = None  # How much to downsample images
-        # TODO(@evinitsky) remove the magic numbers
-        self.grid = None
-        # How many grid points the robot/humans occupy
-        self.robot_grid_size = None
-        # The image used to represent the robot positions
-        self.image = None
-
-        self.render_train = False
-
-        # for visualization
-        self.states = None
-        self.action_values = None
-        self.attention_weights = None
-
-        # observation space
-        self.obs_norm = 100.0
-        self.num_stacked_frames = None
-        self.observed_image = None  # The stacked images we will observe
-
-    @property
-    def observation_space(self):
-        return Box(low=-1.0, high=1.0, shape=(self.human_num*5+4,))
-        # if not self.train_on_images:
-        #     human_num = self.human_num
-        #     # TODO(@evinitsky) clean this the heck up. This initialization should be done elsewhere!! ABSTRACTION BREAK
-        #     self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
-        #     self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
-        #     temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
-        #     return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0] + 4, ))
-        # else:
-        #     img_shape = self.image.shape
-        #     new_tuple = (img_shape[0], img_shape[1], img_shape[2] * self.num_stacked_frames)
-        #     return Box(low=-1.0, high=1.0, shape=new_tuple)
-
-
-    @property
-    def action_space(self):
-        # TODO(@evinitsky) what are the right bounds
-        return Box(low=-2.0, high=2.0, shape=(2, ))
-
-    def configure(self, config):
         self.config = config
 
         # Training details
         self.num_stacked_frames = config.getint('train_details', 'num_stacked_frames')
+        self.train_on_images = config.getboolean('train_details', 'train_on_images')
+        self.show_images = config.getboolean('train_details', 'show_images')
 
         self.time_limit = config.getint('env', 'time_limit')
         self.discretization = config.getint('env', 'discretization')
@@ -160,8 +86,29 @@ class CrowdSimEnv(gym.Env):
         logging.info('Training simulation: {}, test simulation: {}'.format(self.train_val_sim, self.test_sim))
         logging.info('Square width: {}, circle width: {}'.format(self.square_width, self.circle_radius))
 
-    def set_robot(self, robot):
         self.robot = robot
+        self.attention_weights = None
+        self.obs_norm = 100
+
+        # generate a set of humans so we have something in the observation space
+        self.generate_random_human_position(self.human_num, rule=self.train_val_sim)
+
+
+    @property
+    def observation_space(self):
+        if not self.train_on_images:
+            temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
+            return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0] + 4, ))
+        else:
+            img_shape = self.image.shape
+            new_tuple = (img_shape[0], img_shape[1], img_shape[2] * self.num_stacked_frames)
+            return Box(low=-1.0, high=1.0, shape=new_tuple)
+
+
+    @property
+    def action_space(self):
+        # TODO(@evinitsky) what are the right bounds
+        return Box(low=-2.0, high=2.0, shape=(2, ))
 
     def generate_random_human_position(self, human_num, rule):
         """
@@ -212,7 +159,7 @@ class CrowdSimEnv(gym.Env):
                     while True:
                         px = np.random.random() * width * 0.5 * sign
                         py = (np.random.random() - 0.5) * height
-                        collide = False
+                        collide = False                            
                         for agent in [self.robot] + self.humans:
                             if norm((px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
                                 collide = True
@@ -357,6 +304,9 @@ class CrowdSimEnv(gym.Env):
             else:
                 self.robot.set(0, 0, 0, self.circle_radius, 0, 0, np.pi / 2) #default goal is directly above robot
 
+
+            # By setting np.random.seed with essentially the iteration number, they can ensure that the 
+            # 'training cases' are the same each time.
             if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
                 if phase in ['train', 'val']:
@@ -367,6 +317,8 @@ class CrowdSimEnv(gym.Env):
                 # case_counter is always between 0 and case_size[phase]
                 self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
             else:
+                ## this is how they handle 'testing', if you set test_case to -1 it'll set up a specific
+                ## initial configuration
                 assert phase == 'test'
                 if self.case_counter[phase] == -1:
                     # for debugging purposes
