@@ -103,3 +103,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# custom objects
+*.mp4
+transfer_results/*
