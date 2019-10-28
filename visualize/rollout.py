@@ -27,7 +27,8 @@ from run_scripts.test_rllib_script import env_creator
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 
-from models.models import ConvLSTM
+from models.conv_lstm import ConvLSTM
+
 ModelCatalog.register_custom_model("rnn", ConvLSTM)
 
 class DefaultMapping(collections.defaultdict):
