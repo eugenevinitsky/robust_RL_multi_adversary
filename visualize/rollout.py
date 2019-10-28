@@ -22,12 +22,10 @@ try:
 except ImportError:
     from ray.rllib.agents.registry import get_agent_class
 
-from envs.crowd_env import CrowdSimEnv
-from envs.policy.policy_factory import policy_factory
-from envs.utils.robot import Robot
-from envs.policy.orca import ORCA
-
 from run_scripts.test_rllib_script import env_creator
+
+from utils.parsers import replay_parser
+from utils.rllib_utils import get_config
 
 from models.conv_lstm import ConvLSTM
 
@@ -75,10 +73,11 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, num_rollo
             for p, m in policy_map.items()
         }
     else:
-        env = create_env(rllib_config['env_config'])
+        env = env_creator(rllib_config['env_config'])
         multiagent = False
         use_lstm = {DEFAULT_POLICY_ID: False}
 
+    rewards = []
 
     # actually do the rollout
     for r_itr in range(num_rollouts):
@@ -133,50 +132,38 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, num_rollo
                 reward_total += reward
             obs = next_obs
         print("Episode reward", reward_total)
+        rewards.append(reward_total)
 
     if not rllib_config['env_config']['show_images']:
         if save_trajectory:
             env.render('traj', video_file)
-        else:
             output_path = video_file
             if not output_path[-4:] == '.mp4':
                 output_path += '_.mp4'
             env.render('video', output_path)
+    else:
+        logging.info('Video creation is disabled since show_images is true.')
+
 
     logging.info('It takes %.2f seconds to finish. Final status is %s', env.global_time, info)
     if env.robot.visible and info == 'reach goal':
         human_times = env.get_human_times()
         logging.info('Average time for humans to reach goal: %.2f', sum(human_times) / len(human_times))
+
+    return rewards
     
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument(
-        'result_dir', type=str, help='Directory containing results')
-    parser.add_argument('checkpoint_num', type=str, help='Checkpoint number.')
-    parser.add_argument('--num_cpus', type=int, default=1, help='Number of cpus to run experiment with')
-    parser.add_argument('--video_file', type=str, default="rollout.mp4")
-    parser.add_argument('--show_images', action="store_true")
-    parser.add_argument('--num_rollouts', type=int, default=1)
-    parser.add_argument('--traj', default=False, action='store_true')
+    parser = replay_parser(parser)
     args = parser.parse_args()
 
     # configure logging and device
     logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s',
                         datefmt="%Y-%m-%d %H:%M:%S")
 
-    config_path = os.path.join(args.result_dir, "params.pkl")
-    if not os.path.exists(config_path):
-        config_path = os.path.join(args.result_dir, "../params.pkl")
-    if not os.path.exists(config_path):
-        raise ValueError(
-            "Could not find params.pkl in either the checkpoint dir or "
-            "its parent directory.")
-    with open(config_path, 'rb') as f:
-        rllib_config = cloudpickle.load(f)
+    rllib_config, checkpoint = get_config(args)
 
-    checkpoint = args.result_dir + '/checkpoint_' + args.checkpoint_num
-    checkpoint = checkpoint + '/checkpoint-' + args.checkpoint_num
     ray.init(num_cpus=args.num_cpus)
 
     rllib_config['env_config']['show_images'] = args.show_images
