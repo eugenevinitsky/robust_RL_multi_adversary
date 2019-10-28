@@ -26,6 +26,7 @@ from envs.crowd_env import CrowdSimEnv
 from envs.policy.policy_factory import policy_factory
 from envs.utils.robot import Robot
 from envs.policy.orca import ORCA
+from utils.env_creator import env_creator
 
 from run_scripts.test_rllib_script import env_creator
 
@@ -75,7 +76,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file):
             for p, m in policy_map.items()
         }
     else:
-        env = create_env(rllib_config['env_config'])
+        env = env_creator(rllib_config['env_config'])
         multiagent = False
         use_lstm = {DEFAULT_POLICY_ID: False}
 
