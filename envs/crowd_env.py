@@ -59,10 +59,11 @@ class CrowdSimEnv(gym.Env):
         self.closer_goal = config.getfloat('reward', 'closer_goal')
         self.randomize_goals = config.getboolean('sim', 'randomize_goals')
         self.update_goals = config.getboolean('sim', 'update_goals')
-        self.chase_robot = config.getboolean('humans', 'chase_robot')
 
         # transfer configs
         self.change_colors_mode = config.get('transfer', 'change_colors_mode')
+        self.chase_robot = config.getboolean('transfer', 'chase_robot')
+        self.restrict_goal_region = config.getboolean('transfer', 'restrict_goal_region')
 
         if self.config.get('humans', 'policy') == 'orca':
             self.case_capacity = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
@@ -800,4 +801,9 @@ class CrowdSimEnv(gym.Env):
             raise NotImplementedError
 
     def generate_random_goals(self):
-        return (np.random.rand(2) - 0.5) * 2 * self.goal_region
+
+        if self.restrict_goal_region:
+            goal_reg = self.goal_region
+        else:
+            goal_reg = self.accessible_space #unrestricted goal region, goal can be anywhere in accessible space
+        return (np.random.rand(2) - 0.5) * 2 * goal_reg
