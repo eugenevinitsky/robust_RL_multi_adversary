@@ -31,3 +31,8 @@ def env_parser(parser):
     parser.add_argument("--show_images", action="store_true", default=False, help="Whether to display the observations")
     parser.add_argument('--train_on_images', action='store_true', default=False, help='Whether to train on images')
     return parser
+
+
+def ma_env_parser(parser):
+    parser.add_argument("--perturb_actions", action="store_true", default=False, help="Add adversary to agent actions")
+    parser.add_argument("--perturb_state", action="store_true", default=False, help="Add adversary to agent state")

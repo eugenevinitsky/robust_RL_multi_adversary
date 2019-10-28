@@ -47,7 +47,6 @@ class CrowdSimEnv(gym.Env):
         self.observed_image = np.ones((self.discretization, self.discretization, 3 * self.num_stacked_frames)) * 255
         self.time_step = config.getfloat('env', 'time_step')
         self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
-        self.adversary_scaling = config.getfloat('env', 'adversary_scaling')
         self.gauss_noise_state_stddev = config.getfloat('env', 'gaussian_noise_state_stddev')
         self.gauss_noise_action_stddev = config.getfloat('env', 'gaussian_noise_action_stddev')
         self.add_gauss_noise_state = config.getboolean('env', 'add_gaussian_noise_state')
@@ -770,6 +769,16 @@ class CrowdSimEnv(gym.Env):
 
 class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
+    def __init__(self, config, robot):
+        super(MultiAgentCrowdSimEnv, self).__init__(config, robot)
+        self.adversary_action_scaling = config.getfloat('env', 'adversary_action_scaling')
+        self.adversary_state_scaling = config.getfloat('env', 'adversary_state_scaling')
+        self.perturb_actions = config.getboolean('ma_train_details', 'perturb_actions')
+        self.perturb_state = config.getboolean('ma_train_details', 'perturb_state')
+        if not self.perturb_state and not self.perturb_actions:
+            logging.exception("Either one of perturb actions or perturb state must be true")
+
+
     @property
     def adv_action_space(self):
         """
@@ -779,25 +788,34 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         Therefore, its action space is the same size as the agent's
         observation space.
         """
-        obs_size = super().observation_space.shape[0]
+        obs_size = super().observation_space.shape
+        if len(obs_size) > 1:
+            obs_size = np.product(obs_size)
         act_size = super().action_space.shape[0]
         box = Box(low=-1.0, high=1.0, shape=(obs_size+act_size,))
         return box
 
-    
     def step(self, action, update=True):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
         """
-        action_perturbation = action['adversary'][:2] * self.adversary_scaling
-        state_perturbation = action['adversary'][2:] * self.adversary_scaling
-        robot_action = action['robot'] + action_perturbation
+        if self.perturb_state and self.perturb_actions:
+            action_perturbation = action['adversary'][:2] * self.adversary_action_scaling
+            state_perturbation = action['adversary'][2:] * self.adversary_state_scaling
+        elif not self.perturb_state and self.perturb_actions:
+            action_perturbation = action['adversary'] * self.adversary_action_scaling
+        else:
+            state_perturbation = action['adversary'] * self.adversary_state_scaling
+
+        if self.perturb_actions:
+            robot_action = action['robot'] + action_perturbation
         ob, reward, done, info = super().step(robot_action, update)
 
-        ob = {'robot': np.clip(ob + state_perturbation,
-                               a_min=self.observation_space.low[0],
-                               a_max=self.observation_space.high[0]),
-                               'adversary': ob}
+        if self.perturb_state:
+            ob = {'robot': np.clip(ob + state_perturbation,
+                                   a_min=self.observation_space.low[0],
+                                   a_max=self.observation_space.high[0]),
+                                   'adversary': ob}
         reward = {'robot': reward, 'adversary': -reward}
         done = {'__all__': done}
         
