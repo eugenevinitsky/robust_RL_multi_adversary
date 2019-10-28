@@ -9,17 +9,16 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib import animation
-import matplotlib.lines as mlines
 from matplotlib import patches
 import numpy as np
 from numpy.linalg import norm
+from ray.rllib.env.multi_agent_env import MultiAgentEnv
 import rvo2
 
 from envs.utils.human import Human
 from envs.utils.info import *
 from envs.utils.utils import point_to_segment_dist
-from utils.constants import ROBOT_COLOR, GOAL_COLOR, HUMAN_COLOR
-from ray.rllib.env.multi_agent_env import MultiAgentEnv
+from utils.constants import ROBOT_COLOR, GOAL_COLOR, HUMAN_COLOR, BACKGROUND_COLOR, COLOR_LIST
 
 
 class CrowdSimEnv(gym.Env):
@@ -60,7 +59,11 @@ class CrowdSimEnv(gym.Env):
         self.closer_goal = config.getfloat('reward', 'closer_goal')
         self.randomize_goals = config.getboolean('sim', 'randomize_goals')
         self.update_goals = config.getboolean('sim', 'update_goals')
-        self.chase_robot = config.getboolean('humans', 'chase_robot')
+
+        # transfer configs
+        self.change_colors_mode = config.get('transfer', 'change_colors_mode')
+        self.chase_robot = config.getboolean('transfer', 'chase_robot')
+        self.restrict_goal_region = config.getboolean('transfer', 'restrict_goal_region')
 
         if self.config.get('humans', 'policy') == 'orca':
             self.case_capacity = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
@@ -279,6 +282,12 @@ class CrowdSimEnv(gym.Env):
         Set px, py, gx, gy, vx, vy, theta for robot and humans
         :return:
         """
+        # Set up the colors
+        self.robot_color = ROBOT_COLOR
+        self.human_color = HUMAN_COLOR
+        self.goal_color = GOAL_COLOR
+        self.background_color = BACKGROUND_COLOR
+
         if self.robot is None:
             raise AttributeError('robot has to be set!')
         assert phase in ['train', 'val', 'test']
@@ -347,9 +356,16 @@ class CrowdSimEnv(gym.Env):
 
         # TODO(@evinitsky) don't overwrite the ob, just calculate ob only once
         if self.train_on_images:
+            bg_color = np.array(self.background_color)[np.newaxis, np.newaxis, :]
+            self.image = np.ones((self.discretization, self.discretization, 3)) * bg_color
+
+            # should we shift the colors?
+            change_colors = False
+            if self.change_colors_mode != 'no_change':
+                change_colors = True
+            self.image_state_space(update_colors=change_colors)
+
             # TODO(@evinitsky) don't recreate this every time
-            self.image = np.ones((self.discretization, self.discretization, 3)) * 255
-            self.image_state_space()
             ob = np.rot90(self.image)
             # if needed, render the ob for visualization
             if self.show_images:
@@ -357,6 +373,10 @@ class CrowdSimEnv(gym.Env):
                 cv2.resizeWindow('image', 1000, 1000)
                 cv2.imshow("image", ob)
                 cv2.waitKey(2)
+            # The last axis is represented as {s_{t}, ..., s_{t - num_stacked_frames + 2},
+            #                                  s_{t - num_stacked_frames + 1}}
+            # where each of these states is three channels wide.
+            # We roll it forward so that we can overwrite the oldest frame
             self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
             self.observed_image[:, :, 0: 3] = ob
             ob = (self.observed_image - 128.0) / 255.0
@@ -495,9 +515,15 @@ class CrowdSimEnv(gym.Env):
 
         # TODO(@evinitsky) don't overwrite the ob, just calculate ob only once
         if self.train_on_images:
+            bg_color = np.array(self.background_color)[np.newaxis, np.newaxis, :]
+            self.image = np.ones((self.discretization, self.discretization, 3)) * bg_color
+
+            # test if we should  shift the colors?
+            change_colors = False
+            if self.change_colors_mode == 'every_step':
+                change_colors = True
+            self.image_state_space(update_colors=change_colors)
             # TODO(@evinitsky) don't recreate this every time
-            self.image = np.ones((self.discretization, self.discretization, 3)) * 255
-            self.image_state_space()
             ob = np.rot90(self.image)
             # if needed, render the ob for visualization
             if self.show_images:
@@ -514,25 +540,35 @@ class CrowdSimEnv(gym.Env):
 
         return ob, reward, done, {}
 
-    def image_state_space(self):
+    def image_state_space(self, update_colors):
         """Take the current state and render it as an image
+        Parameters
+        ==========
+        update_colors: bool
+            If true, we change the color scheme
 
         Returns
         =======
         None
         """
+        if update_colors:
+            self.robot_color = COLOR_LIST[np.random.randint(len(COLOR_LIST))]
+            self.human_color = COLOR_LIST[np.random.randint(len(COLOR_LIST))]
+            self.goal_color = COLOR_LIST[np.random.randint(len(COLOR_LIST))]
+            self.background_color = COLOR_LIST[np.random.randint(len(COLOR_LIST))]
+
         # Fill in the robot position
         robot_pos = self.robot.get_full_state().position
-        self.fill_grid(self.pos_to_coord(robot_pos), self.robot_grid_size, ROBOT_COLOR)
+        self.fill_grid(self.pos_to_coord(robot_pos), self.robot_grid_size, self.robot_color)
 
         # Fill in the human position
         for human in self.humans:
             pos = human.get_full_state().position
-            self.fill_grid(self.pos_to_coord(pos), self.robot_grid_size, HUMAN_COLOR)
+            self.fill_grid(self.pos_to_coord(pos), self.robot_grid_size, self.human_color)
 
         # Fill in the goal image
         goal_pos = self.robot.get_goal_position()
-        self.fill_grid(self.pos_to_coord(goal_pos), self.robot_grid_size, GOAL_COLOR)
+        self.fill_grid(self.pos_to_coord(goal_pos), self.robot_grid_size, self.goal_color)
 
     def pos_to_coord(self, pos):
         """Convert a position into a coordinate in the image
@@ -765,7 +801,12 @@ class CrowdSimEnv(gym.Env):
             raise NotImplementedError
             
     def generate_random_goals(self):
-        return (np.random.rand(2) - 0.5) * 2 * self.goal_region
+        if self.restrict_goal_region:
+            goal_reg = self.goal_region
+        else:
+            goal_reg = self.accessible_space #unrestricted goal region, goal can be anywhere in accessible space
+        return (np.random.rand(2) - 0.5) * 2 * goal_reg
+
 
 class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
@@ -829,4 +870,3 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
         ob = super().reset(phase, test_case)
         return {'robot': ob, 'adversary': ob}
-        

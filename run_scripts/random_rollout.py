@@ -10,29 +10,12 @@ import numpy as np
 from envs.crowd_env import CrowdSimEnv
 from envs.policy.policy_factory import policy_factory
 from envs.utils.robot import Robot
+from utils.env_creator import env_creator, construct_config
 from utils.parsers import env_parser, init_parser
 
+
 def run(passed_config):
-    config_path = passed_config['env_params']
-    temp_config = configparser.RawConfigParser()
-    temp_config.read_string(config_path)
-
-    robot = Robot(temp_config, 'robot')
-
-    env = CrowdSimEnv(temp_config, robot)
-    # additional configuration
-    env.show_images = passed_config['show_images']
-
-    # configure policy
-    policy_params = configparser.RawConfigParser()
-    policy_params.read_string(passed_config['policy_params'])
-    policy = policy_factory[passed_config['policy']](policy_params)
-    if not policy.trainable:
-        sys.exit('Policy has to be trainable')
-    if passed_config["policy_params"] is None:
-        sys.exit('Policy config has to be specified for a trainable network')
-
-    robot.set_policy(policy)
+    env = env_creator(passed_config)
 
     ob = env.reset()
     total_rew = 0
@@ -50,8 +33,7 @@ def setup_random():
     with open(args.policy_params, 'r') as file:
         policy_params = file.read()
 
-    passed_config = {'env_params': env_params, 'policy_params': policy_params,
-                     'policy': args.policy, 'show_images': args.show_images}
+    passed_config = construct_config(env_params, policy_params, args)
 
     return passed_config
 
