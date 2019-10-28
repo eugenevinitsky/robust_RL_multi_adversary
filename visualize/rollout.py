@@ -29,7 +29,7 @@ from envs.policy.orca import ORCA
 
 from run_scripts.test_rllib_script import env_creator
 
-from models.models import ConvLSTM
+from models.conv_lstm import ConvLSTM
 
 ModelCatalog.register_custom_model("rnn", ConvLSTM)
 

@@ -16,7 +16,7 @@ from envs.utils.robot import Robot
 from utils.parsers import init_parser, env_parser, ray_parser
 
 from ray.rllib.models.catalog import MODEL_DEFAULTS
-from models.models import ConvLSTM
+from models.conv_lstm import ConvLSTM
 
 
 def setup_exps(args):

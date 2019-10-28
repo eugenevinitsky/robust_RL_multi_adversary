@@ -1,6 +1,6 @@
 import numpy as np
 
-from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy, PPOLoss
+from ray.rllib.policy.rnn_sequencing import add_time_dimension
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.tf.misc import normc_initializer, get_activation_fn
 from ray.rllib.models.tf.recurrent_tf_modelv2 import RecurrentTFModelV2
@@ -8,7 +8,8 @@ from ray.rllib.utils import try_import_tf
 from ray.rllib.utils.annotations import override
 
 tf = try_import_tf()
-    
+
+
 class ConvLSTM(RecurrentTFModelV2):
     """
     fcnet_hiddens = [[layers before lstm], [layers after lstm]]
@@ -95,11 +96,19 @@ class ConvLSTM(RecurrentTFModelV2):
         self.register_variables(self.rnn_model.variables)
         self.rnn_model.summary()
 
+    @override(ModelV2)
+    def forward(self, input_dict, state, seq_lens):
+        """Adds time dimension to batch before sending inputs to forward_rnn().
+        You should implement forward_rnn() in your subclass."""
+        output, new_state = self.forward_rnn(
+            add_time_dimension(input_dict["obs"], seq_lens), state,
+            seq_lens)
+        return tf.reshape(output, [-1, self.num_outputs]), new_state
+
     @override(RecurrentTFModelV2)
     def forward_rnn(self, input_dict, state, seq_lens):
-        # by sublcassing recurrent_tf_modelv2, forward_rnn receives 
+        # by subclassing recurrent_tf_modelv2, forward_rnn receives
         # inputs that are B x T x features 
-        # DON'T OVERRIDE FORWARD
         model_out, self._value_out,  h, c = self.rnn_model([input_dict, seq_lens] + state)
         return model_out, [h, c]
 
