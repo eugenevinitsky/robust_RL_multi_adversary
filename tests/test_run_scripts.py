@@ -11,11 +11,9 @@ import unittest
 import ray
 from ray.tune import run as run_tune
 
-from utils.parsers import env_parser, init_parser
 from run_scripts.random_rollout import run as run_random, setup_random
 from run_scripts.test_rllib_script import setup_exps
 from visualize.rollout import run_rollout
-from models.models import ConvLSTM
 
 class TestRollout(unittest.TestCase):
 
