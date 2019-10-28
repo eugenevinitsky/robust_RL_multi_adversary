@@ -60,6 +60,7 @@ class CrowdSimEnv(gym.Env):
         self.randomize_goals = config.getboolean('sim', 'randomize_goals')
         self.update_goals = config.getboolean('sim', 'update_goals')
         self.chase_robot = config.getboolean('humans', 'chase_robot')
+        self.render_humans = config.getboolean('humans', 'render')
 
         if self.config.get('humans', 'policy') == 'orca':
             self.case_capacity = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
@@ -95,6 +96,7 @@ class CrowdSimEnv(gym.Env):
     @property
     def observation_space(self):
         if not self.train_on_images:
+            assert self.human_num != 0, "There are no humans in this simulation. Either change the obs space, or add humans"
             temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
             return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0] + 4, ))
         else:
@@ -273,6 +275,37 @@ class CrowdSimEnv(gym.Env):
         del sim
         return self.human_times
 
+    def compute_observation(self):
+        # TODO(@evinitsky) don't overwrite the ob, just calculate ob only once
+        if self.train_on_images:
+            # TODO(@evinitsky) don't recreate this every time
+            self.image = np.ones((self.discretization, self.discretization, 3)) * 255
+            self.image_state_space()
+            ob = np.rot90(self.image)
+            # if needed, render the ob for visualization
+            if self.show_images:
+                cv2.namedWindow("image", cv2.WINDOW_NORMAL)
+                cv2.resizeWindow('image', 1000, 1000)
+                cv2.imshow("image", ob)
+                cv2.waitKey(2)
+            self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
+            self.observed_image[:, :, 0: 3] = ob
+            ob = (self.observed_image - 128.0) / 255.0
+        
+        elif self.robot.sensor == 'coordinates':
+            ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
+            normalized_pos =  np.asarray(self.robot.get_position())/self.accessible_space
+            normalized_goal =  np.asarray(self.robot.get_goal_position())/self.accessible_space
+            ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
+
+        elif self.robot.sensor == 'RGB':
+            raise NotImplementedError
+
+        if self.add_gauss_noise_state:
+            ob = np.random.normal(scale=self.gauss_noise_state_stddev, size=ob.shape) + ob
+        
+        return ob
+
     def reset(self, phase='test', test_case=None):
         """
         Set px, py, gx, gy, vx, vy, theta for robot and humans
@@ -334,35 +367,7 @@ class CrowdSimEnv(gym.Env):
 
         self.states = list()
 
-        # get current observation
-        if self.robot.sensor == 'coordinates':
-            ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
-            normalized_pos =  np.asarray(self.robot.get_position())/self.accessible_space
-            normalized_goal =  np.asarray(self.robot.get_goal_position())/self.accessible_space
-            ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
-
-        elif self.robot.sensor == 'RGB':
-            raise NotImplementedError
-
-        # TODO(@evinitsky) don't overwrite the ob, just calculate ob only once
-        if self.train_on_images:
-            # TODO(@evinitsky) don't recreate this every time
-            self.image = np.ones((self.discretization, self.discretization, 3)) * 255
-            self.image_state_space()
-            ob = np.rot90(self.image)
-            # if needed, render the ob for visualization
-            if self.show_images:
-                cv2.namedWindow("image", cv2.WINDOW_NORMAL)
-                cv2.resizeWindow('image', 1000, 1000)
-                cv2.imshow("image", ob)
-                cv2.waitKey(2)
-            self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
-            self.observed_image[:, :, 0: 3] = ob
-            ob = (self.observed_image - 128.0) / 255.0
-
-        if self.add_gauss_noise_state:
-            ob = np.random.normal(scale=self.gauss_noise_state_stddev, size=ob.shape) + ob
-
+        ob = self.compute_observation()
         return ob
 
     def onestep_lookahead(self, action):
@@ -476,40 +481,15 @@ class CrowdSimEnv(gym.Env):
                 # only record the first time the human reaches the goal
                 if self.human_times[i] == 0 and human.reached_destination():
                     self.human_times[i] = self.global_time
-
-            # compute the observation
-            if self.robot.sensor == 'coordinates':
-                ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
-                normalized_pos = np.asarray(self.robot.get_position()) / self.accessible_space
-                normalized_goal = np.asarray(self.robot.get_goal_position()) / self.accessible_space
-                ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
-            elif self.robot.sensor == 'RGB':
-                raise NotImplementedError
+            ob = self.compute_observation()
         else:
-            if self.robot.sensor == 'coordinates':
+            if self.train_on_images:
+                raise NotImplementedError
+            elif self.robot.sensor == 'coordinates':
                 ob = np.concatenate([human.get_next_observable_state(action).as_array()
                                  for human, action in zip(self.humans, human_actions)]) / self.obs_norm
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
-
-        # TODO(@evinitsky) don't overwrite the ob, just calculate ob only once
-        if self.train_on_images:
-            # TODO(@evinitsky) don't recreate this every time
-            self.image = np.ones((self.discretization, self.discretization, 3)) * 255
-            self.image_state_space()
-            ob = np.rot90(self.image)
-            # if needed, render the ob for visualization
-            if self.show_images:
-                cv2.namedWindow("image", cv2.WINDOW_NORMAL)
-                cv2.resizeWindow('image', 1000, 1000)
-                cv2.imshow("image", ob)
-                cv2.waitKey(2)
-            self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
-            self.observed_image[:, :, 0: 3] = ob
-            ob = (self.observed_image - 128.0) / 255.0
-
-        if self.add_gauss_noise_state:
-            ob = np.random.normal(scale=self.gauss_noise_state_stddev, size=ob.shape) + ob
 
         return ob, reward, done, {}
 
@@ -525,9 +505,10 @@ class CrowdSimEnv(gym.Env):
         self.fill_grid(self.pos_to_coord(robot_pos), self.robot_grid_size, ROBOT_COLOR)
 
         # Fill in the human position
-        for human in self.humans:
-            pos = human.get_full_state().position
-            self.fill_grid(self.pos_to_coord(pos), self.robot_grid_size, HUMAN_COLOR)
+        if self.render_humans:
+            for human in self.humans:
+                pos = human.get_full_state().position
+                self.fill_grid(self.pos_to_coord(pos), self.robot_grid_size, HUMAN_COLOR)
 
         # Fill in the goal image
         goal_pos = self.robot.get_goal_position()
