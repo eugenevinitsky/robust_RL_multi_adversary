@@ -45,7 +45,7 @@ class DefaultMapping(collections.defaultdict):
 def default_policy_agent_mapping(unused_agent_id):
     return DEFAULT_POLICY_ID
 
-def run_rollout(rllib_config, checkpoint, save_trajectory, video_file):
+def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, num_rollouts):
     rllib_config['num_workers'] = 0
 
     # Determine agent and checkpoint
@@ -82,65 +82,67 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file):
 
 
     # actually do the rollout
-    mapping_cache = {}  # in case policy_agent_mapping is stochastic
-    agent_states = DefaultMapping(
-        lambda agent_id: state_init[mapping_cache[agent_id]])
-    prev_actions = DefaultMapping(
-        lambda agent_id: action_init[mapping_cache[agent_id]])
-    obs = env.reset()
-    prev_rewards = collections.defaultdict(lambda: 0.)
-    done = False
-    reward_total = 0.0
-    while not done:
-        multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
-        action_dict = {}
-        for agent_id, a_obs in multi_obs.items():
-            if a_obs is not None:
-                policy_id = mapping_cache.setdefault(
-                    agent_id, policy_agent_mapping(agent_id))
-                p_use_lstm = use_lstm[policy_id]
-                if p_use_lstm:
-                    a_action, p_state, _ = agent.compute_action(
-                        a_obs,
-                        state=agent_states[agent_id],
-                        prev_action=prev_actions[agent_id],
-                        prev_reward=prev_rewards[agent_id],
-                        policy_id=policy_id)
-                    agent_states[agent_id] = p_state
-                else:
-                    a_action = agent.compute_action(
-                        a_obs,
-                        prev_action=prev_actions[agent_id],
-                        prev_reward=prev_rewards[agent_id],
-                        policy_id=policy_id)
-                a_action = _flatten_action(a_action)  # tuple actions
-                action_dict[agent_id] = a_action
-                prev_actions[agent_id] = a_action
-        action = action_dict
+    for r_itr in range(num_rollouts):
+        mapping_cache = {}  # in case policy_agent_mapping is stochastic
+        agent_states = DefaultMapping(
+            lambda agent_id: state_init[mapping_cache[agent_id]])
+        prev_actions = DefaultMapping(
+            lambda agent_id: action_init[mapping_cache[agent_id]])
+        obs = env.reset()
+        prev_rewards = collections.defaultdict(lambda: 0.)
+        done = False
+        reward_total = 0.0
+        while not done:
+            multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
+            action_dict = {}
+            for agent_id, a_obs in multi_obs.items():
+                if a_obs is not None:
+                    policy_id = mapping_cache.setdefault(
+                        agent_id, policy_agent_mapping(agent_id))
+                    p_use_lstm = use_lstm[policy_id]
+                    if p_use_lstm:
+                        a_action, p_state, _ = agent.compute_action(
+                            a_obs,
+                            state=agent_states[agent_id],
+                            prev_action=prev_actions[agent_id],
+                            prev_reward=prev_rewards[agent_id],
+                            policy_id=policy_id)
+                        agent_states[agent_id] = p_state
+                    else:
+                        a_action = agent.compute_action(
+                            a_obs,
+                            prev_action=prev_actions[agent_id],
+                            prev_reward=prev_rewards[agent_id],
+                            policy_id=policy_id)
+                    a_action = _flatten_action(a_action)  # tuple actions
+                    action_dict[agent_id] = a_action
+                    prev_actions[agent_id] = a_action
+            action = action_dict
 
-        action = action if multiagent else action[_DUMMY_AGENT_ID]
-        next_obs, reward, done, info = env.step(action)
-        if multiagent:
-            for agent_id, r in reward.items():
-                prev_rewards[agent_id] = r
-        else:
-            prev_rewards[_DUMMY_AGENT_ID] = reward
+            action = action if multiagent else action[_DUMMY_AGENT_ID]
+            next_obs, reward, done, info = env.step(action)
+            if multiagent:
+                for agent_id, r in reward.items():
+                    prev_rewards[agent_id] = r
+            else:
+                prev_rewards[_DUMMY_AGENT_ID] = reward
 
-        if multiagent:
-            done = done["__all__"]
-            reward_total += sum(reward.values())
-        else:
-            reward_total += reward
-        obs = next_obs
+            if multiagent:
+                done = done["__all__"]
+                reward_total += sum(reward.values())
+            else:
+                reward_total += reward
+            obs = next_obs
         print("Episode reward", reward_total)
 
-    if save_trajectory:
-        env.render('traj', video_file)
-    else:
-        output_path = video_file
-        if not output_path[-4:] == '.mp4':
-            output_path += '.mp4'
-        env.render('video', output_path)
+    if not rllib_config['env_config']['show_images']:
+        if save_trajectory:
+            env.render('traj', video_file)
+        else:
+            output_path = video_file
+            if not output_path[-4:] == '.mp4':
+                output_path += '_.mp4'
+            env.render('video', output_path)
 
     logging.info('It takes %.2f seconds to finish. Final status is %s', env.global_time, info)
     if env.robot.visible and info == 'reach goal':
@@ -155,6 +157,8 @@ def main():
     parser.add_argument('checkpoint_num', type=str, help='Checkpoint number.')
     parser.add_argument('--num_cpus', type=int, default=1, help='Number of cpus to run experiment with')
     parser.add_argument('--video_file', type=str, default="rollout.mp4")
+    parser.add_argument('--show_images', action="store_true")
+    parser.add_argument('--num_rollouts', type=int, default=1)
     parser.add_argument('--traj', default=False, action='store_true')
     args = parser.parse_args()
 
@@ -176,7 +180,9 @@ def main():
     checkpoint = checkpoint + '/checkpoint-' + args.checkpoint_num
     ray.init(num_cpus=args.num_cpus)
 
-    run_rollout(rllib_config, checkpoint, args.traj, args.video_file)
+    rllib_config['env_config']['show_images'] = args.show_images
+
+    run_rollout(rllib_config, checkpoint, args.traj, args.video_file, args.num_rollouts)
 
 
 if __name__ == '__main__':
