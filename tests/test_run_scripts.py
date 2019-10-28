@@ -62,7 +62,7 @@ class TestRollout(unittest.TestCase):
                     rllib_config = cloudpickle.load(f)
 
                 checkpoint = os.path.join(sub_folder, 'checkpoint_1/checkpoint-1')
-                run_rollout(rllib_config, checkpoint, False, os.path.join(test_out_dir, "test_replay_{}.mp4".format(count)))    
+                run_rollout(rllib_config, checkpoint, False, os.path.join(test_out_dir, "test_replay_{}.mp4".format(count)), 2)
         assert count == 1
 
 
