@@ -39,3 +39,16 @@ def env_parser(parser):
     parser.add_argument('--friction', action='store_true', default=False,
                         help='If true, all the commands are slightly less than expected and the humans move slower')
     return parser
+
+
+def replay_parser(parser):
+    parser.add_argument(
+        'result_dir', type=str, help='Directory containing results')
+    parser.add_argument('checkpoint_num', type=str, help='Checkpoint number.')
+    parser.add_argument('--num_cpus', type=int, default=1, help='Number of cpus to run experiment with')
+    parser.add_argument('--video_file', type=str, default="rollout.mp4")
+    parser.add_argument('--show_images', action="store_true")
+    parser.add_argument('--num_rollouts', type=int, default=1)
+    parser.add_argument('--traj', type=str, default='no_show',
+                        help='What type of video we want to generate. Options are [human, traj, video]')
+    return parser
