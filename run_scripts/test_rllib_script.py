@@ -14,7 +14,7 @@ from utils.env_creator import env_creator, construct_config
 from utils.parsers import init_parser, env_parser, ray_parser
 
 from ray.rllib.models.catalog import MODEL_DEFAULTS
-from models.models import ConvLSTM
+from models.conv_lstm import ConvLSTM
 
 
 def setup_exps(args):

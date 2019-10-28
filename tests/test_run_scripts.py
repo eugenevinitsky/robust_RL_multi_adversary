@@ -39,19 +39,19 @@ class TestRollout(unittest.TestCase):
         self.transfer_test(test_out_dir)
         shutil.rmtree(test_out_dir)
 
-    # def test_train_with_images_script(self):
-    #     script_path = os.path.dirname(os.path.abspath(__file__))
-    #     folder = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
-    #     test_out_dir = os.path.join(script_path, "test_out/" + folder)
-    #     # Run it with images
-    #     exp_dict, args = setup_exps(["--train_on_images"])
-    #     exp_dict['config']['train_batch_size'] = 128
-    #     exp_dict['local_dir'] = test_out_dir
-    #     exp_dict['stop']['training_iteration'] = 1
-    #     run_tune(**exp_dict)
-    #     self.replay_rollout(test_out_dir)
-    #     self.transfer_test(test_out_dir)
-    #     shutil.rmtree(test_out_dir)
+    def test_train_with_images_script(self):
+        script_path = os.path.dirname(os.path.abspath(__file__))
+        folder = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+        test_out_dir = os.path.join(script_path, "test_out/" + folder)
+        # Run it with images
+        exp_dict, args = setup_exps(["--train_on_images"])
+        exp_dict['config']['train_batch_size'] = 128
+        exp_dict['local_dir'] = test_out_dir
+        exp_dict['stop']['training_iteration'] = 1
+        run_tune(**exp_dict)
+        self.replay_rollout(test_out_dir)
+        self.transfer_test(test_out_dir)
+        shutil.rmtree(test_out_dir)
 
     def replay_rollout(self, test_out_dir):
         count = 0
