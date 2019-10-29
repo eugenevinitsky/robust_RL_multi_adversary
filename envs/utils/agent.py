@@ -19,16 +19,20 @@ class Agent(object):
         self.policy = policy_factory[config.get(section, 'policy')]()
         self.sensor = config.get(section, 'sensor')
         self.kinematics = self.policy.kinematics if self.policy is not None else None
-        self.px = None
-        self.py = None
-        self.gx = None
-        self.gy = None
-        self.vx = None
-        self.vy = None
-        self.theta = None
-        self.time_step = None
+        self.px = 0.0
+        self.py = 0.0
+        self.gx = 0.0
+        self.gy = 0.0
+        self.vx = 0.0
+        self.vy = 0.0
+        self.theta = 0.0
+        self.time_step = 0.0
         self.reward = 0
         self.accessible_space = config.getfloat('sim', 'accessible_space')
+
+        # If true all of the actions will be slightly less than intended by a constant factor
+        self.friction = config.getboolean('transfer', 'friction')
+        self.friction_coef = config.getfloat('transfer', 'friction_coef')
 
     def print_info(self):
         logging.info('Agent is {} and has {} kinematic constraint'.format(
@@ -135,10 +139,16 @@ class Agent(object):
         self.check_validity(action)
         if self.kinematics == 'holonomic':
             vx, vy = action
+            if self.friction:
+                vx = vx - (self.friction_coef * vx)
+                vy = vy - (self.friction_coef * vy)
             px = self.px + vx * delta_t
             py = self.py + vy * delta_t
         else:
             r, v = action
+            if self.friction:
+                r = r - (np.pi / 2) * self.friction_coef * r
+                v = v - self.friction_coef * v
             theta = self.theta + r
             px = self.px + np.cos(theta) * v * delta_t
             py = self.py + np.sin(theta) * v * delta_t
