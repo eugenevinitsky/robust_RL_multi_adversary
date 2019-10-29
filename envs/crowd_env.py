@@ -807,10 +807,6 @@ class CrowdSimEnv(gym.Env):
         else:
             goal_reg = self.accessible_space #unrestricted goal region, goal can be anywhere in accessible space
         return (np.random.rand(2) - 0.5) * 2 * goal_reg
-<<<<<<< HEAD
-=======
-
->>>>>>> 15343ac471ddf1c7d1079513a9f0d01cef27d052
 
 class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
