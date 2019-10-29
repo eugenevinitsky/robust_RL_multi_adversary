@@ -9,15 +9,16 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib import animation
-import matplotlib.lines as mlines
 from matplotlib import patches
 import numpy as np
 from numpy.linalg import norm
+from ray.rllib.env.multi_agent_env import MultiAgentEnv
 import rvo2
 
 from envs.utils.human import Human
 from envs.utils.info import *
 from envs.utils.utils import point_to_segment_dist
+from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from utils.constants import ROBOT_COLOR, GOAL_COLOR, HUMAN_COLOR, BACKGROUND_COLOR, COLOR_LIST
 
 
@@ -799,11 +800,74 @@ class CrowdSimEnv(gym.Env):
                 plt.close()
         else:
             raise NotImplementedError
-
+            
     def generate_random_goals(self):
-
         if self.restrict_goal_region:
             goal_reg = self.goal_region
         else:
             goal_reg = self.accessible_space #unrestricted goal region, goal can be anywhere in accessible space
         return (np.random.rand(2) - 0.5) * 2 * goal_reg
+
+class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
+
+    def __init__(self, config, robot):
+        super(MultiAgentCrowdSimEnv, self).__init__(config, robot)
+        self.adversary_action_scaling = config.getfloat('env', 'adversary_action_scaling')
+        self.adversary_state_scaling = config.getfloat('env', 'adversary_state_scaling')
+        self.perturb_actions = config.getboolean('ma_train_details', 'perturb_actions')
+        self.perturb_state = config.getboolean('ma_train_details', 'perturb_state')
+        if not self.perturb_state and not self.perturb_actions:
+            logging.exception("Either one of perturb actions or perturb state must be true")
+
+
+    @property
+    def adv_action_space(self):
+        """
+        Simple action space for an adversary that can perturb
+        every element of the agent's observation space.
+
+        Therefore, its action space is the same size as the agent's
+        observation space.
+        """
+        obs_size = super().observation_space.shape
+        if len(obs_size) > 1:
+            obs_size = np.product(obs_size)
+        act_size = super().action_space.shape[0]
+        box = Box(low=-1.0, high=1.0, shape=(obs_size+act_size,))
+        return box
+
+    def step(self, action, update=True):
+        """
+        Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
+        """
+        if self.perturb_state and self.perturb_actions:
+            action_perturbation = action['adversary'][:2] * self.adversary_action_scaling
+            state_perturbation = action['adversary'][2:] * self.adversary_state_scaling
+        elif not self.perturb_state and self.perturb_actions:
+            action_perturbation = action['adversary'] * self.adversary_action_scaling
+        else:
+            state_perturbation = action['adversary'] * self.adversary_state_scaling
+
+        if self.perturb_actions:
+            robot_action = action['robot'] + action_perturbation
+        ob, reward, done, info = super().step(robot_action, update)
+
+        if self.perturb_state:
+            ob = {'robot': np.clip(ob + state_perturbation,
+                                   a_min=self.observation_space.low[0],
+                                   a_max=self.observation_space.high[0]),
+                                   'adversary': ob}
+        reward = {'robot': reward, 'adversary': -reward}
+        done = {'__all__': done}
+        
+        return ob, reward, done, info
+
+    def reset(self, phase='test', test_case=None):
+        """
+        Set px, py, gx, gy, vx, vy, theta for robot and humans
+        :return:
+        """
+
+        ob = super().reset(phase, test_case)
+        return {'robot': ob, 'adversary': ob}
+        

@@ -41,6 +41,12 @@ def env_parser(parser):
     return parser
 
 
+def ma_env_parser(parser):
+    parser.add_argument("--perturb_actions", action="store_true", default=False, help="Add adversary to agent actions")
+    parser.add_argument("--perturb_state", action="store_true", default=False, help="Add adversary to agent state")
+    return parser
+
+
 def replay_parser(parser):
     parser.add_argument(
         'result_dir', type=str, help='Directory containing results')
