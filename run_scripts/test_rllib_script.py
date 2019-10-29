@@ -10,13 +10,11 @@ from ray.rllib.models import ModelCatalog
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
-from envs.crowd_env import CrowdSimEnv
-from envs.policy.policy_factory import policy_factory
-from envs.utils.robot import Robot
+from utils.env_creator import env_creator, construct_config
 from utils.parsers import init_parser, env_parser, ray_parser
 
 from ray.rllib.models.catalog import MODEL_DEFAULTS
-from models.models import ConvLSTM
+from models.conv_lstm import ConvLSTM
 
 
 def setup_exps(args):
@@ -31,19 +29,14 @@ def setup_exps(args):
     config['gamma'] = 0.99
     config['train_batch_size'] = 10000
 
-    config['env_config']['run'] = alg_run
-    config['env_config']['policy'] = args.policy
-    config['env_config']['show_images'] = args.show_images
-    config['env_config']['train_on_images'] = args.train_on_images
-
     with open(args.env_params, 'r') as file:
         env_params = file.read()
 
     with open(args.policy_params, 'r') as file:
         policy_params = file.read()
 
-    config['env_config']['env_params'] = env_params
-    config['env_config']['policy_params'] = policy_params
+    config['env_config'] = construct_config(env_params, policy_params, args)
+    config['env_config']['run'] = alg_run
 
     # pick out the right model
     if args.train_on_images:
@@ -91,33 +84,6 @@ def setup_exps(args):
 
     return exp_dict, args
 
-
-def env_creator(passed_config):
-    config_path = passed_config['env_params']
-    
-    env_params = configparser.RawConfigParser()
-    env_params.read_string(config_path)
-    
-    robot = Robot(env_params, 'robot')
-    env = CrowdSimEnv(env_params, robot)
-
-    # additional configuration
-    env.show_images = passed_config['show_images']
-    env.train_on_images = passed_config['train_on_images']
-
-    # configure policy
-    policy_params = configparser.RawConfigParser()
-    policy_params.read_string(passed_config['policy_params'])
-    policy = policy_factory[passed_config['policy']](policy_params)
-    if not policy.trainable:
-        sys.exit('Policy has to be trainable')
-    if passed_config['policy_params'] is None:
-        sys.exit('Policy config has to be specified for a trainable network')
-
-    robot.set_policy(policy)
-    policy.set_env(env)
-    robot.print_info()
-    return env
 
 if __name__=="__main__":
 
