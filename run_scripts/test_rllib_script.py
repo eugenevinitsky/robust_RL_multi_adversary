@@ -29,7 +29,7 @@ def setup_exps(args):
     alg_run = 'PPO'
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = args.num_cpus
-    config['gamma'] = tune.grid_search([0.5, 0.9, 0.99, 0.999])
+    config['gamma'] = grid_search([0.5, 0.9, 0.99, 0.999])
     config['lr'] = 5e-5
     config['train_batch_size'] = 10000
     config['vf_loss_coeff'] = 1e-2
