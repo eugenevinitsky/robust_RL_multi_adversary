@@ -14,7 +14,7 @@ from ray.tune.registry import register_env
 from envs.crowd_env import CrowdSimEnv, MultiAgentCrowdSimEnv
 from envs.policy.policy_factory import policy_factory
 from envs.utils.robot import Robot
-from utils.parsers import init_parser, env_parser, ray_parser
+from utils.parsers import init_parser, env_parser, ray_parser, ma_env_parser
 
 from ray.rllib.models.catalog import MODEL_DEFAULTS
 from models.models import ConvLSTM
@@ -24,7 +24,7 @@ def setup_ma_config(config):
     env = env_creator(config['env_config'])
     policies_to_train = ['robot', 'adversary']
     policy_graphs = {'robot': (None, env.observation_space, env.action_space, {}),
-                    'adversary': (None, env.observation_space, env.adv_action_space, {})}
+                     'adversary': (None, env.observation_space, env.adv_action_space, {})}
 
     def policy_mapping_fn(agent_id):
         if agent_id == 'robot':
@@ -47,6 +47,7 @@ def setup_exps(args):
     parser = init_parser()
     parser = env_parser(parser)
     parser = ray_parser(parser)
+    parser = ma_env_parser(parser)
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
@@ -59,6 +60,8 @@ def setup_exps(args):
     config['env_config']['policy'] = args.policy
     config['env_config']['show_images'] = args.show_images
     config['env_config']['train_on_images'] = args.train_on_images
+    config['env_config']['perturb_state'] = args.perturb_state
+    config['env_config']['perturb_actions'] = args.perturb_actions
 
     with open(args.env_params, 'r') as file:
         env_params = file.read()
@@ -130,6 +133,8 @@ def env_creator(passed_config):
     # additional configuration
     env.show_images = passed_config['show_images']
     env.train_on_images = passed_config['train_on_images']
+    env.perturb_actions = passed_config['env_config']['perturb_actions']
+    env.perturb_state = passed_config['env_config']['perturb_state']
 
     # configure policy
     policy_params = configparser.RawConfigParser()
@@ -144,6 +149,7 @@ def env_creator(passed_config):
     policy.set_env(env)
     robot.print_info()
     return env
+
 
 if __name__=="__main__":
 
