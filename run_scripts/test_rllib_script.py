@@ -60,9 +60,9 @@ def setup_exps(args):
         config['vf_share_layers'] = True
         config['train_batch_size'] = 500  # TODO(@evinitsky) change this it's just for testing
     else:
-        config['model'] = {'use_lstm': True, "lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
-        config['vf_share_layers'] = True
-        config['vf_loss_coeff'] = 1e-4
+        config['model'] = {'use_lstm': False, "lstm_use_prev_action_reward": False, 'lstm_cell_size': 128}
+        #config['vf_share_layers'] = False
+        #config['vf_loss_coeff'] = 1e-4
 
     s3_string = 's3://sim2real/' \
                 + datetime.now().strftime('%m-%d-%Y') + '/' + args.exp_title
