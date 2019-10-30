@@ -832,6 +832,8 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         obs_size = super().observation_space.shape
         if len(obs_size) > 1:
             obs_size = np.product(obs_size)
+        else:
+            obs_size = obs_size[0]
         act_size = super().action_space.shape[0]
         shape = obs_size * self.perturb_state + act_size * self.perturb_actions
         box = Box(low=-1.0, high=1.0, shape=(shape,))
@@ -851,6 +853,8 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
         if self.perturb_actions:
             robot_action = action['robot'] + action_perturbation
+        else:
+            robot_action = action['robot']
         ob, reward, done, info = super().step(robot_action, update)
 
         ob = {'robot': np.clip(ob,
@@ -859,7 +863,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
               'adversary': ob}
         
         if self.perturb_state:
-            ob['robot'] = np.clip(ob + state_perturbation,
+            ob['robot'] = np.clip(ob['robot'] + state_perturbation,
                                    a_min=self.observation_space.low[0],
                                    a_max=self.observation_space.high[0])
     
