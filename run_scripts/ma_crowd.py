@@ -17,7 +17,7 @@ from envs.utils.robot import Robot
 from utils.parsers import init_parser, env_parser, ray_parser, ma_env_parser
 
 from ray.rllib.models.catalog import MODEL_DEFAULTS
-from models.models import ConvLSTM
+from models.conv_lstm import ConvLSTM
 
 
 def setup_ma_config(config):
@@ -133,8 +133,8 @@ def env_creator(passed_config):
     # additional configuration
     env.show_images = passed_config['show_images']
     env.train_on_images = passed_config['train_on_images']
-    env.perturb_actions = passed_config['env_config']['perturb_actions']
-    env.perturb_state = passed_config['env_config']['perturb_state']
+    env.perturb_actions = passed_config['perturb_actions']
+    env.perturb_state = passed_config['perturb_state']
 
     # configure policy
     policy_params = configparser.RawConfigParser()
