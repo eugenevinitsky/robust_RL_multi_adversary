@@ -38,6 +38,18 @@ def env_parser(parser):
                              'be swapped only once')
     parser.add_argument('--friction', action='store_true', default=False,
                         help='If true, all the commands are slightly less than expected and the humans move slower')
+    parser.add_argument('--friction_coef', type=float, default=0.2,
+                        help='The scaling on the friction')
+    parser.add_argument('--chase_robot', action='store_true', default=False,
+                        help='If true, then human default goal will be robots next location. '
+                             'Else, default human behaviour (circle_crossing)')
+    parser.add_argument('--restrict_goal_region', action='store_false', default=True,
+                        help='If false, then goals can be generated anywhere within accessible_space. Else they will'
+                             ' only be generated in the specified goal_region')
+    parser.add_argument('--add_gaussian_noise_state', action='store_true', default=False,
+                        help='If true, add gaussian noise to the observed states')
+    parser.add_argument('--add_gaussian_noise_action', action='store_true', default=False,
+                        help='If true, add gaussian noise to the actions')
     return parser
 
 
