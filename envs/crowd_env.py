@@ -540,10 +540,6 @@ class CrowdSimEnv(gym.Env):
         if self.add_gauss_noise_state:
             ob = np.random.normal(scale=self.gauss_noise_state_stddev, size=ob.shape) + ob
 
-        if done:
-            print("Size of env:")
-            print(asizeof.asizeof(self))
-
         return ob, reward, done, {}
 
 
