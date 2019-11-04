@@ -11,6 +11,7 @@ from ray.tune import run as run_tune
 
 from run_scripts.random_rollout import run as run_random, setup_random
 from run_scripts.test_rllib_script import setup_exps
+from run_scripts.ma_crowd import setup_exps as ma_setup_exps
 from visualize.transfer_test import run_transfer_tests
 from visualize.rollout import run_rollout
 
@@ -45,6 +46,54 @@ class TestRollout(unittest.TestCase):
         test_out_dir = os.path.join(script_path, "test_out/" + folder)
         # Run it with images
         exp_dict, args = setup_exps(["--train_on_images"])
+        exp_dict['config']['train_batch_size'] = 128
+        exp_dict['local_dir'] = test_out_dir
+        exp_dict['stop']['training_iteration'] = 1
+        run_tune(**exp_dict)
+        self.replay_rollout(test_out_dir)
+        self.transfer_test(test_out_dir)
+        shutil.rmtree(test_out_dir)
+
+    def test_ma_crowd_actions_script(self):
+        script_path = os.path.dirname(os.path.abspath(__file__))
+        folder = ''.join(random.choices(string.ascii_uppercase + string.digits, k=9))
+        test_out_dir = os.path.join(script_path, "test_out/" + folder)
+
+        exp_dict, args = ma_setup_exps(["--perturb_actions"])
+
+        # Run it without images
+        exp_dict['config']['train_batch_size'] = 128
+        exp_dict['local_dir'] = test_out_dir
+        exp_dict['stop']['training_iteration'] = 1
+        run_tune(**exp_dict)
+        self.replay_rollout(test_out_dir)
+        self.transfer_test(test_out_dir)
+        shutil.rmtree(test_out_dir)
+
+    def test_ma_crowd_state_script(self):
+        script_path = os.path.dirname(os.path.abspath(__file__))
+        folder = ''.join(random.choices(string.ascii_uppercase + string.digits, k=9))
+        test_out_dir = os.path.join(script_path, "test_out/" + folder)
+
+        exp_dict, args = ma_setup_exps(["--perturb_state"])
+
+        # Run it without images
+        exp_dict['config']['train_batch_size'] = 128
+        exp_dict['local_dir'] = test_out_dir
+        exp_dict['stop']['training_iteration'] = 1
+        run_tune(**exp_dict)
+        self.replay_rollout(test_out_dir)
+        self.transfer_test(test_out_dir)
+        shutil.rmtree(test_out_dir)
+
+    def test_ma_crowd_actions_state_script(self):
+        script_path = os.path.dirname(os.path.abspath(__file__))
+        folder = ''.join(random.choices(string.ascii_uppercase + string.digits, k=9))
+        test_out_dir = os.path.join(script_path, "test_out/" + folder)
+
+        exp_dict, args = ma_setup_exps(["--perturb_actions", "--perturb_state"])
+
+        # Run it without images
         exp_dict['config']['train_batch_size'] = 128
         exp_dict['local_dir'] = test_out_dir
         exp_dict['stop']['training_iteration'] = 1
