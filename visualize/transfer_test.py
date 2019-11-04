@@ -8,6 +8,7 @@ import ray
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from visualize.rollout import run_rollout
+import errno
 
 
 def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir='transfer_results'):
@@ -16,6 +17,14 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     # First compute a baseline score to compare against
     base_rewards = run_rollout(rllib_config, checkpoint, save_trajectory=False, video_file=False,
                                num_rollouts=num_rollouts)
+    output_file_path = os.path.join(file_path, '{}/{}_base.txt'.format(outdir, output_file_name))
+    if not os.path.exists(os.path.dirname(output_file_path)):
+        try:
+            os.makedirs(os.path.dirname(output_file_path))
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
+
     with open(os.path.join(file_path, '{}/{}_base.txt'.format(outdir, output_file_name)),
               'wb') as file:
         np.savetxt(file, base_rewards, delimiter=', ')
@@ -66,9 +75,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('Parse configuration file')
     parser.add_argument('--output_file_name', type=str, default='transfer_out',
                         help='The file name we use to save our results')
+
     parser = replay_parser(parser)
     args = parser.parse_args()
     rllib_config, checkpoint = get_config(args)
 
     ray.init(num_cpus=args.num_cpus)
-    run_transfer_tests(rllib_config, args.num_rollouts, args.output_file_name, checkpoint)
+    run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name)

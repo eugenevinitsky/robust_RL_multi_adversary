@@ -14,6 +14,7 @@ from matplotlib import patches
 import numpy as np
 from numpy.linalg import norm
 import rvo2
+from pympler import asizeof
 
 from envs.utils.human import Human
 from envs.utils.info import *
@@ -461,7 +462,7 @@ class CrowdSimEnv(gym.Env):
             if self.randomize_goals:
                 new_goal = self.generate_random_goals()
                 self.robot.set_goal(new_goal)
-                print("New Goal", self.robot.get_goal_position())
+                #print("New Goal", self.robot.get_goal_position())
             if self.update_goals:
                 done = False
             else:
@@ -538,7 +539,12 @@ class CrowdSimEnv(gym.Env):
         if self.add_gauss_noise_state:
             ob = np.random.normal(scale=self.gauss_noise_state_stddev, size=ob.shape) + ob
 
+        if done:
+            print("Size of env:")
+            print(asizeof.asizeof(self))
+
         return ob, reward, done, {}
+
 
     def image_state_space(self, update_colors):
         """Take the current state and render it as an image
