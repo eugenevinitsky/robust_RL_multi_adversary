@@ -68,7 +68,7 @@ auth:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
     InstanceType: m4.16xlarge
-    ImageId: ami-001cdda01d8d7eaea # Adversarial Sim2Real AMI
+    ImageId: ami-0c4d7ee4aa6661c9f # Adversarial Sim2Real AMI
 
     # You can provision additional disk space with a conf as follows
     BlockDeviceMappings:
@@ -84,7 +84,7 @@ head_node:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 worker_nodes:
     InstanceType: c4.4xlarge
-    ImageId: ami-001cdda01d8d7eaea # Adversarial Sim2Real AMI
+    ImageId: ami-0c4d7ee4aa6661c9f # Adversarial Sim2Real AMI
 
     # Run workers on spot by default. Comment this out to use on-demand.
     InstanceMarketOptions:
@@ -112,15 +112,8 @@ setup_commands:
     # Note: if you're developing Ray, you probably want to create an AMI that
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
-    - cd ~/adversarial_sim2real && git remote remove origin && git remote add origin git@github.com:eugenevinitsky/adversarial_sim2real.git # remove https remote and add ssh remote
-    - cd ~/adversarial_sim2real && git fetch origin; git checkout yuqing_baseline
-    - echo 'export PATH="$HOME/anaconda3/envs/tensorflow_p36/bin:$PATH"' >> ~/.bashrc
-    # - pip uninstall boto3
-    - pip install awscli
-    # - pip install -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.8.0.dev2-cp27-cp27mu-manylinux1_x86_64.whl
-    # - pip install -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.8.0.dev2-cp35-cp35m-manylinux1_x86_64.whl
-    # - pip install -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.8.0.dev2-cp36-cp36m-manylinux1_x86_64.whl
-    # - pip install ray=0.7.4
+    - cd ~/adversarial_sim2real && git fetch origin; git checkout origin/master
+    - source activate tensorflow_p36 && pip install ray==0.7.4
     # Consider uncommenting these if you also want to run apt-get commands during setup
     # - sudo pkill -9 apt-get || true
     # - sudo pkill -9 dpkg || true
