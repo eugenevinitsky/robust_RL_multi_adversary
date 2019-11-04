@@ -12,13 +12,21 @@ def env_creator(passed_config):
     env_params = configparser.RawConfigParser()
     env_params.read_string(config_path)
 
+    # additional configuration
+    env_params['train_details']['show_images'] = str(passed_config['show_images'])
+    env_params['train_details']['train_on_images'] = str(passed_config['train_on_images'])
+
+    env_params['transfer']['change_colors_mode'] = str(passed_config['change_colors_mode'])
+    env_params['transfer']['restrict_goal_region'] = str(passed_config['restrict_goal_region'])
+    env_params['transfer']['chase_robot']  = str(passed_config['chase_robot'])
+    env_params['transfer']['friction'] = str(passed_config['friction'])
+    env_params['transfer']['friction_coef'] = str(passed_config['friction_coef'])
+
+    env_params['env']['add_gaussian_noise_state'] = str(passed_config['add_gaussian_noise_state'])
+    env_params['env']['add_gaussian_noise_action'] = str(passed_config['add_gaussian_noise_action'])
+
     robot = Robot(env_params, 'robot')
     env = CrowdSimEnv(env_params, robot)
-
-    # additional configuration
-    env.show_images = passed_config['show_images']
-    env.train_on_images = passed_config['train_on_images']
-    env.change_colors_mode = passed_config['change_colors_mode']
 
     # configure policy
     policy_params = configparser.RawConfigParser()
@@ -39,5 +47,9 @@ def construct_config(env_params, policy_params, args):
     passed_config = {'env_params': env_params, 'policy_params': policy_params,
                      'policy': args.policy, 'show_images': args.show_images,
                      'change_colors_mode': args.change_colors_mode,
-                     'train_on_images': args.train_on_images, 'friction': args.friction}
+                     'train_on_images': args.train_on_images, 'friction': args.friction,
+                     'friction_coef': args.friction_coef, 'chase_robot': args.chase_robot,
+                     'restrict_goal_region': args.restrict_goal_region,
+                     'add_gaussian_noise_state': args.add_gaussian_noise_state,
+                     'add_gaussian_noise_action': args.add_gaussian_noise_action,}
     return passed_config
