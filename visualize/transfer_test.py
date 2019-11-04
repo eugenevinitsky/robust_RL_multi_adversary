@@ -56,11 +56,44 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
               'wb') as file:
         np.savetxt(file, chase_robot_rewards, delimiter=', ')
 
+    # Add gaussian noise to the actions
+    temp_config = deepcopy(rllib_config)
+    temp_config['env_config']['add_gaussian_noise_state'] = True
+    gaussian_state_rewards = run_rollout(temp_config, checkpoint, save_trajectory=False, video_file=False,
+                                              num_rollouts=num_rollouts)
+    with open(os.path.join(file_path, '{}/{}_gaussian_state_noise.txt'.format(outdir, output_file_name)),
+              'wb') as file:
+        np.savetxt(file, chase_robot_rewards, delimiter=', ')
+
+    # Add gaussian noise to the actions
+    temp_config = deepcopy(rllib_config)
+    temp_config['env_config']['add_gaussian_noise_action'] = True
+    gaussian_action_rewards = run_rollout(temp_config, checkpoint, save_trajectory=False, video_file=False,
+                                              num_rollouts=num_rollouts)
+    with open(os.path.join(file_path, '{}/{}_gaussian_action_noise.txt'.format(outdir, output_file_name)),
+              'wb') as file:
+        np.savetxt(file, chase_robot_rewards, delimiter=', ')
+
+    # Add gaussian noise to the  and states actions
+    temp_config = deepcopy(rllib_config)
+    temp_config['env_config']['add_gaussian_noise_action'] = True
+    temp_config['env_config']['add_gaussian_noise_action'] = True
+    gaussian_state_action_rewards = run_rollout(temp_config, checkpoint, save_trajectory=False, video_file=False,
+                                              num_rollouts=num_rollouts)
+    with open(os.path.join(file_path, '{}/{}_gaussian_state_action.txt'.format(outdir, output_file_name)),
+              'wb') as file:
+        np.savetxt(file, chase_robot_rewards, delimiter=', ')
+
     print('The average base reward is {}'.format(np.mean(base_rewards)))
     print('The average friction reward is {}'.format(np.mean(friction_rewards)))
     print('The average color reward is {}'.format(np.mean(color_rewards)))
     print('The average unrestricted goal region reward is {}'.format(np.mean(unrestrict_goal_reg_rewards)))
     print('The average chasing robot reward is {}'.format(np.mean(chase_robot_rewards)))
+    print('The average Gaussian state reward is {}'.format(np.mean(gaussian_state_rewards)))
+    print('The average Gaussian action reward is {}'.format(np.mean(gaussian_action_rewards)))
+    print('The average Gaussian state + action reward is {}'.format(np.mean(gaussian_state_action_rewards)))
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Parse configuration file')
