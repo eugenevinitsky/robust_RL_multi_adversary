@@ -23,6 +23,7 @@ except ImportError:
     from ray.rllib.agents.registry import get_agent_class
 
 from run_scripts.test_rllib_script import env_creator
+from run_scripts.ma_crowd import env_creator as ma_env_creator
 
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
@@ -50,7 +51,10 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, num_rollo
     agent_cls = get_agent_class(rllib_config['env_config']['run'])
     # configure the env
     env_name ='CrowdSim-v0'
-    register_env(env_name, env_creator)
+    if 'multiagent' in rllib_config and rllib_config['multiagent']['policies']:
+        register_env(env_name, ma_env_creator)
+    else:
+        register_env(env_name, env_creator)
 
     # Instantiate the agent
     # create the agent that will be used to compute the actions
