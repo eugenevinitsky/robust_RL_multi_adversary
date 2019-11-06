@@ -56,6 +56,9 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
     else:
         register_env(env_name, env_creator)
 
+    # Show the images
+    rllib_config['env_config']['show_images'] = show_images
+
     # Instantiate the agent
     # create the agent that will be used to compute the actions
     agent = agent_cls(env=env_name, config=rllib_config)

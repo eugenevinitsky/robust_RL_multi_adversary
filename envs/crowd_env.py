@@ -14,12 +14,10 @@ import numpy as np
 from numpy.linalg import norm
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 import rvo2
-from pympler import asizeof
 
 from envs.utils.human import Human
 from envs.utils.info import *
 from envs.utils.utils import point_to_segment_dist
-from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from utils.constants import ROBOT_COLOR, GOAL_COLOR, HUMAN_COLOR, BACKGROUND_COLOR, COLOR_LIST
 
 
@@ -357,7 +355,7 @@ class CrowdSimEnv(gym.Env):
             raise NotImplementedError
 
         # TODO(@evinitsky) don't overwrite the ob, just calculate ob only once
-        if self.train_on_images:
+        if self.train_on_images or self.show_images:
             bg_color = np.array(self.background_color)[np.newaxis, np.newaxis, :]
             self.image = np.ones((self.discretization, self.discretization, 3)) * bg_color
 
@@ -368,19 +366,20 @@ class CrowdSimEnv(gym.Env):
             self.image_state_space(update_colors=change_colors)
 
             # TODO(@evinitsky) don't recreate this every time
-            ob = np.rot90(self.image)
+            img = np.rot90(self.image)
             # if needed, render the ob for visualization
-            if self.show_images:
-                cv2.namedWindow("image", cv2.WINDOW_NORMAL)
-                cv2.resizeWindow('image', 1000, 1000)
-                cv2.imshow("image", ob)
-                cv2.waitKey(2)
+        if self.show_images:
+            cv2.namedWindow("image", cv2.WINDOW_NORMAL)
+            cv2.resizeWindow('image', 1000, 1000)
+            cv2.imshow("image", img)
+            cv2.waitKey(2)
+        if self.train_on_images:
             # The last axis is represented as {s_{t}, ..., s_{t - num_stacked_frames + 2},
             #                                  s_{t - num_stacked_frames + 1}}
             # where each of these states is three channels wide.
             # We roll it forward so that we can overwrite the oldest frame
             self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
-            self.observed_image[:, :, 0: 3] = ob
+            self.observed_image[:, :, 0: 3] = img
             ob = (self.observed_image - 128.0) / 255.0
 
         if self.add_gauss_noise_state:
@@ -515,8 +514,8 @@ class CrowdSimEnv(gym.Env):
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
 
-        # TODO(@evinitsky) don't overwrite the ob, just calculate ob only once
-        if self.train_on_images:
+        # We need to create this ob if we are showing images OR training on images
+        if self.show_images or self.train_on_images:
             bg_color = np.array(self.background_color)[np.newaxis, np.newaxis, :]
             self.image = np.ones((self.discretization, self.discretization, 3)) * bg_color
 
@@ -526,15 +525,16 @@ class CrowdSimEnv(gym.Env):
                 change_colors = True
             self.image_state_space(update_colors=change_colors)
             # TODO(@evinitsky) don't recreate this every time
-            ob = np.rot90(self.image)
+            img = np.rot90(self.image)
             # if needed, render the ob for visualization
-            if self.show_images:
-                cv2.namedWindow("image", cv2.WINDOW_NORMAL)
-                cv2.resizeWindow('image', 1000, 1000)
-                cv2.imshow("image", ob)
-                cv2.waitKey(2)
+        if self.show_images:
+            cv2.namedWindow("image", cv2.WINDOW_NORMAL)
+            cv2.resizeWindow('image', 1000, 1000)
+            cv2.imshow("image", img)
+            cv2.waitKey(2)
+        if self.train_on_images:
             self.observed_image = np.roll(self.observed_image, shift=3, axis=-1)
-            self.observed_image[:, :, 0: 3] = ob
+            self.observed_image[:, :, 0: 3] = img
             ob = (self.observed_image - 128.0) / 255.0
 
         if self.add_gauss_noise_state:
