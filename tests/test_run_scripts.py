@@ -111,7 +111,9 @@ class TestRollout(unittest.TestCase):
                 with open(config_path, 'rb') as f:
                     rllib_config = cloudpickle.load(f)
                 checkpoint = os.path.join(sub_folder, 'checkpoint_1/checkpoint-1')
-                run_rollout(rllib_config, checkpoint, False, os.path.join(test_out_dir, "test_replay_{}.mp4".format(count)), 2)
+                run_rollout(rllib_config, checkpoint, False,
+                            os.path.join(test_out_dir, "test_replay_{}.mp4".format(count)), show_images=False,
+                            num_rollouts=1)
         assert count == 1
 
     def transfer_test(self, test_out_dir):
@@ -124,7 +126,7 @@ class TestRollout(unittest.TestCase):
                     rllib_config = cloudpickle.load(f)
 
                 checkpoint = os.path.join(sub_folder, 'checkpoint_1/checkpoint-1')
-                run_transfer_tests(rllib_config, checkpoint, 1, 'temp', sub_folder)
+                run_transfer_tests(rllib_config, checkpoint, 1, 'temp', show_images=True, outdir=sub_folder)
         assert count == 1
 
 
