@@ -1,6 +1,7 @@
 import numpy as np
 
 from ray.rllib.policy.rnn_sequencing import add_time_dimension
+from ray.rllib.models.tf.tf_action_dist import DiagGaussian, TFActionDistribution
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.tf.misc import normc_initializer, get_activation_fn
 from ray.rllib.models.tf.recurrent_tf_modelv2 import RecurrentTFModelV2
@@ -10,13 +11,37 @@ from ray.rllib.utils.annotations import override
 tf = try_import_tf()
 
 
+class AutoEncoderActionDistribution(DiagGaussian):
+    """
+    Subclasses the diagonal distribution. Still returns a diagonal gaussian but the sampling operator
+    returns the actions added to the latents of a encoder and then passed through the autoencoder
+    Action distribution where each vector element is a gaussian.
+    The first half of the input vector defines the gaussian means, and the
+    second half the gaussian standard deviations.
+    """
+
+    def __init__(self, inputs, model):
+        self.ob = inputs
+        self.mean = model.mean
+        self.log_std = model.log_std
+        self.std = tf.exp(model.log_std)
+        DiagGaussian.__init__(self, tf.concat([self.mean, self.log_std], axis=1), model)
+
+    @override(TFActionDistribution)
+    def _build_sample_op(self):
+        return self.ob
+
+
 class AutoEncoder(ModelV2):
     """
-       auto_encoder = [[layers before lstm], [layers after lstm]]
+       This autoencoder does a series of convs, then a series of fully connected layers to the bottleneck
+       and then the appropriate inverse operations to reconstruct the image
+       autoencoder_conv_filters = [[convs before FC]]
 
        Arguments:
            TFModelV2 {[type]} -- [description]
     """
+
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
         super(AutoEncoder, self).__init__(obs_space, action_space, num_outputs,
                                           model_config, name, "tf")
@@ -24,18 +49,70 @@ class AutoEncoder(ModelV2):
         input_layer = tf.keras.layers.Input(shape=obs_space.shape, name="inputs")
         conv_activation = get_activation_fn(model_config.get("conv_activation"))
         filters = model_config["custom_options"].get("autoencoder_conv_filters")
-        latent_dim = model_config["custom_options"].get("autoencoder_latent_dim")
-        filters = model_config.get("conv_filters")
+        last_layer = input_layer
+
+        # Build the encoder
         for i, (out_size, kernel, stride) in enumerate(filters):
-            ## Batch x Time x H x W x C
+            ## Batch x H x W x C
             # Time distributed ensures that the conv operates on each image independently
-            last_layer = tf.keras.layers.TimeDistributed(tf.keras.layers.Conv2D(
+            last_layer = tf.keras.layers.Conv2D(
                 out_size,
                 kernel,
                 strides=(stride, stride),
                 activation=conv_activation,
                 padding="same",
-                name="conv{}".format(i)))(last_layer)
+                name="encode_conv{}".format(i))(last_layer)
+        # Now we apply the fully connected layers up to the bottleneck layer
+        hiddens = model_config["custom_options"].get("autoencoder_fcnet_hiddens")  # should be list
+        fc_activation = get_activation_fn(model_config.get("fcnet_activation"))
+        i = 1
+        for hidden in hiddens:
+            last_layer = tf.keras.layers.Dense(
+                hidden,
+                name="encode_fc_{}".format(i),
+                activation=fc_activation,
+                kernel_initializer=normc_initializer(1.0))(last_layer)
+            i += 1
+        # Now apply the layer that gets us to the bottleneck
+        latent_dim = model_config["custom_options"].get("autoencoder_latent_dim")
+        bottleneck_layer = tf.keras.layers.Dense(
+                            latent_dim,
+                            name="bottleneck_in",
+                            activation=fc_activation,
+                            kernel_initializer=normc_initializer(1.0))(last_layer)
+        self.encoder = tf.keras.Model(
+            inputs=input,
+            outputs=bottleneck_layer)
+
+        self.register_variables(self.encoder.variables)
+        self.encoder.summary()
+
+        # Now apply the whole set of operations in reverse to build the decoder
+        output_layer = bottleneck_layer
+        for hidden in hiddens[::-1]:
+            output_layer = tf.keras.layers.Dense(
+                hidden,
+                name="decode_fc_{}".format(i),
+                activation=fc_activation,
+                kernel_initializer=normc_initializer(1.0))(output_layer)
+            i += 1
+        for i, (out_size, kernel, stride) in enumerate(filters[::-1]):
+            ## Batch x H x W x C
+            # Time distributed ensures that the conv operates on each image independently
+            output_layer = tf.keras.layers.Conv2DTranspose(
+                out_size,
+                kernel,
+                strides=(stride, stride),
+                activation=conv_activation,
+                padding="same",
+                name="decode_conv{}".format(i))(output_layer)
+        self.decoder = tf.keras.Model(
+            inputs=bottleneck_layer,
+            outputs=output_layer)
+
+        self.register_variables(self.decoder.variables)
+        self.encoder.summary()
+
 
 
 class ConvLSTM(RecurrentTFModelV2):
