@@ -43,7 +43,7 @@ class DefaultMapping(collections.defaultdict):
 def default_policy_agent_mapping(unused_agent_id):
     return DEFAULT_POLICY_ID
 
-def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, num_rollouts):
+def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_images, num_rollouts):
     rllib_config['num_workers'] = 0
 
     # Determine agent and checkpoint
@@ -55,6 +55,9 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, num_rollo
         register_env(env_name, ma_env_creator)
     else:
         register_env(env_name, env_creator)
+
+    # Show the images
+    rllib_config['env_config']['show_images'] = show_images
 
     # Instantiate the agent
     # create the agent that will be used to compute the actions
@@ -138,7 +141,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, num_rollo
         print("Episode reward", reward_total)
         rewards.append(reward_total)
 
-    if not rllib_config['env_config']['show_images']:
+    if not show_images:
         if save_trajectory:
             env.render('traj', video_file)
             output_path = video_file
@@ -170,9 +173,7 @@ def main():
 
     ray.init(num_cpus=args.num_cpus)
 
-    rllib_config['env_config']['show_images'] = args.show_images
-
-    run_rollout(rllib_config, checkpoint, args.traj, args.video_file, args.num_rollouts)
+    run_rollout(rllib_config, checkpoint, args.traj, args.video_file, args.show_images, args.num_rollouts)
 
 
 if __name__ == '__main__':
