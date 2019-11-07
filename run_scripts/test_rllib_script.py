@@ -27,7 +27,9 @@ def setup_exps(args):
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = args.num_cpus
     config['gamma'] = 0.99
-    config['train_batch_size'] = 10000
+    config['train_batch_size'] = 5000
+    config['num_sgd_iter'] = 10
+    config['sgd_minibatch_size'] = 512
 
     with open(args.env_params, 'r') as file:
         env_params = file.read()
