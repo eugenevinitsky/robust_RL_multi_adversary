@@ -14,7 +14,7 @@ def ray_parser(parser):
     parser.add_argument('--multi_node', action='store_true', help='Set to true if this will '
                                                                   'be run in cluster mode')
     parser.add_argument('--num_iters', type=int, default=350)
-    parser.add_argument('--checkpoint_freq', type=int, default=1)
+    parser.add_argument('--checkpoint_freq', type=int, default=50)
     parser.add_argument('--num_samples', type=int, default=1)
 
     # TODO: Fix this visualization code

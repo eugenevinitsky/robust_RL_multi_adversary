@@ -50,12 +50,11 @@ def setup_exps(args):
         config['model'] = MODEL_DEFAULTS.copy()
         
         config['model']['conv_activation'] = 'relu'
-        config['model']['use_lstm'] = True
-        config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
         config['model']['custom_options']['fcnet_hiddens'] = [[32, 32], []]
         config['model']['conv_filters'] = conv_filters
         config['model']['custom_model'] = "rnn"
+        config['model']['vf_loss_coeff'] = 1e-4
         
         config['vf_share_layers'] = True
         config['sgd_minibatch_size'] = 600
