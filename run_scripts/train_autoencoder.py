@@ -125,7 +125,7 @@ if __name__ == "__main__":
     NUM_EPOCH = 500
     DATA_DIR = "record"
 
-
+    # TODO(@evinitsky) maybe don't load the whole dataset into memory wtf
     # load dataset from record/*. only use first 10K, sorted by filename.
     filelist = os.listdir(images_path)
     filelist.sort()
@@ -138,44 +138,6 @@ if __name__ == "__main__":
     num_batches = int(np.floor(total_length / batch_size))
     print("num_batches", num_batches)
 
-    # list_ds = tf.data.Dataset.list_files(images_path)
-    #
-    # def decode_img(img):
-    #     # convert the compressed string to a 3D uint8 tensor
-    #     img = tf.image.decode_jpeg(img, channels=3)
-    #     # Use `convert_image_dtype` to convert to floats in the [0,1] range.
-    #     img = tf.image.convert_image_dtype(img, tf.float32)
-    #     # resize the image to the desired size.
-    #     # TODO(@evinitsky) magic numbers
-    #     return tf.image.resize(img, [64, 64])
-    #
-    # imgs = list_ds.map(decode_img, num_parallel_calls=AUTOTUNE)
-    #
-    # def prepare_for_training(ds, cache=True, shuffle_buffer_size=1000):
-    #     # This is a small dataset, only load it once, and keep it in memory.
-    #     # use `.cache(filename)` to cache preprocessing work for datasets that don't
-    #     # fit in memory.
-    #     if cache:
-    #         if isinstance(cache, str):
-    #             ds = ds.cache(cache)
-    #         else:
-    #             ds = ds.cache()
-    #
-    #     ds = ds.shuffle(buffer_size=shuffle_buffer_size)
-    #
-    #     # Repeat forever
-    #     ds = ds.repeat()
-    #
-    #     ds = ds.batch(batch_size)
-    #
-    #     # `prefetch` lets the dataset fetch batches in the background while the model
-    #     # is training.
-    #     ds = ds.prefetch(buffer_size=AUTOTUNE)
-    #
-    #     return ds
-    #
-    # train_ds = prepare_for_training(imgs)
-    # TODO(evinitsky) make this a full pass over the dataset
     num_batches = int(np.floor(len(dataset) / batch_size))
 
     vae = ConvVAE(z_size=z_size,
@@ -187,6 +149,7 @@ if __name__ == "__main__":
                   gpu_mode=False)
 
     # train loop:
+    # TODO(Stick this into tune and parallelize)
     print("train", "step", "loss", "recon_loss", "kl_loss")
     for epoch in range(NUM_EPOCH):
         np.random.shuffle(dataset)

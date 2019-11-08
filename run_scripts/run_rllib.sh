@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-python test_rllib_script.py --exp_title test_sim2real --num_cpus 8 --num_iters 100
+python test_rllib_script.py --exp_title test_memory --num_cpus 32 --num_iters 100

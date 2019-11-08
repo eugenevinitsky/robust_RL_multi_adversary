@@ -58,7 +58,7 @@ def setup_exps(args):
         config['model']['custom_model'] = "rnn"
         
         config['vf_share_layers'] = True
-        config['train_batch_size'] = 500  # TODO(@evinitsky) change this it's just for testing
+        config['train_batch_size'] = 30000
 
     s3_string = 's3://sim2real/' \
                 + datetime.now().strftime('%m-%d-%Y') + '/' + args.exp_title
