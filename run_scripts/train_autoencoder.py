@@ -4,15 +4,21 @@
 # Step 1, rollout the env and save the images to a folder
 
 import argparse
-import configparser
 import os
+import random
 import sys
 
 import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
+import tensorflow as tf
 
+from models.VAE import ConvVAE
 from utils.env_creator import env_creator, construct_config
 from utils.parsers import env_parser, init_parser
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # can just override for multi-gpu systems
+AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
 def gather_images(passed_config, output_folder, horizon, total_num_steps):
@@ -24,7 +30,7 @@ def gather_images(passed_config, output_folder, horizon, total_num_steps):
         for i in range(horizon):
             assert np.all(ob > -1)
             assert np.all(ob < 1)
-            matplotlib.image.imsave(os.path.join(output_folder, 'env_{}.png'.format(step_counter)),
+            matplotlib.image.imsave(os.path.join(output_folder, 'env_{}.jpg'.format(step_counter)),
                                     ob[:, :, 0:3] + (128/255))
             # write the image to a file
             ob, rew, done, info = env.step(np.random.rand(2))
@@ -46,6 +52,35 @@ def setup_sampling_env(parser):
     passed_config['train_on_images'] = True
 
     return passed_config
+#
+#
+def count_length_of_filelist(filelist):
+    # although this is inefficient, much faster than doing np.concatenate([giant list of blobs])..
+    N = len(filelist)
+    total_length = 0
+    for i in range(N):
+        filename = filelist[i]
+        raw_data = np.load(os.path.join("record", filename))['obs']
+        l = len(raw_data)
+        total_length += l
+        if (i % 1000 == 0):
+            print("loading file", i)
+    return total_length
+
+
+def create_dataset(filepath, filelist, N=10000):  # N is 10000 episodes, M is number of timesteps
+    length = min(len(filelist), N)
+    data = np.zeros((length, 64, 64, 3), dtype=np.uint8)
+    idx = 0
+    for i in range(length):
+        filename = filelist[i]
+        # TODO(@evinitsky) we dont want the alpha channel in the fist place
+        raw_data = plt.imread(os.path.join(filepath, filename), format='jpg')[:,:,0:3]
+        data[idx] = raw_data
+        idx += 1
+        if ((i + 1) % 100 == 0):
+            print("loading file", i + 1)
+    return data
 
 
 if __name__ == "__main__":
@@ -53,21 +88,127 @@ if __name__ == "__main__":
     parser.add_argument('--horizon', type=int, default=500, help='How long each rollout should be')
     parser.add_argument('--total_step_num', type=int, default=50000,
                         help='How many total steps to collect for the autoencoder training')
-    parser.add_argument('--output_folder', type=str, default='~/sim2real/autoencoder_images')
+    parser.add_argument('--output_folder', type=str, default='~/sim2real')
     parser.add_argument('--gather_images', default=False, action='store_true', help='Whether to gather images or just train')
     args = parser.parse_args()
     config = setup_sampling_env(parser)
 
     # Now construct the folder where we are saving images
     filepath = os.path.expanduser(args.output_folder)
+    images_path = os.path.join(os.path.expanduser((filepath)), 'autoencoder_images')
+    autoencoder_path = os.path.join(os.path.expanduser((filepath)), 'tf_vae')
+    autoencoder_out = os.path.join(os.path.expanduser((filepath)), 'reconstructed_images')
+
     if not os.path.exists(os.path.expanduser(filepath)):
-        os.makedirs(os.path.expanduser((filepath)))
+        os.makedirs(images_path)
+        os.makedirs(autoencoder_path)
+        os.makedirs(autoencoder_out)
 
     if len(os.listdir(filepath)) == 0 and not args.gather_images:
         sys.exit('You dont have any images in the training folder, so you should probably gather some. '
                  'Set --gather_images')
 
     if args.gather_images:
-        gather_images(config, filepath, args.horizon, args.total_step_num)
+        gather_images(config, images_path, args.horizon, args.total_step_num)
+
 
     # Now lets train the auto-encoder
+    np.set_printoptions(precision=4, edgeitems=6, linewidth=100, suppress=True)
+
+    # Hyperparameters for ConvVAE
+    z_size = 32
+    batch_size = 100
+    learning_rate = 0.001
+    kl_tolerance = 0.5
+
+    # Parameters for training
+    NUM_EPOCH = 500
+    DATA_DIR = "record"
+
+
+    # load dataset from record/*. only use first 10K, sorted by filename.
+    filelist = os.listdir(images_path)
+    filelist.sort()
+    filelist = filelist[0:10000]
+    # print("check total number of images:", count_length_of_filelist(filelist))
+    dataset = create_dataset(images_path, filelist)
+
+    # split into batches:
+    total_length = len(dataset)
+    num_batches = int(np.floor(total_length / batch_size))
+    print("num_batches", num_batches)
+
+    # list_ds = tf.data.Dataset.list_files(images_path)
+    #
+    # def decode_img(img):
+    #     # convert the compressed string to a 3D uint8 tensor
+    #     img = tf.image.decode_jpeg(img, channels=3)
+    #     # Use `convert_image_dtype` to convert to floats in the [0,1] range.
+    #     img = tf.image.convert_image_dtype(img, tf.float32)
+    #     # resize the image to the desired size.
+    #     # TODO(@evinitsky) magic numbers
+    #     return tf.image.resize(img, [64, 64])
+    #
+    # imgs = list_ds.map(decode_img, num_parallel_calls=AUTOTUNE)
+    #
+    # def prepare_for_training(ds, cache=True, shuffle_buffer_size=1000):
+    #     # This is a small dataset, only load it once, and keep it in memory.
+    #     # use `.cache(filename)` to cache preprocessing work for datasets that don't
+    #     # fit in memory.
+    #     if cache:
+    #         if isinstance(cache, str):
+    #             ds = ds.cache(cache)
+    #         else:
+    #             ds = ds.cache()
+    #
+    #     ds = ds.shuffle(buffer_size=shuffle_buffer_size)
+    #
+    #     # Repeat forever
+    #     ds = ds.repeat()
+    #
+    #     ds = ds.batch(batch_size)
+    #
+    #     # `prefetch` lets the dataset fetch batches in the background while the model
+    #     # is training.
+    #     ds = ds.prefetch(buffer_size=AUTOTUNE)
+    #
+    #     return ds
+    #
+    # train_ds = prepare_for_training(imgs)
+    # TODO(evinitsky) make this a full pass over the dataset
+    num_batches = int(np.floor(len(dataset) / batch_size))
+
+    vae = ConvVAE(z_size=z_size,
+                  batch_size=batch_size,
+                  learning_rate=learning_rate,
+                  kl_tolerance=kl_tolerance,
+                  is_training=True,
+                  reuse=False,
+                  gpu_mode=False)
+
+    # train loop:
+    print("train", "step", "loss", "recon_loss", "kl_loss")
+    for epoch in range(NUM_EPOCH):
+        np.random.shuffle(dataset)
+        for idx in range(num_batches):
+            batch = dataset[idx * batch_size:(idx + 1) * batch_size]
+            obs = batch.astype(np.float) / 255.0
+
+            feed = {vae.x: obs, }
+
+            (train_loss, r_loss, kl_loss, train_step, _) = vae.sess.run([
+                vae.loss, vae.r_loss, vae.kl_loss, vae.global_step, vae.train_op
+            ], feed)
+
+            if ((train_step + 1) % 10 == 0):
+                print("step", (train_step + 1), train_loss, r_loss, kl_loss)
+
+                # save a few images just for funsies
+                # TODO(Since you're only extracting one image only save one image!)
+                img = vae.sess.run([vae.y], feed)
+                matplotlib.image.imsave(os.path.join(autoencoder_out, 'img_{}.png'.format(train_step)), img[0][0])
+            if ((train_step + 1) % 5000 == 0):
+                vae.save_json("tf_vae/vae.json")
+
+    # finished, final model:
+    vae.save_json(os.path.join(autoencoder_path, "vae.json"))
