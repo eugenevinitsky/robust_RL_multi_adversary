@@ -7,9 +7,6 @@ import sys
 
 import numpy as np
 
-from envs.crowd_env import CrowdSimEnv
-from envs.policy.policy_factory import policy_factory
-from envs.utils.robot import Robot
 from utils.env_creator import env_creator, construct_config
 from utils.parsers import env_parser, init_parser
 
@@ -44,4 +41,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()    
+    main()

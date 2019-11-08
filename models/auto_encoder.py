@@ -1,3 +1,4 @@
+from gym.spaces import Box
 import numpy as np
 
 from ray.rllib.policy.rnn_sequencing import add_time_dimension
@@ -30,6 +31,30 @@ class AutoEncoderActionDistribution(DiagGaussian):
     @override(TFActionDistribution)
     def _build_sample_op(self):
         return self.ob
+
+
+class AutoEncoderAdversary(ModelV2):
+    """This adversary computes its actions by observing the encoded inputs and passes
+       them through a convolutional LSTM. It samples from these actions
+       and then adds them to the latents of an autoencoder
+       """
+    def __init__(self, obs_space, action_space, num_outputs, model_config, name):
+        super(AutoEncoderAdversary, self).__init__(obs_space, action_space, num_outputs,
+                                          model_config, name, "tf")
+        self.autoencoder = AutoEncoder(obs_space, action_space, num_outputs, model_config, name)
+        
+        latent_dim = model_config["custom_options"].get("autoencoder_latent_dim")
+
+
+
+    def custom_loss(self, policy_loss, loss_inputs):
+
+        # You can also add self-supervised losses easily by referencing tensors
+        # created during _build_layers_v2(). For example, an autoencoder-style
+        # loss can be added as follows:
+        # TODO(@evinitsky) figure out how to actually extract the autoencoder right
+        ae_loss = tf.losses.mean_squared_error(loss_inputs["obs"], self.decoder.last_layer)
+        return policy_loss + ae_loss
 
 
 class AutoEncoder(ModelV2):
@@ -112,7 +137,6 @@ class AutoEncoder(ModelV2):
 
         self.register_variables(self.decoder.variables)
         self.encoder.summary()
-
 
 
 class ConvLSTM(RecurrentTFModelV2):
