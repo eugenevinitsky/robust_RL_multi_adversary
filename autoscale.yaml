@@ -60,7 +60,7 @@ auth:
 # By default Ray creates a new private keypair, but you can also use your own.
 # If you do so, make sure to also set "KeyName" in the head and worker node
 # configurations below.
-#    ssh_private_key: /path/to/your/key.pem
+    ssh_private_key: /Users/eugenevinitsky/.ssh/MyKeyPair.pem
 
 # Provider-specific config for the head node, e.g. instance type. By default
 # Ray will auto-configure unspecified fields such as SubnetId and KeyName.
@@ -69,6 +69,7 @@ auth:
 head_node:
     InstanceType: m4.16xlarge
     ImageId: ami-0c4d7ee4aa6661c9f # Adversarial Sim2Real AMI
+    KeyName: MyKeyPair
 
     # You can provision additional disk space with a conf as follows
     BlockDeviceMappings:
@@ -85,6 +86,7 @@ head_node:
 worker_nodes:
     InstanceType: c4.4xlarge
     ImageId: ami-0c4d7ee4aa6661c9f # Adversarial Sim2Real AMI
+    KeyName: MyKeyPair
 
     # Run workers on spot by default. Comment this out to use on-demand.
     InstanceMarketOptions:
@@ -114,6 +116,7 @@ setup_commands:
     # below with a git checkout <your_sha> (and possibly a recompile).
     - cd ~/adversarial_sim2real && git fetch origin; git checkout origin/autoencoder
     - source activate tensorflow_p36 && pip install ray==0.7.4
+    - python ~/adversarial_sim2real/utils/replace_rnn_sequence.py
     # Consider uncommenting these if you also want to run apt-get commands during setup
     # - sudo pkill -9 apt-get || true
     # - sudo pkill -9 dpkg || true
