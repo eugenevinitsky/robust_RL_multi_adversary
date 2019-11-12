@@ -31,33 +31,65 @@ class ConvVAE(object):
                 self._build_graph()
         self._init_session()
 
+    def extract_activations_and_weights(self, activation_list, weight_list, name):
+        pass
+
+
     def _build_graph(self):
         self.g = tf.Graph()
         with self.g.as_default():
 
             self.x = tf.placeholder(tf.float32, shape=[None, 64, 64, 3])
 
+            activation_list = []
+            activation_name_list = []
+
             # Encoder
             h = tf.layers.conv2d(self.x, 32, 4, strides=2, activation=tf.nn.relu, name="enc_conv1")
+            activation_list.append(h)
+            activation_name_list.append("enc_conv1")
             h = tf.layers.conv2d(h, 64, 4, strides=2, activation=tf.nn.relu, name="enc_conv2")
+            activation_list.append(h)
+            activation_name_list.append("enc_conv2")
             h = tf.layers.conv2d(h, 128, 4, strides=2, activation=tf.nn.relu, name="enc_conv3")
+            activation_list.append(h)
+            activation_name_list.append("enc_conv3")
             h = tf.layers.conv2d(h, 256, 4, strides=2, activation=tf.nn.relu, name="enc_conv4")
+            activation_list.append(h)
+            activation_name_list.append("enc_conv4")
             h = tf.reshape(h, [-1, 2 * 2 * 256])
 
             # VAE
             self.mu = tf.layers.dense(h, self.z_size, name="enc_fc_mu")
+            activation_list.append(self.mu)
+            activation_name_list.append("enc_fc_mu")
             self.logvar = tf.layers.dense(h, self.z_size, name="enc_fc_log_var")
+            activation_list.append(self.logvar)
+            activation_name_list.append("enc_fc_log_var")
             self.sigma = tf.exp(self.logvar / 2.0)
             self.epsilon = tf.random_normal([self.batch_size, self.z_size])
             self.z = self.mu + self.sigma * self.epsilon
 
             # Decoder
             h = tf.layers.dense(self.z, 4 * 256, name="dec_fc")
+            activation_list.append(h)
+            activation_name_list.append("dec_fc")
             h = tf.reshape(h, [-1, 1, 1, 4 * 256])
             h = tf.layers.conv2d_transpose(h, 128, 5, strides=2, activation=tf.nn.relu, name="dec_deconv1")
+            activation_list.append(h)
+            activation_name_list.append("dec_deconv1")
             h = tf.layers.conv2d_transpose(h, 64, 5, strides=2, activation=tf.nn.relu, name="dec_deconv2")
+            activation_list.append(h)
+            activation_name_list.append("dec_deconv2")
             h = tf.layers.conv2d_transpose(h, 32, 6, strides=2, activation=tf.nn.relu, name="dec_deconv3")
+            activation_list.append(h)
+            activation_name_list.append("dec_deconv3")
             self.y = tf.layers.conv2d_transpose(h, 3, 6, strides=2, activation=tf.nn.sigmoid, name="dec_deconv4")
+            activation_list.append(h)
+            activation_name_list.append("dec_deconv4")
+
+            self.activation_list = activation_list
+            self.activation_name_list = activation_name_list
 
             # train ops
             if self.is_training:
@@ -85,10 +117,10 @@ class ConvVAE(object):
                 # training
                 self.lr = tf.Variable(self.learning_rate, trainable=False)
                 self.optimizer = tf.train.AdamOptimizer(self.lr)
-                grads = self.optimizer.compute_gradients(self.loss)  # can potentially clip gradients here.
+                self.grads = self.optimizer.compute_gradients(self.loss)  # can potentially clip gradients here.
 
                 self.train_op = self.optimizer.apply_gradients(
-                    grads, global_step=self.global_step, name='train_step')
+                    self.grads, global_step=self.global_step, name='train_step')
 
             # initialize vars
             self.init = tf.global_variables_initializer()
