@@ -147,8 +147,13 @@ class ConvVaeTrainer(Trainable):
 
             feed = {self.vae.x: obs, }
 
-            (train_loss, r_loss, kl_loss, train_step, grads_and_vars, activation_list, _) = self.vae.sess.run([
-                self.vae.loss, self.vae.r_loss, self.vae.kl_loss, self.vae.global_step, self.vae.grads,
+            # (train_loss, r_loss, kl_loss, train_step, grads_and_vars, activation_list, _) = self.vae.sess.run([
+            #     self.vae.loss, self.vae.r_loss, self.vae.kl_loss, self.vae.global_step, self.vae.grads,
+            #     self.vae.activation_list, self.vae.train_op
+            # ], feed)
+
+            (train_loss, r_loss, train_step, grads_and_vars, activation_list, _) = self.vae.sess.run([
+                self.vae.loss, self.vae.r_loss, self.vae.global_step, self.vae.grads,
                 self.vae.activation_list, self.vae.train_op
             ], feed)
 
@@ -158,7 +163,7 @@ class ConvVaeTrainer(Trainable):
                 "epoch": self.iteration,
                 "train_loss": train_loss,
                 "r_loss": r_loss,
-                "kl_loss": kl_loss,
+                # "kl_loss": kl_loss,
             }
 
             grad_squares = [np.square(g).sum() for (g, v) in grads_and_vars]
@@ -172,7 +177,7 @@ class ConvVaeTrainer(Trainable):
             weights = vars[::2]
             biases = vars[1::2]
 
-            if ((train_step) % 10 == 0):
+            if ((train_step + 1) % config['img_freq'] == 0):
                 # Save histograms of the activations
                 # Okay, now lets make a hist of the activations and a hist of the weights
                 for activation, activation_name in zip(activation_list, self.vae.activation_name_list):
@@ -229,16 +234,18 @@ if __name__ == "__main__":
     parser.add_argument('--output_folder', type=str, default='~/sim2real')
     parser.add_argument('--gather_images', default=False, action='store_true',
                         help='Whether to gather images or just train')
+    parser.add_argument('--img_freq', type=int, default=40,
+                        help='How often to log the autoencoder image output')
     args = parser.parse_args()
     config = setup_sampling_env(parser)
 
-    config={'z_size': 32, 'batch_size': 100, 'learning_rate': .0001, 'kl_tolerance': 0.5,
-            'use_gpu': False, 'output_folder': args.output_folder}
+    config={'z_size': 100, 'batch_size': 100, 'learning_rate': .0001, 'kl_tolerance': 0.5,
+            'use_gpu': False, 'output_folder': args.output_folder, 'img_freq': args.img_freq}
 
     results = run(
         ConvVaeTrainer,
         name="autoencoder",
-        stop={"training_iteration": 100},
+        stop={"training_iteration": 1000},
         checkpoint_freq=10,
         checkpoint_at_end=True,
         loggers=[TFLoggerPlus,] + list(DEFAULT_LOGGERS[0:2]),

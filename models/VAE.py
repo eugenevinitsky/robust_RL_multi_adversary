@@ -61,17 +61,17 @@ class ConvVAE(object):
 
             # VAE
             self.mu = tf.layers.dense(h, self.z_size, name="enc_fc_mu")
-            activation_list.append(self.mu)
-            activation_name_list.append("enc_fc_mu")
-            self.logvar = tf.layers.dense(h, self.z_size, name="enc_fc_log_var")
-            activation_list.append(self.logvar)
-            activation_name_list.append("enc_fc_log_var")
-            self.sigma = tf.exp(self.logvar / 2.0)
-            self.epsilon = tf.random_normal([self.batch_size, self.z_size])
-            self.z = self.mu + self.sigma * self.epsilon
+            # activation_list.append(self.mu)
+            # activation_name_list.append("enc_fc_mu")
+            # self.logvar = tf.layers.dense(h, self.z_size, name="enc_fc_log_var")
+            # activation_list.append(self.logvar)
+            # activation_name_list.append("enc_fc_log_var")
+            # self.sigma = tf.exp(self.logvar / 2.0)
+            # self.epsilon = tf.random_normal([self.batch_size, self.z_size])
+            # self.z = self.mu + self.sigma * self.epsilon
 
             # Decoder
-            h = tf.layers.dense(self.z, 4 * 256, name="dec_fc")
+            h = tf.layers.dense(self.mu, 4 * 256, name="dec_fc")
             activation_list.append(h)
             activation_name_list.append("dec_fc")
             h = tf.reshape(h, [-1, 1, 1, 4 * 256])
@@ -105,14 +105,14 @@ class ConvVAE(object):
                 self.r_loss = tf.reduce_mean(self.r_loss)
 
                 # augmented kl loss per dim
-                self.kl_loss = - 0.5 * tf.reduce_sum(
-                    (1 + self.logvar - tf.square(self.mu) - tf.exp(self.logvar)),
-                    reduction_indices=1
-                )
-                self.kl_loss = tf.maximum(self.kl_loss, self.kl_tolerance * self.z_size)
-                self.kl_loss = tf.reduce_mean(self.kl_loss)
+                # self.kl_loss = - 0.5 * tf.reduce_sum(
+                #     (1 + self.logvar - tf.square(self.mu) - tf.exp(self.logvar)),
+                #     reduction_indices=1
+                # )
+                # self.kl_loss = tf.maximum(self.kl_loss, self.kl_tolerance * self.z_size)
+                # self.kl_loss = tf.reduce_mean(self.kl_loss)
 
-                self.loss = self.r_loss + self.kl_loss
+                self.loss = self.r_loss # + self.kl_loss
 
                 # training
                 self.lr = tf.Variable(self.learning_rate, trainable=False)
