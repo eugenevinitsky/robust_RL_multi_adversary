@@ -27,7 +27,7 @@ def setup_ma_config(config):
     policy_graphs = {'robot': (None, env.observation_space, env.action_space, {}),
                      'adversary': (None, env.observation_space, env.adv_action_space, {})}
 
-    num_adversaries = config['num_adversaries']
+    num_adversaries = config['env_config']['num_adversaries']
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     policies_to_train += adv_policies
 
@@ -63,8 +63,9 @@ def setup_exps(args):
     config['num_workers'] = args.num_cpus
     config['gamma'] = 0.99
     config['train_batch_size'] = 10000
-    config['num_adversaries'] = args.num_adv
+    config['env_config']['num_adversaries'] = args.num_adv
 
+    print(config['env_config']['num_adversaries'])
     config['env_config']['run'] = alg_run
     config['env_config']['policy'] = args.policy
     config['env_config']['show_images'] = args.show_images
