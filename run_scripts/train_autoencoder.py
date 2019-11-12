@@ -86,6 +86,25 @@ def create_dataset(filepath, filelist, N=10000):  # N is 10000 episodes, M is nu
     return data
 
 
+def fig2data(fig):
+    """
+    @brief Convert a Matplotlib figure to a 4D numpy array with RGBA channels and return it
+    @param fig a matplotlib figure
+    @return a numpy 3D array of RGBA values
+    """
+    # draw the renderer
+    fig.canvas.draw()
+
+    # Get the RGBA buffer from the figure
+    w, h = fig.canvas.get_width_height()
+    buf = np.fromstring(fig.canvas.tostring_argb(), dtype=np.uint8)
+    buf.shape = (w, h, 4)
+
+    # canvas.tostring_argb give pixmap in ARGB mode. Roll the ALPHA channel to have it in RGBA mode
+    buf = np.roll(buf, 3, axis=2)
+    return buf
+
+
 class ConvVaeTrainer(Trainable):
     def _setup(self, config):
         # Now construct the folder where we are saving images
@@ -104,7 +123,7 @@ class ConvVaeTrainer(Trainable):
                      'Set --gather_images')
 
         if args.gather_images:
-            gather_images(config, images_path, args.horizon, args.total_step_num)
+            gather_images(config['env_config'], images_path, args.horizon, args.total_step_num)
 
         # Now lets train the auto-encoder
         np.set_printoptions(precision=4, edgeitems=6, linewidth=100, suppress=True)
@@ -113,15 +132,29 @@ class ConvVaeTrainer(Trainable):
         self.batch_size = config['batch_size']
 
         # Parameters for training
-        self.NUM_EPOCH = 500
 
-        # TODO(@evinitsky) maybe don't load the whole dataset into memory wtf
+        # # TODO(@evinitsky) maybe don't load the whole dataset into memory wtf
         # load dataset from record/*. only use first 10K, sorted by filename.
         filelist = os.listdir(images_path)
         filelist.sort()
         filelist = filelist[0:10000]
         # print("check total number of images:", count_length_of_filelist(filelist))
         self.dataset = create_dataset(images_path, filelist)
+
+        # (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        #
+        # def create_mnist_dataset(data, labels, batch_size):
+        #     def gen():
+        #         for image, label in zip(data, labels):
+        #             yield image, label
+        #
+        #     ds = tf.data.Dataset.from_generator(gen, (tf.float32, tf.int32), ((28, 28), ()))
+        #
+        #     return ds.repeat().batch(batch_size)
+        #
+        # # train and validation dataset with different batch size
+        # train_dataset = create_mnist_dataset(x_train, y_train, 10)
+        # import ipdb; ipdb.set_trace()
 
         # split into batches:
         total_length = len(self.dataset)
@@ -167,17 +200,17 @@ class ConvVaeTrainer(Trainable):
             }
 
             grad_squares = [np.square(g).sum() for (g, v) in grads_and_vars]
-            for i, grad_square in enumerate(grad_squares):
-                if i % 2 == 0:
-                    results.update({"layer_{}_grad_norm".format(i / 2): np.sqrt(grad_square)})
-                else:
-                    results.update({"bias_{}_grad_norm".format((i - 1) / 2): np.sqrt(grad_square)})
+            grad_weights = grad_squares[::2]
+            grad_biases = grad_squares[1::2]
+            for weight, bias, activation_name in zip(grad_weights, grad_biases, self.vae.activation_name_list):
+                results.update({"layer_{}_grad_norm".format(activation_name): np.sqrt(weight)})
+                results.update({"bias_{}_grad_norm".format((activation_name)): np.sqrt(bias)})
 
             vars = [v for (g, v) in grads_and_vars]
             weights = vars[::2]
             biases = vars[1::2]
 
-            if ((train_step + 1) % config['img_freq'] == 0):
+            if ((train_step + 1) % train_config['img_freq'] == 0):
                 # Save histograms of the activations
                 # Okay, now lets make a hist of the activations and a hist of the weights
                 for activation, activation_name in zip(activation_list, self.vae.activation_name_list):
@@ -185,13 +218,24 @@ class ConvVaeTrainer(Trainable):
 
                 for weight, bias, activation_name in zip(weights, biases, self.vae.activation_name_list):
                     results.update({'hist_weights_{}'.format(activation_name): weight})
-                    results.update({'hist_biasess_{}'.format(activation_name): bias})
+                    results.update({'hist_biases_{}'.format(activation_name): bias})
 
                 # save a few images
                 # TODO(Since you're only extracting one image only feed one image!)
                 img = self.vae.sess.run([self.vae.y], feed)
                 # matplotlib.image.imsave(os.path.join(autoencoder_out, 'img_{}.png'.format(train_step)), img[0][0])
-                results.update({'img_{}'.format(train_step): img[0][0]})
+
+                # construct a matplotlib image with the two side by side
+
+                f = plt.figure(figsize=(10, 5))
+                f, (ax1, ax2) = plt.subplots(1, 2,)
+                ax1.imshow(img[0][0])
+                ax1.set_title('reconstruction')
+                ax2.imshow(obs[0])
+                ax2.set_title('original')
+                data = fig2data(f)
+
+                results.update({'img_{}'.format(train_step): data})
 
             return results
 
@@ -229,7 +273,7 @@ class ConvVaeTrainer(Trainable):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--horizon', type=int, default=500, help='How long each rollout should be')
-    parser.add_argument('--total_step_num', type=int, default=5000,
+    parser.add_argument('--total_step_num', type=int, default=200,
                         help='How many total steps to collect for the autoencoder training')
     parser.add_argument('--output_folder', type=str, default='~/sim2real')
     parser.add_argument('--gather_images', default=False, action='store_true',
@@ -237,10 +281,11 @@ if __name__ == "__main__":
     parser.add_argument('--img_freq', type=int, default=40,
                         help='How often to log the autoencoder image output')
     args = parser.parse_args()
-    config = setup_sampling_env(parser)
+    env_config = setup_sampling_env(parser)
 
-    config={'z_size': 100, 'batch_size': 100, 'learning_rate': .0001, 'kl_tolerance': 0.5,
-            'use_gpu': False, 'output_folder': args.output_folder, 'img_freq': args.img_freq}
+    train_config= {'z_size': 100, 'batch_size': 100, 'learning_rate': .0001, 'kl_tolerance': 0.5,
+                 'use_gpu': False, 'output_folder': args.output_folder, 'img_freq': args.img_freq,
+                   'env_config': env_config}
 
     results = run(
         ConvVaeTrainer,
@@ -250,4 +295,4 @@ if __name__ == "__main__":
         checkpoint_at_end=True,
         loggers=[TFLoggerPlus,] + list(DEFAULT_LOGGERS[0:2]),
         num_samples=1,
-        config=config)
+        config=train_config)
