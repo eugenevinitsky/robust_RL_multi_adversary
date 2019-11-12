@@ -112,7 +112,7 @@ setup_commands:
     # Note: if you're developing Ray, you probably want to create an AMI that
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
-    - cd ~/adversarial_sim2real && git fetch origin; git checkout origin/master
+    - cd ~/adversarial_sim2real && git fetch origin; git checkout origin/image_baseline_2
     - source activate tensorflow_p36 && pip install ray==0.7.4
     # Consider uncommenting these if you also want to run apt-get commands during setup
     # - sudo pkill -9 apt-get || true
