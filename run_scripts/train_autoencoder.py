@@ -125,7 +125,7 @@ class ConvVaeTrainer(Trainable):
                      'Set --gather_images')
 
         if config['gather_images']:
-            gather_images(config['env_config'], images_path, args.horizon, args.total_step_num)
+            gather_images(config['env_config'], images_path, config['horizon'], config['total_step_num'])
 
         # Now lets train the auto-encoder
         np.set_printoptions(precision=4, edgeitems=6, linewidth=100, suppress=True)
@@ -142,21 +142,6 @@ class ConvVaeTrainer(Trainable):
         filelist = filelist[0:10000]
         # print("check total number of images:", count_length_of_filelist(filelist))
         self.dataset = create_dataset(images_path, filelist)
-
-        # (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-        #
-        # def create_mnist_dataset(data, labels, batch_size):
-        #     def gen():
-        #         for image, label in zip(data, labels):
-        #             yield image, label
-        #
-        #     ds = tf.data.Dataset.from_generator(gen, (tf.float32, tf.int32), ((28, 28), ()))
-        #
-        #     return ds.repeat().batch(batch_size)
-        #
-        # # train and validation dataset with different batch size
-        # train_dataset = create_mnist_dataset(x_train, y_train, 10)
-        # import ipdb; ipdb.set_trace()
 
         # split into batches:
         total_length = len(self.dataset)
@@ -293,7 +278,8 @@ if __name__ == "__main__":
 
     train_config = {'z_size': 12, 'batch_size': 100, 'learning_rate': .0001 * (1 / args.top_percent), 'kl_tolerance': 0.5,
                     'use_gpu': False, 'output_folder': args.output_folder, 'img_freq': args.img_freq,
-                    'env_config': env_config, 'top_percent': args.top_percent, 'gather_images': args.gather_images}
+                    'env_config': env_config, 'top_percent': args.top_percent, 'gather_images': args.gather_images,
+                    'horizon': args.horizon, 'total_step_num': args.total_step_num}
 
     results = run(
         ConvVaeTrainer,
