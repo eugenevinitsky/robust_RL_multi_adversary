@@ -14,13 +14,31 @@ def reset_graph():
 
 class ConvVAE(object):
     def __init__(self, z_size=32, batch_size=1, learning_rate=0.0001, kl_tolerance=0.5, is_training=False, reuse=False,
-                 gpu_mode=False):
+                 gpu_mode=False, top_percent=1.0):
+        """
+
+        :param z_size: (int)
+            The size of the bottleneck layer
+        :param batch_size: (int)
+            The size of a minibatch
+        :param learning_rate: (float)
+            The learning rate for SGD
+        :param kl_tolerance: (float)
+            Not used, should be removed
+        :param is_training: (bool)
+            Not used, should be removed
+        :param reuse:
+        :param gpu_mode:
+        :param top_percent: (float)
+            what fraction of the loss tensor we should take
+        """
         self.z_size = z_size
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.is_training = is_training
         self.kl_tolerance = kl_tolerance
         self.reuse = reuse
+        self.top_percent = top_percent
         with tf.variable_scope('conv_vae', reuse=self.reuse):
             if not gpu_mode:
                 with tf.device('/cpu:0'):
@@ -97,12 +115,15 @@ class ConvVAE(object):
 
                 eps = 1e-6  # avoid taking log of zero
 
-                # reconstruction loss
-                self.r_loss = tf.reduce_sum(
-                    tf.square(self.x - self.y),
-                    reduction_indices=[1, 2, 3]
-                )
-                self.r_loss = tf.reduce_mean(self.r_loss)
+                # reconstruction loss. Not that we hard negative mine the top_percent of the loss
+                square_diff = tf.square(self.x - self.y)
+                shape = square_diff.get_shape().as_list()
+                dim = np.prod(shape[1:])
+                diff_flat = tf.reshape(square_diff, [-1, dim])
+                top_k = int(self.top_percent * dim)
+                top_loss, _ = tf.math.top_k(diff_flat, top_k)
+                top_loss = tf.reduce_sum(top_loss, reduction_indices=[1])
+                self.r_loss = tf.reduce_mean(top_loss)
 
                 # augmented kl loss per dim
                 # self.kl_loss = - 0.5 * tf.reduce_sum(
@@ -144,14 +165,14 @@ class ConvVAE(object):
         self.sess.close()
 
     def encode(self, x):
-        return self.sess.run(self.z, feed_dict={self.x: x})
-
-    def encode_mu_logvar(self, x):
-        (mu, logvar) = self.sess.run([self.mu, self.logvar], feed_dict={self.x: x})
-        return mu, logvar
+        return self.sess.run(self.mu, feed_dict={self.x: x})
+    #
+    # def encode_mu_logvar(self, x):
+    #     (mu, logvar) = self.sess.run([self.mu, self.logvar], feed_dict={self.x: x})
+    #     return mu, logvar
 
     def decode(self, z):
-        return self.sess.run(self.y, feed_dict={self.z: z})
+        return self.sess.run(self.y, feed_dict={self.mu: z})
 
     def get_model_params(self):
         # get trainable params.

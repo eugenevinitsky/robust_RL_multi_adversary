@@ -34,7 +34,7 @@ def gather_images(passed_config, output_folder, horizon, total_num_steps):
             assert np.all(ob > -1)
             assert np.all(ob < 1)
             matplotlib.image.imsave(os.path.join(output_folder, 'env_{}.jpg'.format(step_counter)),
-                                    ob[:, :, 0:3] + (128/255))
+                                    ob[:, :, 0:3] + (128 / 255))
             # write the image to a file
             ob, rew, done, info = env.step(np.random.rand(2))
             if done:
@@ -55,6 +55,8 @@ def setup_sampling_env(parser):
     passed_config['train_on_images'] = True
 
     return passed_config
+
+
 #
 #
 def count_length_of_filelist(filelist):
@@ -78,7 +80,7 @@ def create_dataset(filepath, filelist, N=10000):  # N is 10000 episodes, M is nu
     for i in range(length):
         filename = filelist[i]
         # TODO(@evinitsky) we dont want the alpha channel in the fist place
-        raw_data = plt.imread(os.path.join(filepath, filename), format='jpg')[:,:,0:3]
+        raw_data = plt.imread(os.path.join(filepath, filename), format='jpg')[:, :, 0:3]
         data[idx] = raw_data
         idx += 1
         if ((i + 1) % 100 == 0):
@@ -122,7 +124,7 @@ class ConvVaeTrainer(Trainable):
             sys.exit('You dont have any images in the training folder, so you should probably gather some. '
                      'Set --gather_images')
 
-        if args.gather_images:
+        if config['gather_images']:
             gather_images(config['env_config'], images_path, args.horizon, args.total_step_num)
 
         # Now lets train the auto-encoder
@@ -164,12 +166,13 @@ class ConvVaeTrainer(Trainable):
         self.num_batches = int(np.floor(len(self.dataset) / self.batch_size))
 
         self.vae = ConvVAE(z_size=config['z_size'],
-                          batch_size=config['batch_size'],
-                          learning_rate=config['learning_rate'],
-                          kl_tolerance=config['kl_tolerance'],
-                          is_training=True,
-                          reuse=False,
-                          gpu_mode=config['use_gpu'])
+                           batch_size=config['batch_size'],
+                           learning_rate=config['learning_rate'],
+                           kl_tolerance=config['kl_tolerance'],
+                           is_training=True,
+                           reuse=False,
+                           gpu_mode=config['use_gpu'],
+                           top_percent=config['top_percent'])
 
     def _train(self):
         # train loop:
@@ -227,13 +230,15 @@ class ConvVaeTrainer(Trainable):
 
                 # construct a matplotlib image with the two side by side
 
-                f = plt.figure(figsize=(10, 5))
-                f, (ax1, ax2) = plt.subplots(1, 2,)
+                fig = plt.figure(figsize=(8, 16))
+                ax1 = fig.add_subplot(121)
+                ax2 = fig.add_subplot(122)
                 ax1.imshow(img[0][0])
                 ax1.set_title('reconstruction')
                 ax2.imshow(obs[0])
                 ax2.set_title('original')
-                data = fig2data(f)
+                data = fig2data(fig)
+                plt.close(fig)
 
                 results.update({'img_{}'.format(train_step): data})
 
@@ -247,7 +252,7 @@ class ConvVaeTrainer(Trainable):
     def _restore(self, path):
         # See https://stackoverflow.com/a/42763323
         del self.vae
-        config_dir = os.path.dirname(args.checkpoint)
+        config_dir = os.path.dirname(path)
         config_path = os.path.join(config_dir, "params.pkl")
         if not os.path.exists(config_path):
             config_path = os.path.join(config_dir, "../params.pkl")
@@ -259,7 +264,7 @@ class ConvVaeTrainer(Trainable):
         else:
             with open(config_path, "rb") as f:
                 config = pickle.load(f)
-        vae = ConvVAE(z_size=config['z_size'],
+        self.vae = ConvVAE(z_size=config['z_size'],
                       batch_size=config['batch_size'],
                       learning_rate=config['learning_rate'],
                       kl_tolerance=config['kl_tolerance'],
@@ -267,7 +272,7 @@ class ConvVaeTrainer(Trainable):
                       reuse=False,
                       gpu_mode=False)  # use GPU on batchsize of 1000 -> much faster
 
-        vae.load_json(os.path.join(path, 'vae.json'))
+        self.vae.load_json(os.path.join(path, 'vae.json'))
 
 
 if __name__ == "__main__":
@@ -280,19 +285,22 @@ if __name__ == "__main__":
                         help='Whether to gather images or just train')
     parser.add_argument('--img_freq', type=int, default=40,
                         help='How often to log the autoencoder image output')
+    parser.add_argument('--top_percent', type=float, default=0.1,
+                        help='Which percent of the loss tensor to keep in the loss. For example, 0.1 will'
+                             'keep only the top 10% largest elements of the loss')
     args = parser.parse_args()
     env_config = setup_sampling_env(parser)
 
-    train_config= {'z_size': 100, 'batch_size': 100, 'learning_rate': .0001, 'kl_tolerance': 0.5,
-                 'use_gpu': False, 'output_folder': args.output_folder, 'img_freq': args.img_freq,
-                   'env_config': env_config}
+    train_config = {'z_size': 12, 'batch_size': 100, 'learning_rate': .0001 * (1 / args.top_percent), 'kl_tolerance': 0.5,
+                    'use_gpu': False, 'output_folder': args.output_folder, 'img_freq': args.img_freq,
+                    'env_config': env_config, 'top_percent': args.top_percent, 'gather_images': args.gather_images}
 
     results = run(
         ConvVaeTrainer,
         name="autoencoder",
         stop={"training_iteration": 1000},
-        checkpoint_freq=10,
+        checkpoint_freq=args.img_freq,
         checkpoint_at_end=True,
-        loggers=[TFLoggerPlus,] + list(DEFAULT_LOGGERS[0:2]),
+        loggers=[TFLoggerPlus, ] + list(DEFAULT_LOGGERS[0:2]),
         num_samples=1,
         config=train_config)
