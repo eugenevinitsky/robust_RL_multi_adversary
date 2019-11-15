@@ -2,6 +2,7 @@ import numpy as np
 import json
 import tensorflow as tf
 import os
+import sys
 
 
 def reset_graph():
@@ -13,7 +14,8 @@ def reset_graph():
 # TODO(@evinitsky) switch this to a regular VAE
 
 class ConvVAE(object):
-    def __init__(self, z_size=32, batch_size=1, learning_rate=0.0001, kl_tolerance=0.5, is_training=False, reuse=False,
+    def __init__(self, z_size=32, batch_size=1, learning_rate=0.0001, kl_tolerance=0.5,
+                 kernel_size=4, is_training=False, reuse=False,
                  gpu_mode=False, top_percent=1.0):
         """
 
@@ -25,6 +27,8 @@ class ConvVAE(object):
             The learning rate for SGD
         :param kl_tolerance: (float)
             Not used, should be removed
+        :param kernel_size: (int)
+            The size of the kernel in each layer
         :param is_training: (bool)
             Not used, should be removed
         :param reuse:
@@ -37,6 +41,7 @@ class ConvVAE(object):
         self.learning_rate = learning_rate
         self.is_training = is_training
         self.kl_tolerance = kl_tolerance
+        self.kernel_size = kernel_size
         self.reuse = reuse
         self.top_percent = top_percent
         with tf.variable_scope('conv_vae', reuse=self.reuse):
@@ -63,19 +68,29 @@ class ConvVAE(object):
             activation_name_list = []
 
             # Encoder
-            h = tf.layers.conv2d(self.x, 32, 4, strides=2, activation=tf.nn.relu, name="enc_conv1")
+            h = tf.layers.conv2d(self.x, 32, self.kernel_size, strides=2, activation=tf.nn.relu, name="enc_conv1")
             activation_list.append(h)
             activation_name_list.append("enc_conv1")
-            h = tf.layers.conv2d(h, 64, 4, strides=2, activation=tf.nn.relu, name="enc_conv2")
+            h = tf.layers.conv2d(h, 64, self.kernel_size, strides=2, activation=tf.nn.relu, name="enc_conv2")
             activation_list.append(h)
             activation_name_list.append("enc_conv2")
-            h = tf.layers.conv2d(h, 128, 4, strides=2, activation=tf.nn.relu, name="enc_conv3")
+            h = tf.layers.conv2d(h, 128, self.kernel_size, strides=2, activation=tf.nn.relu, name="enc_conv3")
             activation_list.append(h)
             activation_name_list.append("enc_conv3")
-            h = tf.layers.conv2d(h, 256, 4, strides=2, activation=tf.nn.relu, name="enc_conv4")
+            h = tf.layers.conv2d(h, 256, self.kernel_size, strides=2, activation=tf.nn.relu, name="enc_conv4")
             activation_list.append(h)
             activation_name_list.append("enc_conv4")
-            h = tf.reshape(h, [-1, 2 * 2 * 256])
+
+            # this is the size of the image after all the convolutional layers
+            if self.kernel_size == 4:
+                final_shape = 4
+            elif self.kernel_size == 3:
+                final_shape = 9
+            elif self.kernel_size == 2:
+                final_shape = 16
+            else:
+                sys.exit('Only kernel sizes of 2, 3 and 4 are currently supported')
+            h = tf.reshape(h, [-1, final_shape * 256])
 
             # VAE
             self.mu = tf.layers.dense(h, self.z_size, name="enc_fc_mu")
@@ -89,10 +104,11 @@ class ConvVAE(object):
             # self.z = self.mu + self.sigma * self.epsilon
 
             # Decoder
-            h = tf.layers.dense(self.mu, 4 * 256, name="dec_fc")
+            h = tf.layers.dense(self.mu, final_shape * 256, name="dec_fc")
             activation_list.append(h)
             activation_name_list.append("dec_fc")
-            h = tf.reshape(h, [-1, 1, 1, 4 * 256])
+            h = tf.reshape(h, [-1, 1, 1, final_shape * 256])
+            # TODO(@evinitsky) how should we think about what the strides and kernels should be here?
             h = tf.layers.conv2d_transpose(h, 128, 5, strides=2, activation=tf.nn.relu, name="dec_deconv1")
             activation_list.append(h)
             activation_name_list.append("dec_deconv1")

@@ -37,6 +37,7 @@ if __name__=='__main__':
             config = pickle.load(f)
 
     config['gather_images'] = False
+    config['run_mode'] = 'test'
     trainer = ConvVaeTrainer(config)
     trainer._restore(args.checkpoint)
 

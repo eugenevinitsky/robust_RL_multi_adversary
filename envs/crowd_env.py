@@ -41,7 +41,7 @@ class CrowdSimEnv(gym.Env):
         self.time_limit = config.getint('env', 'time_limit')
         self.discretization = config.getint('env', 'discretization')
         self.grid = np.linspace([-6, -6], [6, 6], self.discretization)
-        self.robot_grid_size = np.maximum(int(0.1 / np.abs(self.grid[0, 0] - self.grid[1, 0])), 4)
+        self.robot_grid_size = np.maximum(int(0.1 / np.abs(self.grid[0, 0] - self.grid[1, 0])), 3)
         self.image = np.ones((self.discretization, self.discretization, 3)) * 255
         self.observed_image = np.ones((self.discretization, self.discretization, 3 * self.num_stacked_frames)) * 255
         self.time_step = config.getfloat('env', 'time_step')

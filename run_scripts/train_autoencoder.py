@@ -11,6 +11,7 @@ import sys
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import ray
 from ray.tune import Trainable, run
 from ray.tune.logger import DEFAULT_LOGGERS
 import tensorflow as tf
@@ -24,21 +25,23 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # can just override for multi-gpu syst
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
-def gather_images(passed_config, output_folder, horizon, total_num_steps):
+@ray.remote
+def gather_images(passed_config, output_folder, horizon, total_num_steps, start_index):
     env = env_creator(passed_config)
 
     step_counter = 0
     ob = env.reset()
     while step_counter < total_num_steps:
-        for i in range(horizon):
-            assert np.all(ob > -1)
-            assert np.all(ob < 1)
-            matplotlib.image.imsave(os.path.join(output_folder, 'env_{}.jpg'.format(step_counter)),
-                                    ob[:, :, 0:3] + (128 / 255))
-            # write the image to a file
-            ob, rew, done, info = env.step(np.random.rand(2))
-            if done:
-                ob = env.reset()
+        assert np.all(ob > -1)
+        assert np.all(ob < 1)
+        print('start index is ', start_index)
+        matplotlib.image.imsave(os.path.join(output_folder, 'env_{}.jpg'.format(start_index)),
+                                ob[:, :, 0:3] + (128 / 255))
+        # write the image to a file
+        ob, rew, done, info = env.step(np.random.rand(2))
+        if done or step_counter % horizon == 0:
+            ob = env.reset()
+        start_index += 1
         step_counter += 1
 
 
@@ -125,7 +128,10 @@ class ConvVaeTrainer(Trainable):
                      'Set --gather_images')
 
         if config['gather_images']:
-            gather_images(config['env_config'], images_path, config['horizon'], config['total_step_num'])
+            num_images_per_sample = int(config['total_step_num'] / config['num_cpus'])
+            for i in range(config['num_cpus']):
+                gather_images.remote(config['env_config'], images_path, config['horizon'], num_images_per_sample,
+                                     i * num_images_per_sample)
 
         # Now lets train the auto-encoder
         np.set_printoptions(precision=4, edgeitems=6, linewidth=100, suppress=True)
@@ -139,7 +145,13 @@ class ConvVaeTrainer(Trainable):
         # load dataset from record/*. only use first 10K, sorted by filename.
         filelist = os.listdir(images_path)
         filelist.sort()
-        filelist = filelist[0:10000]
+        # TODO(@evinitsky) add validation split
+        if config['run_mode'] == 'train':
+            filelist = filelist[0:int(len(filelist) * config['train_split'])]
+        elif config['run_mode'] == 'test':
+            filelist = filelist[int(len(filelist) * config['train_split']):]
+        else:
+            sys.exit('Please set a run mode to either train or test')
         # print("check total number of images:", count_length_of_filelist(filelist))
         self.dataset = create_dataset(images_path, filelist)
 
@@ -155,6 +167,7 @@ class ConvVaeTrainer(Trainable):
                            learning_rate=config['learning_rate'],
                            kl_tolerance=config['kl_tolerance'],
                            is_training=True,
+                           kernel_size=config['kernel_size'],
                            reuse=False,
                            gpu_mode=config['use_gpu'],
                            top_percent=config['top_percent'])
@@ -162,6 +175,8 @@ class ConvVaeTrainer(Trainable):
     def _train(self):
         # train loop:
         np.random.shuffle(self.dataset)
+
+        # TODO(@evinitsky) parallelize this loop, might actually be helpful. Watch out though, gradients will be stale.
         for idx in range(self.num_batches):
             batch = self.dataset[idx * self.batch_size:(idx + 1) * self.batch_size]
             obs = batch.astype(np.float) / 255.0
@@ -253,6 +268,7 @@ class ConvVaeTrainer(Trainable):
                       batch_size=config['batch_size'],
                       learning_rate=config['learning_rate'],
                       kl_tolerance=config['kl_tolerance'],
+                      kernel_size=config['kernel_size'],
                       is_training=False,
                       reuse=False,
                       gpu_mode=False)  # use GPU on batchsize of 1000 -> much faster
@@ -263,6 +279,7 @@ class ConvVaeTrainer(Trainable):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--horizon', type=int, default=500, help='How long each rollout should be')
+    parser.add_argument('--num_cpus', type=int, default=2, help='How many cpus to use for gathering images')
     parser.add_argument('--total_step_num', type=int, default=200,
                         help='How many total steps to collect for the autoencoder training')
     parser.add_argument('--output_folder', type=str, default='~/sim2real')
@@ -270,16 +287,20 @@ if __name__ == "__main__":
                         help='Whether to gather images or just train')
     parser.add_argument('--img_freq', type=int, default=40,
                         help='How often to log the autoencoder image output')
+    parser.add_argument('--kernel_size', type=int, default=4, help='size of kernels in VAE')
     parser.add_argument('--top_percent', type=float, default=0.1,
                         help='Which percent of the loss tensor to keep in the loss. For example, 0.1 will'
                              'keep only the top 10% largest elements of the loss')
+    parser.add_argument('--train_split', type=float, default=0.8,
+                        help='Percent to save for train and percent for test')
     args = parser.parse_args()
     env_config = setup_sampling_env(parser)
 
     train_config = {'z_size': 12, 'batch_size': 100, 'learning_rate': .0001 * (1 / args.top_percent), 'kl_tolerance': 0.5,
                     'use_gpu': False, 'output_folder': args.output_folder, 'img_freq': args.img_freq,
                     'env_config': env_config, 'top_percent': args.top_percent, 'gather_images': args.gather_images,
-                    'horizon': args.horizon, 'total_step_num': args.total_step_num}
+                    'horizon': args.horizon, 'total_step_num': args.total_step_num, 'kernel_size': args.kernel_size,
+                    'num_cpus': args.num_cpus, 'train_split': args.train_split, 'run_mode': 'train'}
 
     results = run(
         ConvVaeTrainer,
