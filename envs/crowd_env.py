@@ -6,7 +6,9 @@ import cv2
 import gym
 from gym.spaces import Box
 import matplotlib
-matplotlib.use('TkAgg')
+import sys
+if sys.platform=='darwin':
+    matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib import patches
