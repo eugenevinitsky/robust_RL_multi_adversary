@@ -4,6 +4,7 @@
 # Step 1, rollout the env and save the images to a folder
 
 import argparse
+from datetime import datetime
 import os
 import pickle
 import sys
@@ -11,6 +12,7 @@ import sys
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import pytz
 import ray
 from ray.tune import Trainable, run
 from ray.tune.logger import DEFAULT_LOGGERS
@@ -34,7 +36,6 @@ def gather_images(passed_config, output_folder, horizon, total_num_steps, start_
     while step_counter < total_num_steps:
         assert np.all(ob > -1)
         assert np.all(ob < 1)
-        print('start index is ', start_index)
         matplotlib.image.imsave(os.path.join(output_folder, 'env_{}.jpg'.format(start_index)),
                                 ob[:, :, 0:3] + (128 / 255))
         # write the image to a file
@@ -153,14 +154,19 @@ class ConvVaeTrainer(Trainable):
         else:
             sys.exit('Please set a run mode to either train or test')
         # print("check total number of images:", count_length_of_filelist(filelist))
-        self.dataset = create_dataset(images_path, filelist)
+        self.train_dataset = create_dataset(images_path, filelist)
+        self.valid_dataset = create_dataset(images_path, filelist[int(len(filelist) * config['train_split']):])
 
         # split into batches:
-        total_length = len(self.dataset)
-        self.num_batches = int(np.floor(total_length / self.batch_size))
-        print("num_batches", self.num_batches)
+        total_length = len(self.train_dataset)
+        self.num_train_batches = int(np.floor(total_length / self.batch_size))
 
-        self.num_batches = int(np.floor(len(self.dataset) / self.batch_size))
+        total_length = len(self.valid_dataset)
+        self.num_valid_batches = int(np.floor(total_length / self.batch_size))
+        self.valid_batch_index = 0
+        print("num_train_batches", self.num_train_batches)
+        print("num_valid_batches", self.num_valid_batches)
+
 
         self.vae = ConvVAE(z_size=config['z_size'],
                            batch_size=config['batch_size'],
@@ -174,11 +180,11 @@ class ConvVaeTrainer(Trainable):
 
     def _train(self):
         # train loop:
-        np.random.shuffle(self.dataset)
+        np.random.shuffle(self.train_dataset)
 
         # TODO(@evinitsky) parallelize this loop, might actually be helpful. Watch out though, gradients will be stale.
-        for idx in range(self.num_batches):
-            batch = self.dataset[idx * self.batch_size:(idx + 1) * self.batch_size]
+        for idx in range(self.num_train_batches):
+            batch = self.train_dataset[idx * self.batch_size:(idx + 1) * self.batch_size]
             obs = batch.astype(np.float) / 255.0
 
             feed = {self.vae.x: obs, }
@@ -223,9 +229,18 @@ class ConvVaeTrainer(Trainable):
                     results.update({'hist_weights_{}'.format(activation_name): weight})
                     results.update({'hist_biases_{}'.format(activation_name): bias})
 
-                # save a few images
-                # TODO(Since you're only extracting one image only feed one image!)
-                img = self.vae.sess.run([self.vae.y], feed)
+                # Run over the validation dataset and save a few images
+                batch = self.valid_dataset[self.valid_batch_index * self.batch_size:(self.valid_batch_index + 1) * self.batch_size]
+                self.valid_batch_index += 1
+                self.valid_batch_index %= self.num_valid_batches
+                obs = batch.astype(np.float) / 255.0
+
+                feed = {self.vae.x: obs, }
+                valid_train_loss, valid_r_loss, img = self.vae.sess.run([self.vae.loss, self.vae.r_loss, self.vae.y], feed)
+                results.update({
+                    "valid_train_loss": valid_train_loss,
+                    "valid_r_loss": valid_r_loss,
+                })
                 # matplotlib.image.imsave(os.path.join(autoencoder_out, 'img_{}.png'.format(train_step)), img[0][0])
 
                 # construct a matplotlib image with the two side by side
@@ -282,6 +297,8 @@ if __name__ == "__main__":
     parser.add_argument('--num_cpus', type=int, default=2, help='How many cpus to use for gathering images')
     parser.add_argument('--total_step_num', type=int, default=200,
                         help='How many total steps to collect for the autoencoder training')
+    parser.add_argument('--num_iters', type=int, default=1000,
+                        help='How many total steps to collect for the autoencoder training')
     parser.add_argument('--output_folder', type=str, default='~/sim2real')
     parser.add_argument('--gather_images', default=False, action='store_true',
                         help='Whether to gather images or just train')
@@ -293,6 +310,8 @@ if __name__ == "__main__":
                              'keep only the top 10% largest elements of the loss')
     parser.add_argument('--train_split', type=float, default=0.8,
                         help='Percent to save for train and percent for test')
+    parser.add_argument('--use_s3', action='store_true', default=False,
+                        help='If true upload to s3')
     args = parser.parse_args()
     env_config = setup_sampling_env(parser)
 
@@ -302,12 +321,28 @@ if __name__ == "__main__":
                     'horizon': args.horizon, 'total_step_num': args.total_step_num, 'kernel_size': args.kernel_size,
                     'num_cpus': args.num_cpus, 'train_split': args.train_split, 'run_mode': 'train'}
 
-    results = run(
-        ConvVaeTrainer,
-        name="autoencoder",
-        stop={"training_iteration": 1000},
-        checkpoint_freq=args.img_freq,
-        checkpoint_at_end=True,
-        loggers=[TFLoggerPlus, ] + list(DEFAULT_LOGGERS[0:2]),
-        num_samples=1,
-        config=train_config)
+    date = datetime.now(tz=pytz.utc)
+    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
+    s3_string = "s3://sim2real/autoencoder/" + date
+
+    if args.use_s3:
+        results = run(
+            ConvVaeTrainer,
+            name="autoencoder",
+            stop={"training_iteration": args.num_iters},
+            checkpoint_freq=args.img_freq,
+            checkpoint_at_end=True,
+            loggers=[TFLoggerPlus, ] + list(DEFAULT_LOGGERS[0:2]),
+            num_samples=1,
+            config=train_config,
+            upload_dir=s3_string)
+    else:
+        results = run(
+            ConvVaeTrainer,
+            name="autoencoder",
+            stop={"training_iteration": args.num_iters},
+            checkpoint_freq=args.img_freq,
+            checkpoint_at_end=True,
+            loggers=[TFLoggerPlus, ] + list(DEFAULT_LOGGERS[0:2]),
+            num_samples=1,
+            config=train_config)

@@ -116,6 +116,7 @@ setup_commands:
     # below with a git checkout <your_sha> (and possibly a recompile).
     - cd ~/adversarial_sim2real && git fetch origin; git checkout origin/autoencoder
     - source activate tensorflow_p36 && pip install ray==0.7.4
+    - source activate tensorflow_p36 && pip install pytz
     - python ~/adversarial_sim2real/utils/replace_rnn_sequence.py
     # Consider uncommenting these if you also want to run apt-get commands during setup
     # - sudo pkill -9 apt-get || true
@@ -123,8 +124,8 @@ setup_commands:
     # - sudo dpkg --configure -a
 
 # Custom commands that will be run on the head node after common setup.
-head_setup_commands: []
-    # - pip install boto3==1.4.8  # 1.4.8 adds InstanceMarketOptions
+head_setup_commands:
+    - pip install boto3==1.4.8  # 1.4.8 adds InstanceMarketOptions
 
 # Custom commands that will be run on worker nodes after common setup.
 worker_setup_commands: []
