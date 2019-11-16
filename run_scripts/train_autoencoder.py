@@ -299,7 +299,7 @@ if __name__ == "__main__":
                         help='How many total steps to collect for the autoencoder training')
     parser.add_argument('--num_iters', type=int, default=1000,
                         help='How many total steps to collect for the autoencoder training')
-    parser.add_argument('--output_folder', type=str, default='~/sim2real')
+    parser.add_argument('--output_folder', type=str, default=os.path.expanduser('~/sim2real'))
     parser.add_argument('--gather_images', default=False, action='store_true',
                         help='Whether to gather images or just train')
     parser.add_argument('--img_freq', type=int, default=40,
