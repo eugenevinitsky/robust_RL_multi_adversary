@@ -295,7 +295,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--horizon', type=int, default=500, help='How long each rollout should be')
     parser.add_argument('--num_cpus', type=int, default=2, help='How many cpus to use for gathering images')
-    parser.add_argument('--total_step_num', type=int, default=200,
+    parser.add_argument('--total_step_num', type=int, default=600,
                         help='How many total steps to collect for the autoencoder training')
     parser.add_argument('--num_iters', type=int, default=1000,
                         help='How many total steps to collect for the autoencoder training')
