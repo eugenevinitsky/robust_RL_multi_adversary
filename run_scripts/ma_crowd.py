@@ -24,29 +24,25 @@ from models.conv_lstm import ConvLSTM
 
 def setup_ma_config(config):
     env = env_creator(config['env_config'])
-    policies_to_train = ['robot', 'adversary']
-    policy_graphs = {'robot': (None, env.observation_space, env.action_space, {}),
-                     'adversary': (None, env.observation_space, env.adv_action_space, {})}
+    policies = {'robot': (None, env.observation_space, env.action_space, {})}
 
     num_adversaries = config['num_adversaries']
     del config['num_adversaries'] # KJ Fix this, it's awful
-    adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    policies_to_train += adv_policies
 
+    adv_policies = ['adversary_{}'.format(i) for i in range(num_adversaries)]
     for adv in adv_policies:
-        policy_graphs[adv] = (None, env.observation_space, env.adv_action_space, {})
+        policies[adv] = (None, env.observation_space, env.adv_action_space, {})
+    policies_to_train = list(policies.keys())
 
     def policy_mapping_fn(agent_id):
         if agent_id == 'robot':
             return agent_id
         if agent_id.startswith('adversary'):
             return random.choice(adv_policies)
-    
-    policy_ids = list(policy_graphs.keys())
 
     config.update({
         'multiagent': {
-            'policy_graphs': policy_graphs,
+            'policies': policies,
             'policy_mapping_fn': tune.function(policy_mapping_fn),
             'policies_to_train': policies_to_train
         }
@@ -65,9 +61,9 @@ def setup_exps(args):
     config['num_workers'] = args.num_cpus
     config['gamma'] = 0.99
     config['train_batch_size'] = 10000
-    config['num_adversaries'] = args.num_adv
+    config['num_adversaries'] = args.num_adv # RLlib will freak out about this
 
-    config['env_config']['run'] = alg_run
+    config['env_config']['run'] = CustomPPOTrainer#alg_run
     config['env_config']['policy'] = args.policy
     config['env_config']['show_images'] = args.show_images
     config['env_config']['train_on_images'] = args.train_on_images
@@ -105,9 +101,10 @@ def setup_exps(args):
         config['vf_share_layers'] = True
         config['train_batch_size'] = 500  # TODO(@evinitsky) change this it's just for testing
     else:
-        config['model'] = {'use_lstm': True, "lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
-        config['vf_share_layers'] = True
-        config['vf_loss_coeff'] = 1e-4
+        pass
+        # config['model'] = {'use_lstm': True, "lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
+        # config['vf_share_layers'] = True
+        # config['vf_loss_coeff'] = 1e-4
 
     s3_string = 's3://sim2real/' \
                 + datetime.now().strftime('%m-%d-%Y') + '/' + args.exp_title
