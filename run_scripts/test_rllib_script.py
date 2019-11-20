@@ -57,7 +57,7 @@ def setup_exps(args):
         config['model']['custom_model'] = "rnn"
         
         config['vf_share_layers'] = True
-        config['vf_loss_coeff'] = 1e-4 
+        config['vf_loss_coeff'] = 1e-6
         config['num_sgd_iter'] = 10 
         config['sgd_minibatch_size'] = 512
 

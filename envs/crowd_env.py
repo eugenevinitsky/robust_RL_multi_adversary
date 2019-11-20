@@ -298,6 +298,7 @@ class CrowdSimEnv(gym.Env):
             ob = (self.observed_image - 128.0) / 255.0
         
         elif self.robot.sensor == 'coordinates':
+            assert self.human_num != 0, "There are no humans in this simulation. Either change the obs space, or add humans"
             ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
             normalized_pos =  np.asarray(self.robot.get_position())/self.accessible_space
             normalized_goal =  np.asarray(self.robot.get_goal_position())/self.accessible_space
@@ -721,16 +722,18 @@ class CrowdSimEnv(gym.Env):
                 for i, human in enumerate(humans):
                     human.center = human_positions[frame_num][i]
                     human_numbers[i].set_position((human.center[0] - x_offset, human.center[1] - y_offset))
-                    for arrow in arrows:
-                        arrow.remove()
-                    arrows = [patches.FancyArrowPatch(*orientation[frame_num], color=arrow_color,
-                                                      arrowstyle=arrow_style) for orientation in orientations]
-                    for arrow in arrows:
-                        ax.add_artist(arrow)
+
                     if self.attention_weights is not None:
                         human.set_color(str(self.attention_weights[frame_num][i]))
                         attention_scores[i].set_text('human {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))
-
+                
+                for arrow in arrows:
+                    arrow.remove()
+                arrows = [patches.FancyArrowPatch(*orientation[frame_num], color=arrow_color,
+                                                    arrowstyle=arrow_style) for orientation in orientations]
+                for arrow in arrows:
+                    ax.add_artist(arrow)
+                
                 time.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
             def plot_value_heatmap():
