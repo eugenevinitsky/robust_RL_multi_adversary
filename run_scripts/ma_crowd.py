@@ -11,6 +11,7 @@ from ray.rllib.models import ModelCatalog
 from ray import tune
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
+from custom_ppo import CustomPPOTrainer
 
 from envs.crowd_env import CrowdSimEnv, MultiAgentCrowdSimEnv
 from envs.policy.policy_factory import policy_factory
@@ -28,6 +29,7 @@ def setup_ma_config(config):
                      'adversary': (None, env.observation_space, env.adv_action_space, {})}
 
     num_adversaries = config['num_adversaries']
+    del config['num_adversaries'] # KJ Fix this, it's awful
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     policies_to_train += adv_policies
 
