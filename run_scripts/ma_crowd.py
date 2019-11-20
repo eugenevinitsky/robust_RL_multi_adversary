@@ -12,7 +12,8 @@ from ray import tune
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
-from envs.crowd_env import CrowdSimEnv, MultiAgentCrowdSimEnv
+from algorithms.custom_ppo import KLPPOTrainer
+from envs.crowd_env import MultiAgentCrowdSimEnv
 from envs.policy.policy_factory import policy_factory
 from envs.utils.robot import Robot
 from utils.parsers import init_parser, env_parser, ray_parser, ma_env_parser
@@ -24,6 +25,8 @@ from models.conv_lstm import ConvLSTM
 def setup_ma_config(config):
     env = env_creator(config['env_config'])
     policies_to_train = ['robot', 'adversary']
+    # TODO(clear up the adversary policies, map them to appropriate models)
+    # TODO(clear up the adversary policies, map them to an appropriate trainer!!)
     policy_graphs = {'robot': (None, env.observation_space, env.action_space, {}),
                      'adversary': (None, env.observation_space, env.adv_action_space, {})}
 
@@ -72,6 +75,9 @@ def setup_exps(args):
     config['env_config']['perturb_state'] = args.perturb_state
     config['env_config']['perturb_actions'] = args.perturb_actions
 
+    if not args.perturb_state and not args.perturb_actions:
+        sys.exit('You need to select at least one of perturb actions or perturb state')
+
     with open(args.env_params, 'r') as file:
         env_params = file.read()
 
@@ -93,17 +99,18 @@ def setup_exps(args):
         config['model'] = MODEL_DEFAULTS.copy()
         
         config['model']['conv_activation'] = 'relu'
-        config['model']['use_lstm'] = True
-        config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
         config['model']['custom_options']['fcnet_hiddens'] = [[32, 32], []]
+        # If this is true we concatenate the actions onto the network post-convolution
+        config['model']['custom_options']['use_prev_action'] = True
         config['model']['conv_filters'] = conv_filters
         config['model']['custom_model'] = "rnn"
         
         config['vf_share_layers'] = True
         config['train_batch_size'] = 500  # TODO(@evinitsky) change this it's just for testing
     else:
-        config['model'] = {'use_lstm': True, "lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
+        config['train_batch_size'] = 500
+        config['model'] = {"lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
         config['vf_share_layers'] = True
         config['vf_loss_coeff'] = 1e-4
 
@@ -116,7 +123,7 @@ def setup_exps(args):
 
     exp_dict = {
         'name': args.exp_title,
-        'run_or_experiment': alg_run,
+        'run_or_experiment': KLPPOTrainer,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
             'training_iteration': args.num_iters
@@ -166,6 +173,6 @@ if __name__=="__main__":
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
-        ray.init()
+        ray.init(local_mode=True)
 
     run_tune(**exp_dict, queue_trials=False)
