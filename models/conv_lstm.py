@@ -42,6 +42,12 @@ class ConvLSTM(RecurrentTFModelV2):
         
         last_layer = tf.keras.layers.TimeDistributed(tf.keras.layers.Flatten())(last_layer)
 
+        # If true we append the actions into the layer after the conv
+        self.use_prev_action = model_config["custom_options"].get("use_prev_action")
+        if use_prev_action:
+            actions_layer = tf.keras.layers.Input(shape=(None, action_space.shape), name="agent_actions")
+            last_layer = tf.keras.layers.concatenate([last_layer, actions_layer])
+
         hiddens = model_config["custom_options"].get("fcnet_hiddens") # should be list of lists
         assert type(hiddens) == list
         assert type(hiddens[0]) == list
@@ -88,6 +94,8 @@ class ConvLSTM(RecurrentTFModelV2):
             1, activation=None, name="values")(last_layer)
 
         inputs = [input_layer, seq_in, state_in_h, state_in_c]
+        if self.use_prev_action:
+            inputs.insert(1, actions_layer)
         outputs = [action, values, state_h, state_c]
 
         self.rnn_model = tf.keras.Model(
@@ -100,16 +108,24 @@ class ConvLSTM(RecurrentTFModelV2):
     def forward(self, input_dict, state, seq_lens):
         """Adds time dimension to batch before sending inputs to forward_rnn().
         You should implement forward_rnn() in your subclass."""
-        output, new_state = self.forward_rnn(
-            add_time_dimension(input_dict["obs"], seq_lens), state,
-            seq_lens)
+        if self.use_prev_action:
+            output, new_state = self.forward_rnn(
+                add_time_dimension(input_dict["obs"], seq_lens), state,
+                seq_lens, add_time_dimension(input_dict["prev_action"], seq_lens))
+        else:
+            output, new_state = self.forward_rnn(
+                add_time_dimension(input_dict["obs"], seq_lens), state,
+                seq_lens)
         return tf.reshape(output, [-1, self.num_outputs]), new_state
 
     @override(RecurrentTFModelV2)
-    def forward_rnn(self, input_dict, state, seq_lens):
+    def forward_rnn(self, input_dict, state, seq_lens, prev_action=None):
         # by subclassing recurrent_tf_modelv2, forward_rnn receives
-        # inputs that are B x T x features 
-        model_out, self._value_out,  h, c = self.rnn_model([input_dict, seq_lens] + state)
+        # inputs that are B x T x features
+        if prev_action:
+            model_out, self._value_out,  h, c = self.rnn_model([input_dict, prev_action, seq_lens] + state)
+        else:
+            model_out, self._value_out,  h, c = self.rnn_model([input_dict, seq_lens] + state)
         return model_out, [h, c]
 
     @override(ModelV2)
