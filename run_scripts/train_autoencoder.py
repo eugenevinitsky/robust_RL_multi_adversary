@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytz
 import ray
+from ray import tune
 from ray.tune import Trainable, run
 from ray.tune.logger import DEFAULT_LOGGERS
 import tensorflow as tf
@@ -29,6 +30,24 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 @ray.remote
 def gather_images(passed_config, output_folder, horizon, total_num_steps, start_index):
+    env = env_creator(passed_config)
+
+    step_counter = 0
+    ob = env.reset()
+    while step_counter < total_num_steps:
+        assert np.all(ob > -1)
+        assert np.all(ob < 1)
+        matplotlib.image.imsave(os.path.join(output_folder, 'env_{}.jpg'.format(start_index)),
+                                ob[:, :, 0:3] + (128 / 255))
+        # write the image to a file
+        ob, rew, done, info = env.step(np.random.rand(2))
+        if done or step_counter % horizon == 0:
+            ob = env.reset()
+        start_index += 1
+        step_counter += 1
+
+
+def gather_images_local(passed_config, output_folder, horizon, total_num_steps, start_index):
     env = env_creator(passed_config)
 
     step_counter = 0
@@ -113,59 +132,35 @@ def fig2data(fig):
 
 class ConvVaeTrainer(Trainable):
     def _setup(self, config):
-        # Now construct the folder where we are saving images
-        filepath = os.path.expanduser(config['output_folder'])
-        images_path = os.path.join(os.path.expanduser((filepath)), 'autoencoder_images')
-        autoencoder_path = os.path.join(os.path.expanduser((filepath)), 'tf_vae')
-        autoencoder_out = os.path.join(os.path.expanduser((filepath)), 'reconstructed_images')
-
-        if not os.path.exists(os.path.expanduser(filepath)):
-            os.makedirs(images_path)
-            os.makedirs(autoencoder_path)
-            os.makedirs(autoencoder_out)
-
-        if len(os.listdir(filepath)) == 0 and not config['gather_images']:
-            sys.exit('You dont have any images in the training folder, so you should probably gather some. '
-                     'Set --gather_images')
-
-        if config['gather_images']:
-            num_images_per_sample = int(config['total_step_num'] / config['num_cpus'])
-            for i in range(config['num_cpus']):
-                gather_images.remote(config['env_config'], images_path, config['horizon'], num_images_per_sample,
-                                     i * num_images_per_sample)
-
         # Now lets train the auto-encoder
         np.set_printoptions(precision=4, edgeitems=6, linewidth=100, suppress=True)
 
         # Hyperparameters for ConvVAE
         self.batch_size = config['batch_size']
 
-        # Parameters for training
-
-        # # TODO(@evinitsky) maybe don't load the whole dataset into memory wtf
-        # load dataset from record/*. only use first 10K, sorted by filename.
-        filelist = os.listdir(images_path)
+        filelist = os.listdir(config['images_path'])
+        min_images = config['batch_size'] / (1 - config['train_split'])
+        if len(filelist) < min_images:
+            sys.exit("You need to gather a number of images that's at least {}".format(min_images))
         filelist.sort()
-        # TODO(@evinitsky) add validation split
         if config['run_mode'] == 'train':
-            filelist = filelist[0:int(len(filelist) * config['train_split'])]
+            split_filelist = filelist[0:int(len(filelist) * config['train_split'])]
+            self.valid_dataset = create_dataset(config['images_path'], filelist[int(len(filelist) * config['train_split']):])
+            total_length = len(self.valid_dataset)
+            self.num_valid_batches = int(np.floor(total_length / self.batch_size))
+            self.valid_batch_index = 0
+            print("num_valid_batches", self.num_valid_batches)
         elif config['run_mode'] == 'test':
-            filelist = filelist[int(len(filelist) * config['train_split']):]
+            split_filelist = filelist[int(len(filelist) * config['train_split']):]
         else:
             sys.exit('Please set a run mode to either train or test')
         # print("check total number of images:", count_length_of_filelist(filelist))
-        self.train_dataset = create_dataset(images_path, filelist)
-        self.valid_dataset = create_dataset(images_path, filelist[int(len(filelist) * config['train_split']):])
+        self.train_dataset = create_dataset(config['images_path'], split_filelist)
 
         # split into batches:
         total_length = len(self.train_dataset)
         self.num_train_batches = int(np.floor(total_length / self.batch_size))
-
-        total_length = len(self.valid_dataset)
-        self.num_valid_batches = int(np.floor(total_length / self.batch_size))
-        self.valid_batch_index = 0
         print("num_train_batches", self.num_train_batches)
-        print("num_valid_batches", self.num_valid_batches)
 
 
         self.vae = ConvVAE(z_size=config['z_size'],
@@ -198,8 +193,6 @@ class ConvVaeTrainer(Trainable):
                 self.vae.loss, self.vae.r_loss, self.vae.global_step, self.vae.grads,
                 self.vae.activation_list, self.vae.train_op
             ], feed)
-
-            # TODO(@evinitsky) add gradient norm, add histogram of activations and weights
 
             results = {
                 "epoch": self.iteration,
@@ -248,7 +241,7 @@ class ConvVaeTrainer(Trainable):
                 fig = plt.figure(figsize=(8, 16))
                 ax1 = fig.add_subplot(121)
                 ax2 = fig.add_subplot(122)
-                ax1.imshow(img[0][0])
+                ax1.imshow(img[0])
                 ax1.set_title('reconstruction')
                 ax2.imshow(obs[0])
                 ax2.set_title('original')
@@ -315,11 +308,38 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env_config = setup_sampling_env(parser)
 
-    train_config = {'z_size': 12, 'batch_size': 100, 'learning_rate': .0001 * (1 / args.top_percent), 'kl_tolerance': 0.5,
+    train_config = {'z_size': tune.grid_search([12, 50]), 'batch_size': tune.grid_search([100, 30]),
+                    'learning_rate': .0001 * (1 / args.top_percent), 'kl_tolerance': 0.5,
                     'use_gpu': False, 'output_folder': args.output_folder, 'img_freq': args.img_freq,
-                    'env_config': env_config, 'top_percent': args.top_percent, 'gather_images': args.gather_images,
+                    'env_config': env_config, 'top_percent': tune.grid_search([args.top_percent, 0.02]), 'gather_images': args.gather_images,
                     'horizon': args.horizon, 'total_step_num': args.total_step_num, 'kernel_size': args.kernel_size,
                     'num_cpus': args.num_cpus, 'train_split': args.train_split, 'run_mode': 'train'}
+
+    # Now construct the folder where we are saving images
+    filepath = os.path.expanduser(train_config['output_folder'])
+    images_path = os.path.join(os.path.expanduser((filepath)), 'autoencoder_images')
+    autoencoder_path = os.path.join(os.path.expanduser((filepath)), 'tf_vae')
+    autoencoder_out = os.path.join(os.path.expanduser((filepath)), 'reconstructed_images')
+
+    if not os.path.exists(os.path.expanduser(filepath)):
+        os.makedirs(images_path)
+        os.makedirs(autoencoder_path)
+        os.makedirs(autoencoder_out)
+
+    if len(os.listdir(filepath)) == 0 and not train_config['gather_images']:
+        sys.exit('You dont have any images in the training folder, so you should probably gather some. '
+                 'Set --gather_images')
+
+    if train_config['gather_images']:
+        if train_config['num_cpus'] > 0:
+            num_images_per_sample = int(train_config['total_step_num'] / train_config['num_cpus'])
+            for i in range(train_config['num_cpus']):
+                gather_images.remote(train_config['env_config'], images_path, train_config['horizon'], num_images_per_sample,
+                                     i * num_images_per_sample)
+        else:
+            gather_images_local(train_config['env_config'], images_path, train_config['horizon'], train_config['total_step_num'], 0)
+
+    train_config.update({'images_path': images_path})
 
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
@@ -334,6 +354,7 @@ if __name__ == "__main__":
             checkpoint_at_end=True,
             loggers=[TFLoggerPlus, ] + list(DEFAULT_LOGGERS[0:2]),
             num_samples=1,
+
             config=train_config,
             upload_dir=s3_string)
     else:

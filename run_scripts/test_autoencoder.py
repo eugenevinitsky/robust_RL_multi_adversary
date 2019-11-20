@@ -38,6 +38,7 @@ if __name__=='__main__':
 
     config['gather_images'] = False
     config['run_mode'] = 'test'
+    config['output_folder'] = os.path.expanduser('~/sim2real')
     trainer = ConvVaeTrainer(config)
     trainer._restore(args.checkpoint)
 
@@ -48,11 +49,11 @@ if __name__=='__main__':
         os.makedirs(perturb_path)
 
     # Lets do a few rounds of perturbing and save
-    num_data = len(trainer.dataset)
+    num_data = len(trainer.train_dataset)
     latent_size = config['z_size']
     for i in range(2):
         rand_int = np.random.randint(num_data)
-        input = trainer.dataset[rand_int][np.newaxis, :]
+        input = trainer.train_dataset[rand_int][np.newaxis, :]
         inner_layer = trainer.vae.encode(input)
         for j in range(latent_size + 1):
             if j == 0:
