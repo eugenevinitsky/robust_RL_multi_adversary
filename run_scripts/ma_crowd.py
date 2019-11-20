@@ -6,13 +6,14 @@ import os
 import sys
 
 import ray
+from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 import ray.rllib.agents.ppo as ppo
 from ray.rllib.models import ModelCatalog
 from ray import tune
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
-from algorithms.custom_ppo import KLPPOTrainer
+from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy
 from envs.crowd_env import MultiAgentCrowdSimEnv
 from envs.policy.policy_factory import policy_factory
 from envs.utils.robot import Robot
@@ -24,14 +25,14 @@ from models.conv_lstm import ConvLSTM
 
 def setup_ma_config(config):
     env = env_creator(config['env_config'])
-    policies_to_train = ['robot', 'adversary']
-    # TODO(clear up the adversary policies, map them to appropriate models)
-    # TODO(clear up the adversary policies, map them to an appropriate trainer!!)
-    policy_graphs = {'robot': (None, env.observation_space, env.action_space, {}),
-                     'adversary': (None, env.observation_space, env.adv_action_space, {})}
+    policies_to_train = ['robot']
 
+    policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
     num_adversaries = config['num_adversaries']
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
+    policy_graphs.update({'adversary' + str(i): (CustomPPOPolicy, env.observation_space,
+                                                 env.action_space, {}) for i in range(num_adversaries)})
+
     policies_to_train += adv_policies
 
     for adv in adv_policies:
@@ -42,8 +43,6 @@ def setup_ma_config(config):
             return agent_id
         if agent_id.startswith('adversary'):
             return random.choice(adv_policies)
-    
-    policy_ids = list(policy_graphs.keys())
 
     config.update({
         'multiagent': {
