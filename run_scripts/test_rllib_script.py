@@ -52,7 +52,7 @@ def setup_exps(args):
         config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
-        config['model']['custom_options']['fcnet_hiddens'] = [[32, 32], []]
+        config['model']['custom_options']['fcnet_hiddens'] = [[64], [64]]
         config['model']['conv_filters'] = conv_filters
         config['model']['custom_model'] = "rnn"
         
