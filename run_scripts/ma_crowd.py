@@ -30,8 +30,8 @@ def setup_ma_config(config):
     policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
     num_adversaries = config['num_adversaries']
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.observation_space,
-                                                 env.action_space, {}) for i in range(num_adversaries)})
+    policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
+                                                 env.adv_action_space, {}) for i in range(num_adversaries)})
 
     policies_to_train += adv_policies
 

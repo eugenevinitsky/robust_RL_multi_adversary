@@ -823,6 +823,19 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         if not self.perturb_state and not self.perturb_actions:
             logging.exception("Either one of perturb actions or perturb state must be true")
 
+    @property
+    def adv_observation_space(self):
+        """
+        Simple action space for an adversary that can perturb
+        every element of the agent's observation space.
+
+        Therefore, its action space is the same size as the agent's
+        observation space.
+        """
+        obs_size = super().observation_space.shape
+        dict_space = Dict({'obs': Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32),
+                        'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
+        return dict_space
 
     @property
     def adv_action_space(self):
@@ -840,8 +853,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             obs_size = obs_size[0]
         act_size = super().action_space.shape[0]
         shape = obs_size * self.perturb_state + act_size * self.perturb_actions
-        box = Dict({'obs': Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32),
-                    'is_active': Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.int32)})
+        box = Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32)
         return box
 
     def step(self, action, update=True):
@@ -868,7 +880,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
                                a_max=self.observation_space.high[0])}
         for i in range(self.num_adversaries):
             is_active = 1 if self.curr_adversary == i else 0
-            curr_obs.update({'adversary{}'.format(i): {'obs': 'ob', 'is_active': is_active}})
+            curr_obs.update({'adversary{}'.format(i): {'obs': ob, 'is_active': np.array([is_active])}})
 
         if self.perturb_state:
             curr_obs['robot'] = np.clip(ob['robot'] + state_perturbation,
@@ -892,6 +904,6 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         curr_obs = {'robot': ob}
         for i in range(self.num_adversaries):
             is_active = 1 if self.curr_adversary == i else 0
-            curr_obs.update({'adversary{}'.format(i): {'obs': 'ob', 'is_active': is_active}})
+            curr_obs.update({'adversary{}'.format(i): {'obs': ob, 'is_active': np.array([is_active])}})
         return curr_obs
         
