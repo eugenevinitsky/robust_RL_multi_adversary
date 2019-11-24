@@ -4,7 +4,7 @@ import logging
 
 import cv2
 import gym
-from gym.spaces import Box
+from gym.spaces import Box, Dict
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -818,6 +818,8 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         self.adversary_state_scaling = config.getfloat('env', 'adversary_state_scaling')
         self.perturb_actions = config.getboolean('ma_train_details', 'perturb_actions')
         self.perturb_state = config.getboolean('ma_train_details', 'perturb_state')
+        self.num_adversaries = 0
+        self.curr_adversary = 0
         if not self.perturb_state and not self.perturb_actions:
             logging.exception("Either one of perturb actions or perturb state must be true")
 
@@ -838,20 +840,22 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             obs_size = obs_size[0]
         act_size = super().action_space.shape[0]
         shape = obs_size * self.perturb_state + act_size * self.perturb_actions
-        box = Box(low=-1.0, high=1.0, shape=(shape,))
+        box = Dict({'obs': Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32),
+                    'is_active': Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.int32)})
         return box
 
     def step(self, action, update=True):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
         """
+        adversary_key = 'adversary{}'.format(self.curr_adversary)
         if self.perturb_state and self.perturb_actions:
-            action_perturbation = action['adversary'][:2] * self.adversary_action_scaling
-            state_perturbation = action['adversary'][2:] * self.adversary_state_scaling
+            action_perturbation = action[adversary_key][:2] * self.adversary_action_scaling
+            state_perturbation = action[adversary_key][2:] * self.adversary_state_scaling
         elif not self.perturb_state and self.perturb_actions:
-            action_perturbation = action['adversary'] * self.adversary_action_scaling
+            action_perturbation = action[adversary_key] * self.adversary_action_scaling
         else:
-            state_perturbation = action['adversary'] * self.adversary_state_scaling
+            state_perturbation = action[adversary_key] * self.adversary_state_scaling
 
         if self.perturb_actions:
             robot_action = action['robot'] + action_perturbation
@@ -859,29 +863,35 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             robot_action = action['robot']
         ob, reward, done, info = super().step(robot_action, update)
 
-        ob = {'robot': np.clip(ob,
+        curr_obs = {'robot': np.clip(ob,
                                a_min=self.observation_space.low[0],
-                               a_max=self.observation_space.high[0]),
-              'adversary': ob}
-        
+                               a_max=self.observation_space.high[0])}
+        for i in range(self.num_adversaries):
+            is_active = 1 if self.curr_adversary == i else 0
+            curr_obs.update({'adversary{}'.format(i): {'obs': 'ob', 'is_active': is_active}})
+
         if self.perturb_state:
-            ob['robot'] = np.clip(ob['robot'] + state_perturbation,
+            curr_obs['robot'] = np.clip(ob['robot'] + state_perturbation,
                                    a_min=self.observation_space.low[0],
                                    a_max=self.observation_space.high[0])
-    
 
+        reward_dict = {'robot': reward}
+        reward_dict.update({'adversary{}'.format(i): -reward for i in range(self.num_adversaries)})
 
-        reward = {'robot': reward, 'adversary': -reward}
         done = {'__all__': done}
         
-        return ob, reward, done, info
+        return curr_obs, reward_dict, done, info
 
     def reset(self, phase='test', test_case=None):
         """
         Set px, py, gx, gy, vx, vy, theta for robot and humans
         :return:
         """
-
+        self.curr_adversary = int(np.random.randint(low=0, high=self.num_adversaries))
         ob = super().reset(phase, test_case)
-        return {'robot': ob, 'adversary': ob}
+        curr_obs = {'robot': ob}
+        for i in range(self.num_adversaries):
+            is_active = 1 if self.curr_adversary == i else 0
+            curr_obs.update({'adversary{}'.format(i): {'obs': 'ob', 'is_active': is_active}})
+        return curr_obs
         
