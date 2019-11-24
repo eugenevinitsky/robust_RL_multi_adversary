@@ -53,7 +53,10 @@ def setup_exps(args):
         config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
+        # The first list is hidden layers before the LSTM, the second list is hidden layers after the LSTM.
         config['model']['custom_options']['fcnet_hiddens'] = [[32, 32], []]
+        # If this is true we concatenate the actions onto the network post-convolution
+        config['model']['custom_options']['use_prev_action'] = True
         config['model']['conv_filters'] = conv_filters
         config['model']['custom_model'] = "rnn"
         

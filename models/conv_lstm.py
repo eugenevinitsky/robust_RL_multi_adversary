@@ -44,7 +44,7 @@ class ConvLSTM(RecurrentTFModelV2):
 
         # If true we append the actions into the layer after the conv
         self.use_prev_action = model_config["custom_options"].get("use_prev_action")
-        if use_prev_action:
+        if self.use_prev_action:
             actions_layer = tf.keras.layers.Input(shape=(None, action_space.shape), name="agent_actions")
             last_layer = tf.keras.layers.concatenate([last_layer, actions_layer])
 

@@ -30,23 +30,25 @@ def setup_ma_config(config):
     policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
     num_adversaries = config['num_adversaries']
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    policy_graphs.update({'adversary' + str(i): (CustomPPOPolicy, env.observation_space,
+    policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.observation_space,
                                                  env.action_space, {}) for i in range(num_adversaries)})
 
     policies_to_train += adv_policies
 
-    for adv in adv_policies:
-        policy_graphs[adv] = (None, env.observation_space, env.adv_action_space, {})
-
+    # def policy_mapping_fn(agent_id):
+    #     if agent_id == 'robot':
+    #         return agent_id
+    #     if agent_id.startswith('adversary'):
+    #         import ipdb; ipdb.set_trace()
+    #         policy_choice = random.choice(adv_policies)
+    #         print('the policy choice is ', policy_choice)
+    #         return policy_choice
     def policy_mapping_fn(agent_id):
-        if agent_id == 'robot':
-            return agent_id
-        if agent_id.startswith('adversary'):
-            return random.choice(adv_policies)
+        return agent_id
 
     config.update({
         'multiagent': {
-            'policy_graphs': policy_graphs,
+            'policies': policy_graphs,
             'policy_mapping_fn': tune.function(policy_mapping_fn),
             'policies_to_train': policies_to_train
         }
@@ -73,6 +75,7 @@ def setup_exps(args):
     config['env_config']['train_on_images'] = args.train_on_images
     config['env_config']['perturb_state'] = args.perturb_state
     config['env_config']['perturb_actions'] = args.perturb_actions
+    config['env_config']['num_adversaries'] = args.num_adv
 
     if not args.perturb_state and not args.perturb_actions:
         sys.exit('You need to select at least one of perturb actions or perturb state')
@@ -104,11 +107,11 @@ def setup_exps(args):
         config['model']['custom_options']['use_prev_action'] = True
         config['model']['conv_filters'] = conv_filters
         config['model']['custom_model'] = "rnn"
-        
         config['vf_share_layers'] = True
         config['train_batch_size'] = 500  # TODO(@evinitsky) change this it's just for testing
     else:
         config['train_batch_size'] = 500
+        # TODO(@evinitsky) put the lstm back
         config['model'] = {"lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
         config['vf_share_layers'] = True
         config['vf_loss_coeff'] = 1e-4
@@ -150,6 +153,7 @@ def env_creator(passed_config):
     env.train_on_images = passed_config['train_on_images']
     env.perturb_actions = passed_config['perturb_actions']
     env.perturb_state = passed_config['perturb_state']
+    env.num_adversaries = passed_config['num_adversaries']
 
     # configure policy
     policy_params = configparser.RawConfigParser()
