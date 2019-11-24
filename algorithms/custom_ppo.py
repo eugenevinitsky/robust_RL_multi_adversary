@@ -68,8 +68,9 @@ def new_postprocess_ppo_gae(policy,
     # if other_agent_batches:
     batch_size = sample_batch['obs'].shape[0]
     if other_agent_batches:
-        for i, other_agent_batch in enumerate(other_agent_batches.values()):
-            batch = other_agent_batch[1]
+        i = 0
+        for other_agent_batch in enumerate(other_agent_batches.values()):
+            batch = other_agent_batch[1][1]
             if "kj_log_std" in batch:
                 postprocess["kj_log_std_{}".format(i)] = batch["kj_log_std"]
                 postprocess["kj_std_{}".format(i)] = batch["kj_std"]
@@ -77,6 +78,7 @@ def new_postprocess_ppo_gae(policy,
                 postprocess[SampleBatch.CUR_OBS + '_' + str(i)] = sample_batch[SampleBatch.CUR_OBS]
                 postprocess[SampleBatch.PREV_ACTIONS + '_' + str(i)] = sample_batch[SampleBatch.PREV_ACTIONS]
                 postprocess[SampleBatch.PREV_REWARDS + '_' + str(i)] = sample_batch[SampleBatch.PREV_REWARDS]
+                i += 1
 
     # handle the fake pass
     if not other_agent_batches:
@@ -104,10 +106,11 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
         other_std = train_batch["kj_std_{}".format(i)]
         other_mean = train_batch["kj_mean_{}".format(i)]
 
-        kl_loss += (
+        kl_loss += tf.reduce_sum(
             other_logstd - log_std +
             (tf.square(std) + tf.square(mean - other_mean)) /
-            (2.0 * tf.square(other_std)) - 0.5
+            (2.0 * tf.square(other_std)) - 0.5,
+            reduction_indices=[1]
         )
     return -kl_loss
 
@@ -121,11 +124,12 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     is_active = original_space['is_active']
 
     # TODO(@evinitsky) extract the ppo_surrogate_loss before the mean is taken
-    pre_mean_loss = ppo_custom_surrogate_loss(policy, model, dist_class, train_batch)
+    ppo_custom_surrogate_loss(policy, model, dist_class, train_batch)
+    pre_mean_loss = policy.loss_obj.pre_mean_loss
 
     def reduce_mean_valid(t):
         return tf.reduce_mean(tf.boolean_mask(t, policy.loss_obj.valid_mask))
-    return reduce_mean_valid(pre_mean_loss * is_active + policy.kl_diff_loss)
+    return reduce_mean_valid(pre_mean_loss * tf.squeeze(is_active) + policy.kl_diff_loss)
 
 
 def new_kl_and_loss_stats(policy, train_batch):
