@@ -112,7 +112,7 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
             (2.0 * tf.square(other_std)) - 0.5,
             reduction_indices=[1]
         )
-    return -kl_loss
+    return kl_loss
 
 
 # def new_ppo_surrogate_loss(policy, batch_tensors):
@@ -129,7 +129,10 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
 
     def reduce_mean_valid(t):
         return tf.reduce_mean(tf.boolean_mask(t, policy.loss_obj.valid_mask))
-    return reduce_mean_valid(pre_mean_loss * tf.squeeze(is_active) + policy.kl_diff_loss)
+    return reduce_mean_valid(pre_mean_loss * tf.squeeze(is_active) -
+                             policy.config['kl_diff_weight'] * policy.kl_diff_loss)
+    # return reduce_mean_valid(pre_mean_loss * tf.squeeze(is_active))
+
 
 
 def new_kl_and_loss_stats(policy, train_batch):
@@ -273,6 +276,7 @@ def ppo_custom_surrogate_loss(policy, model, dist_class, train_batch):
 class SetUpConfig(object):
     def __init__(self, config):
         self.num_adversaries = config['num_adversaries']
+        self.kl_diff_weight = config['kl_diff_weight']
 
 
 def special_setup_mixins(policy, obs_space, action_space, config):
@@ -293,6 +297,7 @@ CustomPPOPolicy = PPOTFPolicy.with_updates(
 
 my_special_config = DEFAULT_CONFIG
 my_special_config["num_adversaries"] = 2
+my_special_config["kl_diff_weight"] = 1e-5
 KLPPOTrainer = PPOTrainer.with_updates(
     default_policy=CustomPPOPolicy,
     default_config=my_special_config
