@@ -68,7 +68,7 @@ def setup_exps(args):
     config['gamma'] = 0.99
     config['train_batch_size'] = 10000
     config['num_adversaries'] = args.num_adv
-    config['kl_diff_weight'] = 1e-5
+    config['kl_diff_weight'] = 1e-9
 
     config['env_config']['run'] = alg_run
     config['env_config']['policy'] = args.policy

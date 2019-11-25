@@ -123,14 +123,21 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     original_space = restore_original_dimensions(train_batch['obs'], model.obs_space)
     is_active = original_space['is_active']
 
-    # TODO(@evinitsky) extract the ppo_surrogate_loss before the mean is taken
+    # extract the ppo_surrogate_loss before the mean is taken
     ppo_custom_surrogate_loss(policy, model, dist_class, train_batch)
     pre_mean_loss = policy.loss_obj.pre_mean_loss
 
     def reduce_mean_valid(t):
         return tf.reduce_mean(tf.boolean_mask(t, policy.loss_obj.valid_mask))
-    return reduce_mean_valid(pre_mean_loss * tf.squeeze(is_active) -
-                             policy.config['kl_diff_weight'] * policy.kl_diff_loss)
+
+    # This mask combines both the valid mask and a check for when we were actually active in the env
+    combined_mask = tf.math.logical_and(policy.loss_obj.valid_mask, tf.cast(tf.squeeze(is_active, -1), tf.bool))
+    standard_loss = tf.reduce_mean(tf.boolean_mask(pre_mean_loss, combined_mask))
+
+    # Since we are happy to evaluate the kl diff over obs in which we weren't active, we only mask this
+    # with respect to the valid mask, which tracks padding for RNNs
+    kl_loss = policy.config['kl_diff_weight'] * reduce_mean_valid(policy.kl_diff_loss)
+    return kl_loss + standard_loss
     # return reduce_mean_valid(pre_mean_loss * tf.squeeze(is_active))
 
 
