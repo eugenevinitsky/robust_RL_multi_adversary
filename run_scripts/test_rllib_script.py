@@ -26,6 +26,8 @@ def setup_exps(args):
     alg_run = 'PPO'
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = args.num_cpus
+    config["sgd_minibatch_size"] = 500
+    config["num_sgd_iter"] = 10
     config['gamma'] = 0.99
 
     with open(args.env_params, 'r') as file:
@@ -49,9 +51,6 @@ def setup_exps(args):
         config['model'] = MODEL_DEFAULTS.copy()
         
         config['model']['conv_activation'] = 'relu'
-        config['model']['use_lstm'] = True
-        config['model']['lstm_use_prev_action_reward'] = True
-        config['model']['lstm_cell_size'] = 128
         # The first list is hidden layers before the LSTM, the second list is hidden layers after the LSTM.
         config['model']['custom_options']['fcnet_hiddens'] = [[32, 32], []]
         # If this is true we concatenate the actions onto the network post-convolution
@@ -61,6 +60,12 @@ def setup_exps(args):
         
         config['vf_share_layers'] = True
         config['train_batch_size'] = args.train_batch_size  # TODO(@evinitsky) change this it's just for testing
+
+    else:
+        config['model']['fcnet_hiddens'] = [64, 64]
+        config['model']['use_lstm'] = True
+        config['model']['lstm_use_prev_action_reward'] = True
+        config['model']['lstm_cell_size'] = 128
 
     s3_string = 's3://sim2real/' \
                 + datetime.now().strftime('%m-%d-%Y') + '/' + args.exp_title
