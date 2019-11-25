@@ -66,9 +66,8 @@ def setup_exps(args):
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = args.num_cpus
     config['gamma'] = 0.99
-    config['train_batch_size'] = 10000
     config['num_adversaries'] = args.num_adv
-    config['kl_diff_weight'] = 1e-9
+    config['kl_diff_weight'] = args.kl_diff_weight
 
     config['env_config']['run'] = alg_run
     config['env_config']['policy'] = args.policy
@@ -112,8 +111,7 @@ def setup_exps(args):
         config['train_batch_size'] = args.train_batch_size
     else:
         config['train_batch_size'] = args.train_batch_size
-        # TODO(@evinitsky) put the lstm back
-        config['model'] = {"lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
+        config['model'] = {"lstm_use_prev_action_reward": True, 'lstm_cell_size': 128, 'use_lstm': True}
         config['vf_share_layers'] = True
         config['vf_loss_coeff'] = 1e-4
 
