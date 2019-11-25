@@ -59,7 +59,8 @@ def env_parser(parser):
 def ma_env_parser(parser):
     parser.add_argument("--perturb_actions", action="store_true", default=False, help="Add adversary to agent actions")
     parser.add_argument("--perturb_state", action="store_true", default=False, help="Add adversary to agent state")
-    parser.add_argument("--kl_diff_weight", type=float, default=0.0, help="How much weight to reward differences in kl between policies")
+    parser.add_argument("--kl_diff_weight", type=float, default=0.0,
+                        help="How much weight to reward differences in kl between policies")
     return parser
 
 

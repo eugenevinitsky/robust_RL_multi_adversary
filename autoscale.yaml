@@ -67,7 +67,7 @@ auth:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
-    InstanceType: m4.16xlarge
+    InstanceType: c4.8xlarge
     ImageId: ami-0c4d7ee4aa6661c9f # Adversarial Sim2Real AMI
     KeyName: MyKeyPair
 
@@ -84,7 +84,7 @@ head_node:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 worker_nodes:
-    InstanceType: c4.4xlarge
+    InstanceType: c4.8xlarge
     ImageId: ami-0c4d7ee4aa6661c9f # Adversarial Sim2Real AMI
     KeyName: MyKeyPair
 
@@ -114,7 +114,7 @@ setup_commands:
     # Note: if you're developing Ray, you probably want to create an AMI that
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
-    - cd ~/adversarial_sim2real && git fetch origin; git checkout origin/kl_div
+    - cd ~/adversarial_sim2real && git fetch; git checkout origin/kl_div; git pull origin kl_div
     - source activate tensorflow_p36 && pip install ray==0.7.6
     - python ~/adversarial_sim2real/utils/replace_rnn_sequence.py
     # Consider uncommenting these if you also want to run apt-get commands during setup
