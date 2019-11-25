@@ -27,7 +27,6 @@ def setup_exps(args):
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = args.num_cpus
     config['gamma'] = 0.99
-    #config['train_batch_size'] = 10000
 
     with open(args.env_params, 'r') as file:
         env_params = file.read()
@@ -61,7 +60,7 @@ def setup_exps(args):
         config['model']['custom_model'] = "rnn"
         
         config['vf_share_layers'] = True
-        config['train_batch_size'] = 500  # TODO(@evinitsky) change this it's just for testing
+        config['train_batch_size'] = args.train_batch_size  # TODO(@evinitsky) change this it's just for testing
 
     s3_string = 's3://sim2real/' \
                 + datetime.now().strftime('%m-%d-%Y') + '/' + args.exp_title
