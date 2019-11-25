@@ -117,7 +117,8 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
 
 # def new_ppo_surrogate_loss(policy, batch_tensors):
 def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
-    policy.kl_diff_loss = setup_kl_loss(policy, model, dist_class, train_batch)
+    if policy.num_adversaries > 1:
+        policy.kl_diff_loss = setup_kl_loss(policy, model, dist_class, train_batch)
 
     # zero out the loss elements where you weren't actually acting
     original_space = restore_original_dimensions(train_batch['obs'], model.obs_space)
@@ -136,8 +137,11 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
 
     # Since we are happy to evaluate the kl diff over obs in which we weren't active, we only mask this
     # with respect to the valid mask, which tracks padding for RNNs
-    kl_loss = policy.config['kl_diff_weight'] * reduce_mean_valid(policy.kl_diff_loss)
-    return kl_loss + standard_loss
+    if policy.num_adversaries > 1:
+        kl_loss = policy.config['kl_diff_weight'] * reduce_mean_valid(policy.kl_diff_loss)
+        return kl_loss + standard_loss
+    else:
+        return standard_loss
     # return reduce_mean_valid(pre_mean_loss * tf.squeeze(is_active))
 
 
@@ -145,9 +149,10 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
 def new_kl_and_loss_stats(policy, train_batch):
     # import ipdb; ipdb.set_trace()
     # total_kl_diff = sum([batch['kl_diff'] for batch in batch_tensors])
-    info = {'kl_diff': policy.kl_diff_loss}
     stats = kl_and_loss_stats(policy, train_batch)
-    stats.update(info)
+    if policy.num_adversaries > 1:
+        info = {'kl_diff': policy.kl_diff_loss}
+        stats.update(info)
     return stats
 
 
