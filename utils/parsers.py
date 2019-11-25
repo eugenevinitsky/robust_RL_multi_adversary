@@ -13,6 +13,7 @@ def ray_parser(parser):
     parser.add_argument('--num_cpus', type=int, default=1, help='Number of cpus to run experiment with')
     parser.add_argument('--multi_node', action='store_true', help='Set to true if this will '
                                                                   'be run in cluster mode')
+    parser.add_argument('--train_batch_size', type=int, default=30000, help='How many steps go into a training batch')
     parser.add_argument('--num_iters', type=int, default=350)
     parser.add_argument('--checkpoint_freq', type=int, default=50)
     parser.add_argument('--num_samples', type=int, default=1)
