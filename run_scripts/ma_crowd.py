@@ -109,9 +109,9 @@ def setup_exps(args):
         config['model']['conv_filters'] = conv_filters
         config['model']['custom_model'] = "rnn"
         config['vf_share_layers'] = True
-        config['train_batch_size'] = 500  # TODO(@evinitsky) change this it's just for testing
+        config['train_batch_size'] = args.train_batch_size
     else:
-        config['train_batch_size'] = 500
+        config['train_batch_size'] = args.train_batch_size
         # TODO(@evinitsky) put the lstm back
         config['model'] = {"lstm_use_prev_action_reward": True, 'lstm_cell_size': 128}
         config['vf_share_layers'] = True
