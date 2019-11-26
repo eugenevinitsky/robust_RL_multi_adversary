@@ -30,6 +30,7 @@ def setup_exps(args):
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = args.num_cpus
     config["sgd_minibatch_size"] = 500
+    config['train_batch_size'] = args.train_batch_size
     config["num_sgd_iter"] = 10
     config['gamma'] = 0.99
 
@@ -62,8 +63,6 @@ def setup_exps(args):
         config['model']['custom_model'] = "rnn"
 
         config['vf_share_layers'] = True
-        config['train_batch_size'] = args.train_batch_size  # TODO(@evinitsky) change this it's just for testing
-
     else:
         config['model']['fcnet_hiddens'] = [64, 64]
         config['model']['use_lstm'] = True
