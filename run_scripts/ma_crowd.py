@@ -113,7 +113,9 @@ def setup_exps(args):
         config['vf_share_layers'] = True
     else:
         config['model']['fcnet_hiddens'] = [64, 64]
-        config['model'] = {"lstm_use_prev_action_reward": True, 'lstm_cell_size': 128, 'use_lstm': True}
+        config['model']['use_lstm'] = True
+        config['model']['lstm_use_prev_action_reward'] = True
+        config['model']['lstm_cell_size'] = 128
         config['vf_share_layers'] = True
         config['vf_loss_coeff'] = 1e-4
     config['train_batch_size'] = args.train_batch_size
