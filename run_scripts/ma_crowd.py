@@ -30,8 +30,9 @@ def setup_ma_config(config):
     policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
     num_adversaries = config['num_adversaries']
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
+    adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
     policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
-                                                 env.adv_action_space, {}) for i in range(num_adversaries)})
+                                                 env.adv_action_space, adversary_config) for i in range(num_adversaries)})
 
     policies_to_train += adv_policies
 
@@ -110,13 +111,12 @@ def setup_exps(args):
         config['model']['conv_filters'] = conv_filters
         config['model']['custom_model'] = "rnn"
         config['vf_share_layers'] = True
-        config['train_batch_size'] = args.train_batch_size
     else:
-        config['train_batch_size'] = args.train_batch_size
         config['model']['fcnet_hiddens'] = [64, 64]
         config['model'] = {"lstm_use_prev_action_reward": True, 'lstm_cell_size': 128, 'use_lstm': True}
         config['vf_share_layers'] = True
         config['vf_loss_coeff'] = 1e-4
+    config['train_batch_size'] = args.train_batch_size
 
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
