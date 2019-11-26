@@ -385,7 +385,7 @@ class CrowdSimEnv(gym.Env):
         if self.add_gauss_noise_state:
             ob = np.random.normal(scale=self.gauss_noise_state_stddev, size=ob.shape) + ob
 
-        return ob
+        return np.clip(ob, a_min=self.observation_space.low, a_max=self.observation_space.high)
 
     def onestep_lookahead(self, action):
         return self.step(action, update=False)
@@ -540,7 +540,7 @@ class CrowdSimEnv(gym.Env):
         if self.add_gauss_noise_state:
             ob = np.random.normal(scale=self.gauss_noise_state_stddev, size=ob.shape) + ob
 
-        return ob, reward, done, {}
+        return np.clip(ob, a_min=self.observation_space.low, a_max=self.observation_space.high), reward, done, {}
 
 
     def image_state_space(self, update_colors):
@@ -904,6 +904,8 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         curr_obs = {'robot': ob}
         for i in range(self.num_adversaries):
             is_active = 1 if self.curr_adversary == i else 0
-            curr_obs.update({'adversary{}'.format(i): {'obs': ob, 'is_active': np.array([is_active])}})
+            curr_obs.update({'adversary{}'.format(i):
+                                 {'obs': np.clip(ob, a_min=self.observation_space.low, a_max=self.observation_space.high),
+                                  'is_active': np.array([is_active])}})
         return curr_obs
         

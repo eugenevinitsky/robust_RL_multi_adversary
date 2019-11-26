@@ -1,10 +1,10 @@
-import argparse
-import random
-import configparser
+import errno
 from datetime import datetime
 import os
+import subprocess
 import sys
 
+import pytz
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 import ray.rllib.agents.ppo as ppo
@@ -14,17 +14,17 @@ from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
 from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy
-from envs.crowd_env import MultiAgentCrowdSimEnv
-from envs.policy.policy_factory import policy_factory
-from envs.utils.robot import Robot
+from visualize.transfer_test import run_transfer_tests
+from utils.env_creator import ma_env_creator
 from utils.parsers import init_parser, env_parser, ray_parser, ma_env_parser
+from utils.rllib_utils import get_config_from_path
 
 from ray.rllib.models.catalog import MODEL_DEFAULTS
 from models.conv_lstm import ConvLSTM
 
 
 def setup_ma_config(config):
-    env = env_creator(config['env_config'])
+    env = ma_env_creator(config['env_config'])
     policies_to_train = ['robot']
 
     policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
@@ -118,10 +118,13 @@ def setup_exps(args):
         config['vf_share_layers'] = True
         config['vf_loss_coeff'] = 1e-4
 
+    date = datetime.now(tz=pytz.utc)
+    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
     s3_string = 's3://sim2real/' \
-                + datetime.now().strftime('%m-%d-%Y') + '/' + args.exp_title
+                + date + '/' + args.exp_title
+
     config['env'] = 'MultiAgentCrowdSimEnv'
-    register_env('MultiAgentCrowdSimEnv', env_creator)
+    register_env('MultiAgentCrowdSimEnv', ma_env_creator)
 
     setup_ma_config(config)
 
@@ -141,36 +144,6 @@ def setup_exps(args):
     return exp_dict, args
 
 
-def env_creator(passed_config):
-    config_path = passed_config['env_params']
-    
-    env_params = configparser.RawConfigParser()
-    env_params.read_string(config_path)
-    
-    robot = Robot(env_params, 'robot')
-    env = MultiAgentCrowdSimEnv(env_params, robot)
-
-    # additional configuration
-    env.show_images = passed_config['show_images']
-    env.train_on_images = passed_config['train_on_images']
-    env.perturb_actions = passed_config['perturb_actions']
-    env.perturb_state = passed_config['perturb_state']
-    env.num_adversaries = passed_config['num_adversaries']
-
-    # configure policy
-    policy_params = configparser.RawConfigParser()
-    policy_params.read_string(passed_config['policy_params'])
-    policy = policy_factory[passed_config['policy']](policy_params)
-    if not policy.trainable:
-        sys.exit('Policy has to be trainable')
-    if passed_config['policy_params'] is None:
-        sys.exit('Policy config has to be specified for a trainable network')
-
-    robot.set_policy(policy)
-    policy.set_env(env)
-    robot.print_info()
-    return env
-
 if __name__=="__main__":
 
     exp_dict, args = setup_exps(sys.argv[1:])
@@ -181,3 +154,27 @@ if __name__=="__main__":
         ray.init(local_mode=True)
 
     run_tune(**exp_dict, queue_trials=False)
+
+    # Now we add code to loop through the results and create scores of the results
+    if args.run_transfer_tests:
+        date = datetime.now(tz=pytz.utc)
+        date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
+        output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results'), date), args.exp_title)
+        if not os.path.exists(output_path):
+            try:
+                os.makedirs(output_path)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:
+                    raise
+        for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
+            # TODO(@evinitsky) this is pretty brittle, we should just remove the test folder from sim2real
+            if "checkpoint_{}".format(args.num_iters) in dirpath and 'test' not in dirpath:
+                # grab the experiment name
+                folder = os.path.dirname(dirpath)
+                tune_name = folder.split("/")[-1]
+                outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
+                config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
+                run_transfer_tests(config, checkpoint_path, 50, args.exp_title, output_path, save_trajectory=False)
+        p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path, "s3://sim2real/transfer_results/{}/{}".format(date, args.exp_title)).split(' '))
+        p1.wait()
