@@ -126,7 +126,7 @@ class TestRollout(unittest.TestCase):
                     rllib_config = cloudpickle.load(f)
 
                 checkpoint = os.path.join(sub_folder, 'checkpoint_1/checkpoint-1')
-                run_transfer_tests(rllib_config, checkpoint, 1, 'temp', show_images=True, outdir=sub_folder)
+                run_transfer_tests(rllib_config, checkpoint, 1, 'temp', sub_folder, show_images=True)
         assert count == 1
 
 

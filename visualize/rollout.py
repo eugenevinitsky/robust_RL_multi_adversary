@@ -22,8 +22,7 @@ try:
 except ImportError:
     from ray.rllib.agents.registry import get_agent_class
 
-from run_scripts.test_rllib_script import env_creator
-from run_scripts.ma_crowd import env_creator as ma_env_creator
+from utils.env_creator import env_creator, ma_env_creator
 
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
@@ -42,6 +41,7 @@ class DefaultMapping(collections.defaultdict):
 
 def default_policy_agent_mapping(unused_agent_id):
     return DEFAULT_POLICY_ID
+
 
 def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_images, num_rollouts):
     rllib_config['num_workers'] = 0
