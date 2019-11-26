@@ -834,7 +834,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         """
         obs_size = super().observation_space.shape
         dict_space = Dict({'obs': Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32),
-                        'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
+                           'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
         return dict_space
 
     @property
@@ -883,9 +883,9 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             curr_obs.update({'adversary{}'.format(i): {'obs': ob, 'is_active': np.array([is_active])}})
 
         if self.perturb_state:
-            curr_obs['robot'] = np.clip(ob['robot'] + state_perturbation,
-                                   a_min=self.observation_space.low[0],
-                                   a_max=self.observation_space.high[0])
+            curr_obs['robot'] = np.clip(curr_obs['robot'] + state_perturbation,
+                                        a_min=self.observation_space.low,
+                                        a_max=self.observation_space.high)
 
         reward_dict = {'robot': reward}
         reward_dict.update({'adversary{}'.format(i): -reward for i in range(self.num_adversaries)})
