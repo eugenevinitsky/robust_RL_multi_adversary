@@ -30,6 +30,8 @@ def setup_ma_config(config):
     policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
     num_adversaries = config['num_adversaries']
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
+    # adversary_config = config
+    # adversary_config.update({"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}})
     adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
     policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
                                                  env.adv_action_space, adversary_config) for i in range(num_adversaries)})
