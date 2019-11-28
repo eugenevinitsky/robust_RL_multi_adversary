@@ -11,7 +11,20 @@ from visualize.rollout import run_rollout
 import errno
 
 
+def reset_config(rllib_config):
+    """Return a copy of the config with the possible transfer parameters set to default values"""
+    copy_config = deepcopy(rllib_config)
+    copy_config['env_config']['friction'] = False
+    copy_config['env_config']['change_colors_mode'] = 'no_change'
+    copy_config['env_config']['restrict_goal_region'] = True
+    copy_config['env_config']['chase_robot'] = False
+    copy_config['env_config']['add_gaussian_noise_state'] = False
+    copy_config['env_config']['add_gaussian_noise_action'] = False
+    return copy_config
+
+
 def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir, save_trajectory, show_images=False):
+    # TODO(@Evinitsky) when you run the transfer tests for multi-agent you want to run it with no adversaries!!!
     file_path = os.path.dirname(os.path.abspath(__file__))
 
     # First compute a baseline score to compare against
@@ -24,7 +37,8 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         "**********************************************************\n"
         "**********************************************************"
     )
-    base_rewards = run_rollout(rllib_config, checkpoint, save_trajectory=save_trajectory, video_file="base",
+    temp_config = reset_config(rllib_config)
+    base_rewards = run_rollout(temp_config, checkpoint, save_trajectory=save_trajectory, video_file="base",
                                show_images=show_images, num_rollouts=num_rollouts)
     output_file_path = os.path.join(file_path, '{}/{}_base.txt'.format(outdir, output_file_name))
     if not os.path.exists(os.path.dirname(output_file_path)):
@@ -48,7 +62,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         "**********************************************************\n"
         "**********************************************************"
     )
-    temp_config = deepcopy(rllib_config)
+    temp_config = reset_config(rllib_config)
     temp_config['env_config']['friction'] = True
     friction_rewards = run_rollout(temp_config, checkpoint, save_trajectory=save_trajectory, video_file="friction",
                                    show_images=show_images, num_rollouts=num_rollouts)
@@ -66,13 +80,13 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         "**********************************************************\n"
         "**********************************************************"
     )
-    temp_config = deepcopy(rllib_config)
+    temp_config = reset_config(rllib_config)
     temp_config['env_config']['change_colors_mode'] = 'every_step'
     color_rewards = run_rollout(temp_config, checkpoint, save_trajectory=save_trajectory, video_file="colours",
                                 show_images=show_images,  num_rollouts=num_rollouts)
     with open(os.path.join(file_path, '{}/{}_color.txt'.format(outdir, output_file_name)),
               'wb') as file:
-        np.savetxt(file, friction_rewards, delimiter=', ')
+        np.savetxt(file, color_rewards, delimiter=', ')
 
     # Allow goals to spawn anywhere (no longer restricted to smaller space)
     print(
@@ -84,7 +98,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         "**********************************************************\n"
         "**********************************************************"
     )
-    temp_config = deepcopy(rllib_config)
+    temp_config = reset_config(rllib_config)
     temp_config['env_config']['restrict_goal_region'] = False
     unrestrict_goal_reg_rewards = run_rollout(temp_config, checkpoint, save_trajectory=save_trajectory, video_file="goal_reg",
                                               show_images=show_images, num_rollouts=num_rollouts)
@@ -102,7 +116,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         "**********************************************************\n"
         "**********************************************************"
     )
-    temp_config = deepcopy(rllib_config)
+    temp_config = reset_config(rllib_config)
     temp_config['env_config']['chase_robot'] = True
     chase_robot_rewards = run_rollout(temp_config, checkpoint, save_trajectory=save_trajectory, video_file="chase_rob",
                                       show_images=show_images, num_rollouts=num_rollouts)
@@ -120,13 +134,13 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         "**********************************************************\n"
         "**********************************************************"
     )
-    temp_config = deepcopy(rllib_config)
+    temp_config = reset_config(rllib_config)
     temp_config['env_config']['add_gaussian_noise_state'] = True
     gaussian_state_rewards = run_rollout(temp_config, checkpoint, save_trajectory=save_trajectory, video_file="gauss_state",
                                          show_images=show_images, num_rollouts=num_rollouts)
     with open(os.path.join(file_path, '{}/{}_gaussian_state_noise.txt'.format(outdir, output_file_name)),
               'wb') as file:
-        np.savetxt(file, chase_robot_rewards, delimiter=', ')
+        np.savetxt(file, gaussian_state_rewards, delimiter=', ')
 
     # Add gaussian noise to the actions
     print(
@@ -138,13 +152,13 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         "**********************************************************\n"
         "**********************************************************"
     )
-    temp_config = deepcopy(rllib_config)
+    temp_config = reset_config(rllib_config)
     temp_config['env_config']['add_gaussian_noise_action'] = True
     gaussian_action_rewards = run_rollout(temp_config, checkpoint, save_trajectory=save_trajectory, video_file="gauss_ac",
                                           show_images=show_images, num_rollouts=num_rollouts)
     with open(os.path.join(file_path, '{}/{}_gaussian_action_noise.txt'.format(outdir, output_file_name)),
               'wb') as file:
-        np.savetxt(file, chase_robot_rewards, delimiter=', ')
+        np.savetxt(file, gaussian_action_rewards, delimiter=', ')
 
     # Add gaussian noise to the states and actions
     print(
@@ -156,14 +170,14 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         "**********************************************************\n"
         "**********************************************************"
     )
-    temp_config = deepcopy(rllib_config)
+    temp_config = reset_config(rllib_config)
     temp_config['env_config']['add_gaussian_noise_action'] = True
     temp_config['env_config']['add_gaussian_noise_action'] = True
     gaussian_state_action_rewards = run_rollout(temp_config, checkpoint, save_trajectory=save_trajectory, video_file="gauss_both",
                                                 show_images=show_images, num_rollouts=num_rollouts)
-    with open(os.path.join(file_path, '{}/{}_gaussian_state_action.txt'.format(outdir, output_file_name)),
+    with open(os.path.join(file_path, '{}/{}_gaussian_action_noise.txt'.format(outdir, output_file_name)),
               'wb') as file:
-        np.savetxt(file, chase_robot_rewards, delimiter=', ')
+        np.savetxt(file, gaussian_state_action_rewards, delimiter=', ')
 
     print('The average base reward is {}'.format(np.mean(base_rewards)))
     print('The average friction reward is {}'.format(np.mean(friction_rewards)))
@@ -192,4 +206,4 @@ if __name__ == '__main__':
     if args.traj == 'video':
         save_trajectory = True
     run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name, args.output_dir,
-                       save_trajectory=save_trajectory, show_images=False)
+                       save_trajectory=save_trajectory, show_images=args.show_images)

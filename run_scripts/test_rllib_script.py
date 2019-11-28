@@ -88,8 +88,6 @@ def setup_exps(args):
         'config': config,
         'num_samples': args.num_samples,
     }
-    if args.use_s3:
-        exp_dict['upload_dir'] = s3_string
 
     return exp_dict, args
 
@@ -97,6 +95,13 @@ def setup_exps(args):
 if __name__ == "__main__":
 
     exp_dict, args = setup_exps(sys.argv[1:])
+
+    date = datetime.now(tz=pytz.utc)
+    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
+    s3_string = 's3://sim2real/' \
+                + date + '/' + args.exp_title
+    if args.use_s3:
+        exp_dict['upload_dir'] = s3_string
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
@@ -107,8 +112,6 @@ if __name__ == "__main__":
 
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
-        date = datetime.now(tz=pytz.utc)
-        date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results'), date), args.exp_title)
         if not os.path.exists(output_path):
             try:

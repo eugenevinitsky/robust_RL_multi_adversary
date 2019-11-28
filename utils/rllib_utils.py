@@ -1,6 +1,5 @@
 import os
-import cloudpickle
-
+from ray import cloudpickle
 
 def get_config(args):
     config_path = os.path.join(args.result_dir, "params.pkl")
