@@ -117,6 +117,12 @@ def setup_exps(args):
 
     setup_ma_config(config)
 
+    # def on_train_result(info):
+    #     num_episodes = info["result"]["episodes_this_iter"]
+    #     import ipdb; ipdb.set_trace()
+    #
+    # config["callbacks"] = {"on_train_result": tune.function(on_train_result)}
+
     exp_dict = {
         'name': args.exp_title,
         'run_or_experiment': KLPPOTrainer,
