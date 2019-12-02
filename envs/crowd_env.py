@@ -347,8 +347,8 @@ class CrowdSimEnv(gym.Env):
         # get current observation
         if self.robot.sensor == 'coordinates':
             ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
-            normalized_pos =  np.asarray(self.robot.get_position())/self.accessible_space
-            normalized_goal =  np.asarray(self.robot.get_goal_position())/self.accessible_space
+            normalized_pos = np.asarray(self.robot.get_position())/self.accessible_space
+            normalized_goal = np.asarray(self.robot.get_goal_position())/self.accessible_space
             ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
 
         elif self.robot.sensor == 'RGB':

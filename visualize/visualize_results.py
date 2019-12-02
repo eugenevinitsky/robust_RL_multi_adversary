@@ -23,6 +23,8 @@ for (dirpath, dirnames, filenames) in os.walk(args.results_path):
             if prefix in file and '.png' not in file:
                 file_output = np.loadtxt(os.path.join(dirpath, file))
                 mean = np.mean(file_output)
+                if mean < 0:
+                    import ipdb; ipdb.set_trace()
                 var = np.var(file_output)
                 results[i].append((mean, var, file))
 
@@ -31,17 +33,17 @@ if not os.path.exists('transfer_results/{}'.format(output_path)):
     os.makedirs('transfer_results/{}'.format(output_path))
 
 for i, result in enumerate(results):
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(20, 5))
     legends = []
     means = []
     vars = []
     for mean, var, legend in result:
-        if 'MA' not in legend:
-            means.append(mean)
-            vars.append(var)
-            legends.append(legend.split('.')[0].split('_' + prefix_list[i])[0])
+        means.append(mean)
+        vars.append(var)
+        legends.append(legend.split('.')[0].split('_' + prefix_list[i])[0])
     y_pos = np.arange(len(legends))
 
+    # plt.bar(y_pos, means, align='center', alpha=0.5, yerr=np.sqrt(vars))
     plt.bar(y_pos, means, align='center', alpha=0.5)
     plt.xticks(y_pos, legends)
     plt.ylabel('Avg. score')

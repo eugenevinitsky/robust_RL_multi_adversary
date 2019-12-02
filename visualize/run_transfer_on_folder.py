@@ -24,7 +24,7 @@ if not os.path.exists('transfer_results/{}'.format(output_path)):
     os.makedirs('transfer_results/{}'.format(output_path))
 
 for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser(args.result_dir)):
-    if "checkpoint_{}".format(args.checkpoint_num) in dirpath and 'MA' not in dirpath:
+    if "checkpoint_{}".format(args.checkpoint_num) in dirpath and 'MA' in dirpath:
 
         # grab the experiment name
         folder = os.path.dirname(dirpath)
