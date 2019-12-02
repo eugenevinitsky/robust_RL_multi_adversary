@@ -64,7 +64,7 @@ def setup_exps(args):
     config['gamma'] = 0.99
     config["sgd_minibatch_size"] = 500
     config["num_sgd_iter"] = 10
-    config["lr"] = 5e-5
+    config["lr"] = tune.grid_search([5e-5, 5e-4])
     config['num_adversaries'] = args.num_adv
     config['kl_diff_weight'] = args.kl_diff_weight
 
@@ -109,7 +109,7 @@ def setup_exps(args):
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
         config['vf_share_layers'] = True
-        config['vf_loss_coeff'] = 1e-3
+        config['vf_loss_coeff'] = tune.grid_search([1e-2, 1e-3, 1e-4])
     config['train_batch_size'] = args.train_batch_size
 
     config['env'] = 'MultiAgentCrowdSimEnv'
