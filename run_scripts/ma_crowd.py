@@ -15,7 +15,8 @@ from ray.tune.registry import register_env
 
 from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy
 from visualize.transfer_test import run_transfer_tests
-from utils.env_creator import ma_env_creator
+from utils.env_creator import ma_env_creator, construct_config
+
 from utils.parsers import init_parser, env_parser, ray_parser, ma_env_parser
 from utils.rllib_utils import get_config_from_path
 
@@ -38,14 +39,6 @@ def setup_ma_config(config):
 
     policies_to_train += adv_policies
 
-    # def policy_mapping_fn(agent_id):
-    #     if agent_id == 'robot':
-    #         return agent_id
-    #     if agent_id.startswith('adversary'):
-    #         import ipdb; ipdb.set_trace()
-    #         policy_choice = random.choice(adv_policies)
-    #         print('the policy choice is ', policy_choice)
-    #         return policy_choice
     def policy_mapping_fn(agent_id):
         return agent_id
 
@@ -75,24 +68,20 @@ def setup_exps(args):
     config['kl_diff_weight'] = args.kl_diff_weight
 
     config['env_config']['run'] = alg_run
-    config['env_config']['policy'] = args.policy
-    config['env_config']['show_images'] = args.show_images
-    config['env_config']['train_on_images'] = args.train_on_images
-    config['env_config']['perturb_state'] = args.perturb_state
-    config['env_config']['perturb_actions'] = args.perturb_actions
-    config['env_config']['num_adversaries'] = args.num_adv
-
-    if not args.perturb_state and not args.perturb_actions:
-        sys.exit('You need to select at least one of perturb actions or perturb state')
 
     with open(args.env_params, 'r') as file:
         env_params = file.read()
 
     with open(args.policy_params, 'r') as file:
         policy_params = file.read()
+    config['env_config'] = construct_config(env_params, policy_params, args)
 
-    config['env_config']['env_params'] = env_params
-    config['env_config']['policy_params'] = policy_params
+    config['env_config']['perturb_state'] = args.perturb_state
+    config['env_config']['perturb_actions'] = args.perturb_actions
+    config['env_config']['num_adversaries'] = args.num_adv
+
+    if not args.perturb_state and not args.perturb_actions:
+        sys.exit('You need to select at least one of perturb actions or perturb state')
 
     # pick out the right model
     if args.train_on_images:
@@ -121,8 +110,6 @@ def setup_exps(args):
         config['vf_share_layers'] = True
         config['vf_loss_coeff'] = 1e-4
     config['train_batch_size'] = args.train_batch_size
-
-
 
     config['env'] = 'MultiAgentCrowdSimEnv'
     register_env('MultiAgentCrowdSimEnv', ma_env_creator)
@@ -178,6 +165,6 @@ if __name__=="__main__":
                 outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
-                run_transfer_tests(config, checkpoint_path, 50, args.exp_title, output_path, save_trajectory=False)
+                run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)
         p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path, "s3://sim2real/transfer_results/{}/{}".format(date, args.exp_title)).split(' '))
         p1.wait()

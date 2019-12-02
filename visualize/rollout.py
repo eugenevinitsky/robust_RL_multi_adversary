@@ -80,9 +80,14 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             for p, m in policy_map.items()
         }
     else:
-        env = env_creator(rllib_config['env_config'])
         multiagent = False
         use_lstm = {DEFAULT_POLICY_ID: False}
+
+    # We always have to remake the env since we may want to overwrite the config
+    if 'multiagent' in rllib_config and rllib_config['multiagent']['policies']:
+        env = ma_env_creator(rllib_config['env_config'])
+    else:
+        env = env_creator(rllib_config['env_config'])
 
     rewards = []
 
@@ -125,6 +130,12 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             action = action_dict
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
+
+            # TODO(@evinitsky) make this a config option
+            if 'multiagent' in rllib_config:
+                for key, value in action.items():
+                    if key != 'robot':
+                        action[key] = np.zeros(value.shape)
             next_obs, reward, done, info = env.step(action)
             if multiagent:
                 for agent_id, r in reward.items():
@@ -134,7 +145,8 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
 
             if multiagent:
                 done = done["__all__"]
-                reward_total += sum(reward.values())
+                # TODO(@evinitsky) make this a config option
+                reward_total += reward['robot']
             else:
                 reward_total += reward
             obs = next_obs
@@ -170,6 +182,7 @@ def main():
                         datefmt="%Y-%m-%d %H:%M:%S")
 
     rllib_config, checkpoint = get_config(args)
+    rllib_config['env_config']['chase_robot'] = True
 
     ray.init(num_cpus=args.num_cpus)
 

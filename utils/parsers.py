@@ -55,6 +55,7 @@ def env_parser(parser):
                         help='If true, add gaussian noise to the actions')
     parser.add_argument('--num_adv', type=int, default=2, help='Specifies how many adversaries '
                             'are training in the multi-agent setting')
+    parser.add_argument('--human_num', type=int, default=1, help='How many humans are in the training scenario')
     return parser
 
 

@@ -175,7 +175,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     temp_config['env_config']['add_gaussian_noise_action'] = True
     gaussian_state_action_rewards = run_rollout(temp_config, checkpoint, save_trajectory=save_trajectory, video_file="gauss_both",
                                                 show_images=show_images, num_rollouts=num_rollouts)
-    with open(os.path.join(file_path, '{}/{}_gaussian_action_noise.txt'.format(outdir, output_file_name)),
+    with open(os.path.join(file_path, '{}/{}_gaussian_state_action_noise.txt'.format(outdir, output_file_name)),
               'wb') as file:
         np.savetxt(file, gaussian_state_action_rewards, delimiter=', ')
 
