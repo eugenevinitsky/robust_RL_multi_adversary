@@ -154,7 +154,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
         rewards.append(reward_total)
 
     if not show_images:
-        if save_trajectory:
+        if save_trajectory != 'no_show':
             env.render('traj', video_file)
             output_path = video_file
             if not output_path[-4:] == '.mp4':
@@ -182,7 +182,6 @@ def main():
                         datefmt="%Y-%m-%d %H:%M:%S")
 
     rllib_config, checkpoint = get_config(args)
-    rllib_config['env_config']['chase_robot'] = True
 
     ray.init(num_cpus=args.num_cpus)
 
