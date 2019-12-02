@@ -132,7 +132,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             action = action if multiagent else action[_DUMMY_AGENT_ID]
 
             # TODO(@evinitsky) make this a config option
-            if 'multiagent' in rllib_config:
+            if multiagent:
                 for key, value in action.items():
                     if key != 'robot':
                         action[key] = np.zeros(value.shape)

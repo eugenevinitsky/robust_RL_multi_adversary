@@ -7,6 +7,7 @@ import sys
 import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
+from ray import tune
 from ray.rllib.models import ModelCatalog
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
@@ -33,6 +34,7 @@ def setup_exps(args):
     config['train_batch_size'] = args.train_batch_size
     config["num_sgd_iter"] = 10
     config['gamma'] = 0.99
+    config['lr'] = tune.grid_search([5e-5, 5e-4])
 
     with open(args.env_params, 'r') as file:
         env_params = file.read()
@@ -69,7 +71,7 @@ def setup_exps(args):
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
         config['vf_share_layers'] = True
-        config['vf_loss_coeff'] = 1e-4
+        config['vf_loss_coeff'] = tune.grid_search([1e-2, 1e-3, 1e-4])
 
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
