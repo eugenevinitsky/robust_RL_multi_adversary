@@ -18,8 +18,23 @@ def alter_config(env_params, passed_config):
     env_params['transfer']['friction'] = str(passed_config['friction'])
     env_params['transfer']['friction_coef'] = str(passed_config['friction_coef'])
 
-    env_params['sim']['human_num'] = str(passed_config['human_num'])
+    # TODO(@evinitsky) remove this
+    env_params['sim']['human_num'] = str(passed_config.get('human_num', 1))
 
+
+def configure_policy(passed_config, env, robot):
+    # configure policy
+    policy_params = configparser.RawConfigParser()
+    policy_params.read_string(passed_config['policy_params'])
+    policy = policy_factory[passed_config['policy']](policy_params)
+    if not policy.trainable:
+        sys.exit('Policy has to be trainable')
+    if passed_config['policy_params'] is None:
+        sys.exit('Policy config has to be specified for a trainable network')
+
+    robot.set_policy(policy)
+    policy.set_env(env)
+    robot.print_info()
 
 def env_creator(passed_config):
     config_path = passed_config['env_params']
@@ -36,17 +51,7 @@ def env_creator(passed_config):
     env = CrowdSimEnv(env_params, robot)
 
     # configure policy
-    policy_params = configparser.RawConfigParser()
-    policy_params.read_string(passed_config['policy_params'])
-    policy = policy_factory[passed_config['policy']](policy_params)
-    if not policy.trainable:
-        sys.exit('Policy has to be trainable')
-    if passed_config['policy_params'] is None:
-        sys.exit('Policy config has to be specified for a trainable network')
-
-    robot.set_policy(policy)
-    policy.set_env(env)
-    robot.print_info()
+    configure_policy(passed_config, env, robot)
     return env
 
 
@@ -66,17 +71,7 @@ def ma_env_creator(passed_config):
     env.num_adversaries = passed_config['num_adversaries']
 
     # configure policy
-    policy_params = configparser.RawConfigParser()
-    policy_params.read_string(passed_config['policy_params'])
-    policy = policy_factory[passed_config['policy']](policy_params)
-    if not policy.trainable:
-        sys.exit('Policy has to be trainable')
-    if passed_config['policy_params'] is None:
-        sys.exit('Policy config has to be specified for a trainable network')
-
-    robot.set_policy(policy)
-    policy.set_env(env)
-    robot.print_info()
+    configure_policy(passed_config, env, robot)
     return env
 
 

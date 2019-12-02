@@ -853,7 +853,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             obs_size = obs_size[0]
         act_size = super().action_space.shape[0]
         shape = obs_size * self.perturb_state + act_size * self.perturb_actions
-        box = Box(low=-0.2, high=0.2, shape=(shape,), dtype=np.float32)
+        box = Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32)
         return box
 
     def step(self, action, update=True):
