@@ -104,7 +104,8 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     temp_config = reset_config(rllib_config)
     temp_config['env_config']['restrict_goal_region'] = False
 
-    # enable goal randomization
+    # enable goal randomization. We need to do it in this complicated way because
+    # this param is in the env_params.config instead of the env config
     # TODO(@evinitsky) make this less gross
     params_string = temp_config['env_config']['env_params']
     params_parser = configparser.RawConfigParser()

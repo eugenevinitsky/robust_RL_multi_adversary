@@ -12,9 +12,10 @@ parser.add_argument('results_path', type=str, help='Pass the path to the folder 
 
 args = parser.parse_args()
 prefix_list = ['base', 'friction', 'color', 'unrestrict_goal_reg', 'chase_robot',
-               'gaussian_state_noise', 'gaussian_action_noise', 'gaussian_action_noise']
+               'gaussian_state_noise', 'gaussian_action_noise', 'gaussian_state_action_noise']
 results = [[] for _ in range(len(prefix_list))]
 
+base_value = 9
 # Now lets walk through the folder
 # TODO(@evinitsky) remove all these loops
 for (dirpath, dirnames, filenames) in os.walk(args.results_path):
@@ -22,10 +23,8 @@ for (dirpath, dirnames, filenames) in os.walk(args.results_path):
         for i, prefix in enumerate(prefix_list):
             if prefix in file and '.png' not in file:
                 file_output = np.loadtxt(os.path.join(dirpath, file))
-                mean = np.mean(file_output)
-                if mean < 0:
-                    import ipdb; ipdb.set_trace()
-                var = np.var(file_output)
+                mean = np.mean(file_output - base_value)
+                var = np.var(file_output - base_value)
                 results[i].append((mean, var, file))
 
 output_path = args.results_path.split('/')[-1]
