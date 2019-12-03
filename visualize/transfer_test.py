@@ -1,4 +1,5 @@
 import argparse
+import configparser
 from copy import deepcopy
 import os
 
@@ -98,8 +99,23 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         "**********************************************************\n"
         "**********************************************************"
     )
+
+    # undo the goal restriction
     temp_config = reset_config(rllib_config)
     temp_config['env_config']['restrict_goal_region'] = False
+
+    # enable goal randomization
+    # TODO(@evinitsky) make this less gross
+    params_string = temp_config['env_config']['env_params']
+    params_parser = configparser.RawConfigParser()
+    params_parser.read_string(params_string)
+    params_parser['sim']['randomize_goals'] = str(True)
+    with open('tmp.config', 'w') as file:
+        params_parser.write(file)
+    with open('tmp.config', 'r') as file:
+        env_params = file.read()
+    os.remove('tmp.config')
+    temp_config['env_config']['env_params'] = env_params
     unrestrict_goal_reg_rewards = run_rollout(temp_config, checkpoint, save_trajectory=save_trajectory, video_file="goal_reg",
                                               show_images=show_images, num_rollouts=num_rollouts)
     with open(os.path.join(file_path, '{}/{}_unrestrict_goal_reg.txt'.format(outdir, output_file_name)),
