@@ -132,6 +132,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             action = action if multiagent else action[_DUMMY_AGENT_ID]
 
             # TODO(@evinitsky) make this a config option
+            # the adversaries shouldn't be active anymore
             if multiagent:
                 for key, value in action.items():
                     if key != 'robot':
@@ -143,6 +144,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             else:
                 prev_rewards[_DUMMY_AGENT_ID] = reward
 
+            # we only want the robot reward, not the adversary reward
             if multiagent:
                 done = done["__all__"]
                 # TODO(@evinitsky) make this a config option

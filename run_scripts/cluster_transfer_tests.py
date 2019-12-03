@@ -5,6 +5,8 @@ import errno
 import os
 import subprocess
 
+import ray
+
 from visualize.transfer_test import run_transfer_tests
 from utils.rllib_utils import get_config_from_path
 
@@ -16,6 +18,9 @@ args = parser.parse_args()
 
 
 date = "12-02-19"
+
+ray.init()
+
 output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results'), date), args.exp_title)
 if not os.path.exists(output_path):
     try:
@@ -32,6 +37,8 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results"
         outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
         config, checkpoint_path = get_config_from_path(folder, str(args.checkpoint_num))
+        if 'run' not in config['env_config']:
+            config['env_config'].update({'run': 'PPO'})
         run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)
 p1 = subprocess.Popen(
     "aws s3 sync {} {}".format(output_path, "s3://sim2real/transfer_results/{}/{}".format(date, args.exp_title)).split(
