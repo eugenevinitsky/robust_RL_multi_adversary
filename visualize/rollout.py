@@ -157,7 +157,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
         rewards.append(reward_total)
 
         if not show_images:
-            if save_trajectory != 'no_show':
+            if save_trajectory:
                 # env.render('traj', video_file)
                 output_path = 'videos/' + str(r_itr) + video_file
                 if not output_path[-4:] == '.mp4':
@@ -190,7 +190,7 @@ def main():
 
     ray.init(num_cpus=args.num_cpus)
 
-    run_rollout(rllib_config, checkpoint, args.traj, args.video_file, args.show_images, args.num_rollouts)
+    run_rollout(rllib_config, checkpoint, args.traj, args.save_videp, args.show_images, args.num_rollouts)
 
 
 if __name__ == '__main__':

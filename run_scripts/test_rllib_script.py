@@ -70,7 +70,7 @@ def setup_exps(args):
         config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
-        config['vf_share_layers'] = True
+        config['vf_share_layers'] = tune.grid_search([True, False])
         config['vf_loss_coeff'] = 1e-3
 
     date = datetime.now(tz=pytz.utc)
@@ -80,9 +80,13 @@ def setup_exps(args):
     config['env'] = 'CrowdSim'
     register_env('CrowdSim', env_creator)
 
+    def trial_str_creator(trial):
+        return "{}_{}".format(trial.trainable_name, trial.experiment_tag)
+
     exp_dict = {
         'name': args.exp_title,
         'run_or_experiment': alg_run,
+        'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
             'training_iteration': args.num_iters
@@ -131,6 +135,6 @@ if __name__ == "__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)
-        p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path, "s3://sim2real/transfer_results/{}/{}/{}".format(date, args.exp_title, tune_name)).split(' '))
-        p1.wait()
+                run_transfer_tests(config, checkpoint_path, 1, args.exp_title, output_path, save_trajectory=False)
+                p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path, "s3://sim2real/transfer_results/{}/{}/{}".format(date, args.exp_title, tune_name)).split(' '))
+                p1.wait()
