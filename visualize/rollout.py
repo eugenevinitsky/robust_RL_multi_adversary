@@ -153,7 +153,6 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             else:
                 reward_total += reward
             obs = next_obs
-        print('the adversary was ', env.curr_adversary)
         print("Episode reward", reward_total)
         rewards.append(reward_total)
 
