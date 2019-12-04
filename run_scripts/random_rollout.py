@@ -19,8 +19,10 @@ def run(passed_config):
 
     ob = env.reset()
     total_rew = 0
-    for i in range(100):
-        ob, rew, done, info = env.step(np.random.rand(2))
+    for i in range(1000):
+        action = np.random.rand(2) - 0.5
+        print('the action is ', action)
+        ob, rew, done, info = env.step(np.random.rand(2) - 0.5)
         total_rew += rew
     print('The total reward is {}'.format(total_rew))
 
