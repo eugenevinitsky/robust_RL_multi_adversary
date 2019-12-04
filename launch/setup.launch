@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<launch>
+    <param name="use_sim_time" value="true"/>
+    <arg name="ns" default=""/>
+    <arg name="rl_params" default="rl_params_img_dyn"/>
+    <!-- <arg name="rl_params" default="rl_params_scan"/> -->
+
+    <arg name="update_rate" default="10000"/>
+    <!-- <arg name="update_rate" default="300"/> -->
+
+	<arg name="map_path" default="home/ubuntu/map/turltebot_map.yaml"/>
+
+        <!-- Start Turtlebot-->
+
+         <arg name="multi_robot_name" default=""/>
+         <arg name="set_lidar_frame_id" default="base_scan"/>
+
+         <include file="$(find turtlebot3_bringup)/launch/turtlebot3_core.launch">
+            <arg name="multi_robot_name" value="$(arg multi_robot_name)"/>
+         </include>
+         <include file="$(find turtlebot3_bringup)/launch/turtlebot3_lidar.launch">
+            <arg name="set_frame_id" value="$(arg set_lidar_frame_id)"/>
+         </include>
+
+        <node pkg="turtlebot3_bringup" type="turtlebot3_diagnostics" name="turtlebot3_diagnostics" output="screen">
+        </node>
+
+    <node pkg="rl_agent" type="rollout_turtlebot.py" name="rollout_turtlebot.py" output="screen" args="POLICY CHECKPOINT" />
+
+</launch>
