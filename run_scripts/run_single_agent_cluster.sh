@@ -71,7 +71,6 @@
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/test_rllib_script.py --exp_title SA_h3 --use_s3 \
 --train_batch_size 30000 --checkpoint_freq 50 --num_iters 300 --num_cpus 18 --run_transfer_tests --human_num 3" --tmux --start --cluster-name=ev_sa_test1
 
-
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/test_rllib_script.py --exp_title SA_GaA_h3 --use_s3 \
 --train_batch_size 30000 --checkpoint_freq 50 --num_iters 300 --add_gaussian_noise_action --num_cpus 34 --run_transfer_tests --human_num 3" \
 --tmux --start --cluster-name=ev_sa_test2
