@@ -48,10 +48,28 @@
 #--train_batch_size 30000 --checkpoint_freq 50 --num_iters 500 --add_gaussian_noise_state --add_gaussian_noise_action --num_cpus 18 --run_transfer_tests --human_num 4" \
 #--tmux --start --cluster-name=sa_test4
 
+#####################################################################################################
+## 12/1/19 disable goal changing
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/test_rllib_script.py --exp_title SA_h3 --use_s3 \
+#--train_batch_size 30000 --checkpoint_freq 50 --num_iters 300 --num_cpus 34 --run_transfer_tests --human_num 3" --tmux --start --cluster-name=ev_sa_test1
+#
+#
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/test_rllib_script.py --exp_title SA_GaA_h3 --use_s3 \
+#--train_batch_size 30000 --checkpoint_freq 50 --num_iters 300 --add_gaussian_noise_action --num_cpus 34 --run_transfer_tests --human_num 3" \
+#--tmux --start --cluster-name=ev_sa_test2
+#
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/test_rllib_script.py --exp_title SA_GaS_h3 --use_s3 \
+#--train_batch_size 30000 --checkpoint_freq 50 --num_iters 300 --add_gaussian_noise_state --num_cpus 34 --run_transfer_tests --human_num 3" \
+#--tmux --start --cluster-name=ev_sa_test3
+#
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/test_rllib_script.py --exp_title SA_GaS_GaA_h3 --use_s3 \
+#--train_batch_size 30000 --checkpoint_freq 50 --num_iters 300 --add_gaussian_noise_state --add_gaussian_noise_action --num_cpus 34 --run_transfer_tests --human_num 3" \
+#--tmux --start --cluster-name=ev_sa_test4
+
 ####################################################################################################
-# 12/1/19 disable goal changing
+# 12/3/19 disable goal changing
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/test_rllib_script.py --exp_title SA_h3 --use_s3 \
---train_batch_size 30000 --checkpoint_freq 50 --num_iters 300 --num_cpus 34 --run_transfer_tests --human_num 3" --tmux --start --cluster-name=ev_sa_test1
+--train_batch_size 30000 --checkpoint_freq 50 --num_iters 300 --num_cpus 18 --run_transfer_tests --human_num 3" --tmux --start --cluster-name=ev_sa_test1
 
 
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/test_rllib_script.py --exp_title SA_GaA_h3 --use_s3 \
@@ -65,3 +83,4 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/test_rllib_script.py --exp_title SA_GaS_GaA_h3 --use_s3 \
 --train_batch_size 30000 --checkpoint_freq 50 --num_iters 300 --add_gaussian_noise_state --add_gaussian_noise_action --num_cpus 34 --run_transfer_tests --human_num 3" \
 --tmux --start --cluster-name=ev_sa_test4
+

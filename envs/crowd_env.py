@@ -110,7 +110,7 @@ class CrowdSimEnv(gym.Env):
     @property
     def action_space(self):
         # TODO(@evinitsky) what are the right bounds
-        return Box(low=-2.0, high=2.0, shape=(2, ))
+        return Box(low=-1.0, high=1.0, shape=(2, ))
 
     def generate_random_human_position(self, human_num, rule):
         """
@@ -856,7 +856,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             obs_size = obs_size[0]
         act_size = super().action_space.shape[0]
         shape = obs_size * self.perturb_state + act_size * self.perturb_actions
-        box = Box(low=-2.0, high=2.0, shape=(shape,), dtype=np.float32)
+        box = Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32)
         return box
 
     def step(self, action, update=True):

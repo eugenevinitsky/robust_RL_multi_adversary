@@ -86,6 +86,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
     # We always have to remake the env since we may want to overwrite the config
     if 'multiagent' in rllib_config and rllib_config['multiagent']['policies']:
         env = ma_env_creator(rllib_config['env_config'])
+        env.num_iters = 1e8
     else:
         env = env_creator(rllib_config['env_config'])
 
@@ -132,7 +133,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             action = action if multiagent else action[_DUMMY_AGENT_ID]
 
             # TODO(@evinitsky) make this a config option
-            # the adversaries shouldn't be active anymore
+            #the adversaries shouldn't be active anymore
             if multiagent:
                 for key, value in action.items():
                     if key != 'robot':
@@ -152,16 +153,17 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             else:
                 reward_total += reward
             obs = next_obs
+        print('the adversary was ', env.curr_adversary)
         print("Episode reward", reward_total)
         rewards.append(reward_total)
 
-    if not show_images:
-        if save_trajectory != 'no_show':
-            env.render('traj', video_file)
-            output_path = video_file
-            if not output_path[-4:] == '.mp4':
-                output_path += '_.mp4'
-            env.render('video', output_path)
+        if not show_images:
+            if save_trajectory != 'no_show':
+                # env.render('traj', video_file)
+                output_path = 'videos/' + str(r_itr) + video_file
+                if not output_path[-4:] == '.mp4':
+                    output_path += '_.mp4'
+                env.render('video', output_path)
     else:
         logging.info('Video creation is disabled since show_images is true.')
 
@@ -184,6 +186,8 @@ def main():
                         datefmt="%Y-%m-%d %H:%M:%S")
 
     rllib_config, checkpoint = get_config(args)
+    if 'run' not in rllib_config['env_config']:
+        rllib_config['env_config'].update({'run': 'PPO'})
 
     ray.init(num_cpus=args.num_cpus)
 

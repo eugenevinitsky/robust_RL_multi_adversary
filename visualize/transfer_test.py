@@ -222,5 +222,8 @@ if __name__ == '__main__':
     save_trajectory = False
     if args.traj == 'video':
         save_trajectory = True
+
+    if 'run' not in rllib_config['env_config']:
+        rllib_config['env_config'].update({'run': 'PPO'})
     run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name, args.output_dir,
                        save_trajectory=save_trajectory, show_images=args.show_images)
