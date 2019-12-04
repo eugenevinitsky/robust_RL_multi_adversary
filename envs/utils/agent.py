@@ -5,7 +5,7 @@ import logging
 from envs.policy.policy_factory import policy_factory
 from envs.utils.action import ActionXY, ActionRot
 from envs.utils.state import ObservableState, FullState
-
+from geometry_msgs.msg import Twist
 
 class Agent(object):
     def __init__(self, config, section):
@@ -171,6 +171,12 @@ class Agent(object):
             self.theta = (self.theta + r) % (2 * np.pi)
             self.vx = v * np.cos(self.theta)
             self.vy = v * np.sin(self.theta)
+
+    def get_cmd_vel_(self):
+        vel_msg = Twist()
+        vel_msg.linear.x = self.vx
+        vel_msg.linear.y = self.vy
+        return vel_msg
 
     def reached_destination(self):
         return norm(np.array(self.get_position()) - np.array(self.get_goal_position())) < self.radius
