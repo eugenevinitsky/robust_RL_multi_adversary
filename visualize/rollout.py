@@ -134,10 +134,10 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
 
             # TODO(@evinitsky) make this a config option
             #the adversaries shouldn't be active anymore
-            if multiagent:
-                for key, value in action.items():
-                    if key != 'robot':
-                        action[key] = np.zeros(value.shape)
+            # if multiagent:
+            #     for key, value in action.items():
+            #         if key != 'robot':
+            #             action[key] = np.zeros(value.shape)
             next_obs, reward, done, info = env.step(action)
             if multiagent:
                 for agent_id, r in reward.items():
@@ -190,7 +190,7 @@ def main():
 
     ray.init(num_cpus=args.num_cpus)
 
-    run_rollout(rllib_config, checkpoint, args.traj, args.save_videp, args.show_images, args.num_rollouts)
+    run_rollout(rllib_config, checkpoint, args.traj, args.save_video, args.show_images, args.num_rollouts)
 
 
 if __name__ == '__main__':
