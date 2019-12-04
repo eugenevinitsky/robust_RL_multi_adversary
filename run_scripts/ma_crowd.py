@@ -128,11 +128,15 @@ def setup_exps(args):
     #
     # config["callbacks"] = {"on_train_result": tune.function(on_train_result)}
 
+    def trial_str_creator(trial):
+        return "{}_{}".format(trial.trainable_name, trial.experiment_tag)
+
     exp_dict = {
         'name': args.exp_title,
         # TODO (@evinitsky) put this back
         # 'run_or_experiment': KLPPOTrainer,
         'run_or_experiment': PPOTrainer,
+        'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
             'training_iteration': args.num_iters
@@ -162,6 +166,7 @@ if __name__=="__main__":
     run_tune(**exp_dict, queue_trials=False)
 
     # Now we add code to loop through the results and create scores of the results
+    # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results'), date), args.exp_title)
         if not os.path.exists(output_path):
@@ -179,6 +184,7 @@ if __name__=="__main__":
                 outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
-                run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)
-        p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path, "s3://sim2real/transfer_results/{}/{}".format(date, args.exp_title)).split(' '))
-        p1.wait()
+
+                run_transfer_tests(config, checkpoint_path, 1, args.exp_title, output_path, save_trajectory=False)
+                p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path, "s3://sim2real/transfer_results/{}/{}/{}".format(date, args.exp_title, tune_name)).split(' '))
+                p1.wait()

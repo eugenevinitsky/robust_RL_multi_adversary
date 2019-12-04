@@ -72,7 +72,7 @@ def replay_parser(parser):
         'result_dir', type=str, help='Directory containing results')
     parser.add_argument('checkpoint_num', type=str, help='Checkpoint number.')
     parser.add_argument('--num_cpus', type=int, default=1, help='Number of cpus to run experiment with')
-    parser.add_argument('--video_file', type=str, default="rollout.mp4")
+    parser.add_argument('--save_video', action='store_true', default=False)
     parser.add_argument('--show_images', action="store_true")
     parser.add_argument('--num_rollouts', type=int, default=1)
     parser.add_argument('--traj', type=str, default='no_show',
