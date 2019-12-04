@@ -32,6 +32,7 @@ if not os.path.exists('transfer_results/{}'.format(output_path)):
     os.makedirs('transfer_results/{}'.format(output_path))
 
 for i, result in enumerate(results):
+    result = sorted(result, key=lambda x: x[2])
     plt.figure(figsize=(20, 5))
     legends = []
     means = []

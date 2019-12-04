@@ -34,7 +34,7 @@ def setup_exps(args):
     config['train_batch_size'] = args.train_batch_size
     config["num_sgd_iter"] = 10
     config['gamma'] = 0.99
-    config['lr'] = 5e-5
+    config['lr'] = tune.grid_search([5e-5, 5e-4])
 
     with open(args.env_params, 'r') as file:
         env_params = file.read()

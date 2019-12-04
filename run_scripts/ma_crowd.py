@@ -7,6 +7,7 @@ import sys
 import pytz
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
+from ray.rllib.agents.ppo.ppo import PPOTrainer
 import ray.rllib.agents.ppo as ppo
 from ray.rllib.models import ModelCatalog
 from ray import tune
@@ -34,8 +35,11 @@ def setup_ma_config(config):
     # adversary_config = config
     # adversary_config.update({"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}})
     adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
-    policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
-                                                 env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    # TODO(@evinitsky) put this back
+    # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
+    #                                              env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
+                                            env.adv_action_space, adversary_config) for i in range(num_adversaries)})
 
     policies_to_train += adv_policies
 
@@ -66,7 +70,8 @@ def setup_exps(args):
     config["num_sgd_iter"] = 10
     config["lr"] = 5e-5
     config['num_adversaries'] = args.num_adv
-    config['kl_diff_weight'] = args.kl_diff_weight
+    # TODO(@evinitsky) put this back
+    # config['kl_diff_weight'] = args.kl_diff_weight
 
     config['env_config']['run'] = alg_run
 
@@ -104,12 +109,12 @@ def setup_exps(args):
         config['model']['custom_model'] = "rnn"
         config['vf_share_layers'] = True
     else:
-        config['model']['fcnet_hiddens'] = []
+        config['model']['fcnet_hiddens'] = [64]
         config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
         config['vf_share_layers'] = True
-        config['vf_loss_coeff'] = 1e-3
+        config['vf_loss_coeff'] = 1e-4
     config['train_batch_size'] = args.train_batch_size
 
     config['env'] = 'MultiAgentCrowdSimEnv'
@@ -125,7 +130,9 @@ def setup_exps(args):
 
     exp_dict = {
         'name': args.exp_title,
-        'run_or_experiment': KLPPOTrainer,
+        # TODO (@evinitsky) put this back
+        # 'run_or_experiment': KLPPOTrainer,
+        'run_or_experiment': PPOTrainer,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
             'training_iteration': args.num_iters

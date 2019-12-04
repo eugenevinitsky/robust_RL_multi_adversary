@@ -41,7 +41,7 @@ def env_parser(parser):
                              'be swapped only once')
     parser.add_argument('--friction', action='store_true', default=False,
                         help='If true, all the commands are slightly less than expected and the humans move slower')
-    parser.add_argument('--friction_coef', type=float, default=0.2,
+    parser.add_argument('--friction_coef', type=float, default=0.4,
                         help='The scaling on the friction')
     parser.add_argument('--chase_robot', action='store_true', default=False,
                         help='If true, then human default goal will be robots next location. '
