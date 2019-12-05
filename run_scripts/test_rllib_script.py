@@ -70,8 +70,8 @@ def setup_exps(args):
         config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
-        config['vf_share_layers'] = tune.grid_search([True, False])
-        config['vf_loss_coeff'] = 1e-3
+        config['vf_share_layers'] = True
+        config['vf_loss_coeff'] = tune.grid_search([1e-3, 1e-4])
 
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
