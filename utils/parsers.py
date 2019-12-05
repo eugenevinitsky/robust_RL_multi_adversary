@@ -75,6 +75,5 @@ def replay_parser(parser):
     parser.add_argument('--save_video', action='store_true', default=False)
     parser.add_argument('--show_images', action="store_true")
     parser.add_argument('--num_rollouts', type=int, default=1)
-    parser.add_argument('--traj', type=str, default='no_show',
-                        help='What type of video we want to generate. Options are [human, traj, video]')
+
     return parser
