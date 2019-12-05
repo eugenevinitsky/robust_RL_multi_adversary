@@ -161,7 +161,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
                 # env.render('traj', video_file)
                 output_path = 'videos/' + str(r_itr) + video_file
                 if not output_path[-4:] == '.mp4':
-                    output_path += '_.mp4'
+                    output_path += '.mp4'
                 env.render('video', output_path)
     else:
         logging.info('Video creation is disabled since show_images is true.')
@@ -190,7 +190,7 @@ def main():
 
     ray.init(num_cpus=args.num_cpus)
 
-    run_rollout(rllib_config, checkpoint, args.traj, args.save_video, args.show_images, args.num_rollouts)
+    run_rollout(rllib_config, checkpoint, args.save_video, 'rollout', args.show_images, args.num_rollouts)
 
 
 if __name__ == '__main__':
