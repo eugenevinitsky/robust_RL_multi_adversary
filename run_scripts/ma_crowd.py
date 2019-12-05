@@ -160,7 +160,7 @@ if __name__=="__main__":
 
     if args.multi_node:
         # ray.init(redis_address='localhost:6379')
-        ray.inits()
+        ray.init()
     else:
         ray.init(local_mode=True)
 
