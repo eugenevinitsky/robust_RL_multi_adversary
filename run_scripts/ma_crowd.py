@@ -120,8 +120,8 @@ def setup_exps(args):
         config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
-        config['vf_share_layers'] = tune.grid_search([True, False])
-        config['vf_loss_coeff'] = 1e-4
+        config['vf_share_layers'] = True
+        config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
     config['train_batch_size'] = args.train_batch_size
 
     config['env'] = 'MultiAgentCrowdSimEnv'

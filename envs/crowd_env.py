@@ -826,7 +826,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         self.perturb_state = config.getboolean('ma_train_details', 'perturb_state')
         self.num_iters = 0
         # We don't want to perturb until we actually have a reasonably good policy to start with
-        self.adversary_start_iter = 1e4
+        self.adversary_start_iter = 4e3
         self.num_adversaries = 0
         # self.curr_adversary = 0
         if not self.perturb_state and not self.perturb_actions:
@@ -898,7 +898,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             if self.perturb_actions:
                 robot_action = action['robot'] + action_perturbation
                 # apply clipping so that it can't exceed the bounds of what the robot can do
-                robot_action = np.clip(robot_action, a_min=self.observation_space.low, a_max=self.observation_space.high)
+                robot_action = np.clip(robot_action, a_min=self.action_space.low, a_max=self.action_space.high)
 
         ob, reward, done, info = super().step(robot_action, update)
 
