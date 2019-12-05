@@ -939,8 +939,10 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         self.num_iters += 1
         # self.curr_adversary = int(np.random.randint(low=0, high=self.num_adversaries))
         ob = super().reset(phase, test_case)
-        curr_obs = {'robot': ob, 'adversary': ob}
-        # if self.num_iters > self.adversary_start_iter:
+        if self.num_iters > self.adversary_start_iter:
+            curr_obs = {'robot': ob, 'adversary': ob}
+        else:
+            curr_obs = {'robot': ob}
         #     for i in range(self.num_adversaries):
         #         is_active = 1 if self.curr_adversary == i else 0
         #         curr_obs.update({'adversary{}'.format(i):
