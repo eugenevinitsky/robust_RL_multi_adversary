@@ -31,7 +31,19 @@ output_path = args.results_path.split('/')[-1]
 if not os.path.exists('transfer_results/{}'.format(output_path)):
     os.makedirs('transfer_results/{}'.format(output_path))
 
-for i, result in enumerate(results):
+# TODO(@evinitsky) go through the results and pull out the one with the highest mean for a given experiment
+unique_results = []
+for result in results:
+    temp_results = []
+    result_arr = np.array(result)
+    names_arr = result_arr[:, 2]
+    for name in np.unique(names_arr):
+        indices = np.where(names_arr == name)
+        max_value = np.argmax(np.squeeze(result_arr[indices, 0].astype(np.float)))
+        temp_results.append(result[indices[0][max_value]])
+    unique_results.append(temp_results)
+
+for i, result in enumerate(unique_results):
     result = sorted(result, key=lambda x: x[2])
     plt.figure(figsize=(20, 5))
     legends = []
