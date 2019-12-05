@@ -1,5 +1,6 @@
 import errno
 from datetime import datetime
+import random
 import os
 import subprocess
 import sys
@@ -30,7 +31,7 @@ def setup_ma_config(config):
     policies_to_train = ['robot']
 
     policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
-    num_adversaries = config['num_adversaries']
+    num_adversaries = config['env_config']['num_adversaries']
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     # adversary_config = config
     # adversary_config.update({"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}})
@@ -43,8 +44,14 @@ def setup_ma_config(config):
 
     policies_to_train += adv_policies
 
+    # def policy_mapping_fn(agent_id):
+    #     return agent_id
+
     def policy_mapping_fn(agent_id):
-        return agent_id
+        if agent_id == 'robot':
+            return agent_id
+        if agent_id.startswith('adversary'):
+            return random.choice(adv_policies)
 
     config.update({
         'multiagent': {
@@ -69,7 +76,7 @@ def setup_exps(args):
     config["sgd_minibatch_size"] = 500
     config["num_sgd_iter"] = 10
     config["lr"] = tune.grid_search([5e-4, 5e-5, 5e-3])
-    config['num_adversaries'] = args.num_adv
+    # config['num_adversaries'] = args.num_adv
     # TODO(@evinitsky) put this back
     # config['kl_diff_weight'] = args.kl_diff_weight
 

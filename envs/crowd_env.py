@@ -828,9 +828,23 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         # We don't want to perturb until we actually have a reasonably good policy to start with
         self.adversary_start_iter = 1e4
         self.num_adversaries = 0
-        self.curr_adversary = 0
+        # self.curr_adversary = 0
         if not self.perturb_state and not self.perturb_actions:
             logging.exception("Either one of perturb actions or perturb state must be true")
+
+    # @property
+    # def adv_observation_space(self):
+    #     """
+    #     Simple action space for an adversary that can perturb
+    #     every element of the agent's observation space.
+    #
+    #     Therefore, its action space is the same size as the agent's
+    #     observation space.
+    #     """
+    #     obs_size = super().observation_space.shape
+    #     dict_space = Dict({'obs': Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32),
+    #                        'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
+    #     return dict_space
 
     @property
     def adv_observation_space(self):
@@ -842,9 +856,8 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         observation space.
         """
         obs_size = super().observation_space.shape
-        dict_space = Dict({'obs': Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32),
-                           'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
-        return dict_space
+        box_space =  Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32)
+        return box_space
 
     @property
     def adv_action_space(self):
@@ -869,7 +882,8 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
         """
-        adversary_key = 'adversary{}'.format(self.curr_adversary)
+        # adversary_key = 'adversary{}'.format(self.curr_adversary)
+        adversary_key = 'adversary'
 
         robot_action = action['robot']
         if self.num_iters > self.adversary_start_iter:
@@ -894,16 +908,24 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         reward_dict = {'robot': reward}
 
         if self.num_iters > self.adversary_start_iter:
-            for i in range(self.num_adversaries):
-                is_active = 1 if self.curr_adversary == i else 0
-                curr_obs.update({'adversary{}'.format(i): {'obs': ob, 'is_active': np.array([is_active])}})
+            # for i in range(self.num_adversaries):
+        #             #     is_active = 1 if self.curr_adversary == i else 0
+        #             #     curr_obs.update({'adversary{}'.format(i): {'obs': ob, 'is_active': np.array([is_active])}})
+        #             #
+        #             # if self.perturb_state:
+        #             #     curr_obs['robot'] = np.clip(curr_obs['robot'] + state_perturbation,
+        #             #                                 a_min=self.observation_space.low,
+        #             #                                 a_max=self.observation_space.high)
+        #             #
+        #             # reward_dict.update({'adversary{}'.format(i): -reward for i in range(self.num_adversaries)})
+            curr_obs.update({'adversary': ob})
 
             if self.perturb_state:
                 curr_obs['robot'] = np.clip(curr_obs['robot'] + state_perturbation,
                                             a_min=self.observation_space.low,
                                             a_max=self.observation_space.high)
 
-            reward_dict.update({'adversary{}'.format(i): -reward for i in range(self.num_adversaries)})
+            reward_dict.update({'adversary': -reward})
 
         done = {'__all__': done}
         
@@ -915,14 +937,14 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         :return:
         """
         self.num_iters += 1
-        self.curr_adversary = int(np.random.randint(low=0, high=self.num_adversaries))
+        # self.curr_adversary = int(np.random.randint(low=0, high=self.num_adversaries))
         ob = super().reset(phase, test_case)
-        curr_obs = {'robot': ob}
-        if self.num_iters > self.adversary_start_iter:
-            for i in range(self.num_adversaries):
-                is_active = 1 if self.curr_adversary == i else 0
-                curr_obs.update({'adversary{}'.format(i):
-                                     {'obs': np.clip(ob, a_min=self.observation_space.low, a_max=self.observation_space.high),
-                                      'is_active': np.array([is_active])}})
+        curr_obs = {'robot': ob, 'adversary': ob}
+        # if self.num_iters > self.adversary_start_iter:
+        #     for i in range(self.num_adversaries):
+        #         is_active = 1 if self.curr_adversary == i else 0
+        #         curr_obs.update({'adversary{}'.format(i):
+        #                              {'obs': np.clip(ob, a_min=self.observation_space.low, a_max=self.observation_space.high),
+        #                               'is_active': np.array([is_active])}})
         return curr_obs
         
