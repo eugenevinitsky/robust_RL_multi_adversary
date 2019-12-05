@@ -397,7 +397,7 @@ class CrowdSimEnv(gym.Env):
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
         """
         if self.add_gauss_noise_action:
-            action = action + np.random.normal(scale=self.gauss_noise_action_stddev, size=action.shape)
+            action = action + (np.random.normal(scale=self.gauss_noise_action_stddev, size=action.shape) * self.time_step)
             action = np.clip(action, a_min=self.action_space.low, a_max=self.action_space.high)
 
         human_actions = []
@@ -826,7 +826,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         self.perturb_state = config.getboolean('ma_train_details', 'perturb_state')
         self.num_iters = 0
         # We don't want to perturb until we actually have a reasonably good policy to start with
-        self.adversary_start_iter = 4e3
+        self.adversary_start_iter = int(1.5e4)
         self.num_adversaries = 0
         # self.curr_adversary = 0
         if not self.perturb_state and not self.perturb_actions:
