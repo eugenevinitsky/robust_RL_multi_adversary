@@ -1,173 +1,94 @@
 import argparse
-import collections
 import configparser
-import logging
-import os
-import sys
-
-import gym
-import numpy as np
-import ray
-from ray.rllib.agents.registry import get_agent_class
-from ray.cloudpickle import cloudpickle
-from ray.rllib.env import MultiAgentEnv
-from ray.rllib.policy.sample_batch import DEFAULT_POLICY_ID
-from ray.rllib.env.base_env import _DUMMY_AGENT_ID
-from ray.rllib.evaluation.episode import _flatten_action
-from ray.rllib.models import ModelCatalog
-from ray.tune.registry import register_env
-import ray
-try:
-    from ray.rllib.agents.agent import get_agent_class
-except ImportError:
-    from ray.rllib.agents.registry import get_agent_class
-
-from run_scripts.test_rllib_script import env_creator
-from run_scripts.ma_crowd import env_creator as ma_env_creator
-
-from utils.parsers import replay_parser
-from utils.rllib_utils import get_config
-
-from models.conv_lstm import ConvLSTM
-
 import rospy
 import time
 
-ModelCatalog.register_custom_model("rnn", ConvLSTM)
+from actionflow.msg import frame as Frame_msg, pos as Pos_msg
+from geometry_msgs.msg import Twist
 
-class DefaultMapping(collections.defaultdict):
-    """default_factory now takes as an argument the missing key."""
-
-    def __missing__(self, key):
-        self[key] = value = self.default_factory(key)
-        return value
+from ray.rllib.policy.sample_batch import DEFAULT_POLICY_ID
 
 
-def default_policy_agent_mapping(unused_agent_id):
-    return DEFAULT_POLICY_ID
+from envs.policy.policy_factory import policy_factory
 
-def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_images, num_rollouts):
-    rllib_config['num_workers'] = 0
+FRAME_TOPIC = "robot_pos"
+ACTION_TOPIC = '/cmd_vel'
 
-    # Determine agent and checkpoint
-    assert rllib_config['env_config']['run'], "No RL algorithm specified in env config!"
-    agent_cls = get_agent_class(rllib_config['env_config']['run'])
-    # configure the env
-    env_name ='CrowdSim-v0'
-    if 'multiagent' in rllib_config and rllib_config['multiagent']['policies']:
-        register_env(env_name, ma_env_creator)
-    else:
-        register_env(env_name, env_creator)
+class RobootyVisionControl:
+    def __init__(self, rllib_config, checkpoint, show_images):
+         # NEEDS TO BE ROBOT AGENT/POLICY ID
 
-    # Show the images
-    rllib_config['env_config']['show_images'] = show_images
+        rllib_config['num_workers'] = 0
 
-    # Instantiate the agent
-    # create the agent that will be used to compute the actions
-    agent = agent_cls(env=env_name, config=rllib_config)
-    agent.restore(checkpoint)
+        # Determine agent and checkpoint
+        assert rllib_config['env_config']['run'], "No RL algorithm specified in env config!"
+        agent_cls = get_agent_class(rllib_config['env_config']['run'])
+        # configure the env
+        env_name ='CrowdSim-v0'
+        if 'multiagent' in rllib_config and rllib_config['multiagent']['policies']:
+            self.robot_id = 'robot'
+            register_env(env_name, ma_env_creator)
+        else:
+            self.robot_id = DEFAULT_POLICY_ID
+            register_env(env_name, env_creator)
 
-    policy_agent_mapping = default_policy_agent_mapping
-    if hasattr(agent, "workers"):
-        env = agent.workers.local_worker().env
-        multiagent = isinstance(env, MultiAgentEnv)
-        if agent.workers.local_worker().multiagent:
-            policy_agent_mapping = agent.config["multiagent"][
-                "policy_mapping_fn"]
+        # Instantiate the agent
+        # create the agent that will be used to compute the actions
+        agent = agent_cls(env=env_name, config=rllib_config)
+        agent.restore(checkpoint)
 
-        policy_map = agent.workers.local_worker().policy_map
-        state_init = {p: m.get_initial_state() for p, m in policy_map.items()}
-        use_lstm = {p: len(s) > 0 for p, s in state_init.items()}
-        action_init = {
-            p: m.action_space.sample()
-            for p, m in policy_map.items()
-        }
-    else:
-        env = env_creator(rllib_config['env_config'])
-        multiagent = False
-        use_lstm = {DEFAULT_POLICY_ID: False}
+        policy_params = configparser.RawConfigParser()
+        policy_params.read_string(rllib_config['policy_params'])
+        policy = policy_factory[rllib_config['policy']](policy_params)
+        self.kinematics = policy.kinematics
 
-    rewards = []
+        self.policy = agent.workers.local_worker().policy_map[self.robot_id]
 
-    # actually do the rollout
-    for r_itr in range(num_rollouts):
-        mapping_cache = {}  # in case policy_agent_mapping is stochastic
-        agent_states = DefaultMapping(
-            lambda agent_id: state_init[mapping_cache[agent_id]])
-        prev_actions = DefaultMapping(
-            lambda agent_id: action_init[mapping_cache[agent_id]])
-        obs = env.reset()
-        prev_rewards = collections.defaultdict(lambda: 0.)
-        done = False
-        reward_total = 0.0
-        while not done:
-            multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
-            action_dict = {}
-            for agent_id, a_obs in multi_obs.items():
-                if a_obs is not None:
-                    policy_id = mapping_cache.setdefault(
-                        agent_id, policy_agent_mapping(agent_id))
-                    p_use_lstm = use_lstm[policy_id]
-                    if p_use_lstm:
-                        a_action, p_state, _ = agent.compute_action(
-                            a_obs,
-                            state=agent_states[agent_id],
-                            prev_action=prev_actions[agent_id],
-                            prev_reward=prev_rewards[agent_id],
-                            policy_id=policy_id)
-                        agent_states[agent_id] = p_state
-                    else:
-                        a_action = agent.compute_action(
-                            a_obs,
-                            prev_action=prev_actions[agent_id],
-                            prev_reward=prev_rewards[agent_id],
-                            policy_id=policy_id)
-                    a_action = _flatten_action(a_action)  # tuple actions
-                    action_dict[agent_id] = a_action
-                    prev_actions[agent_id] = a_action
-            action = action_dict
+        self.prev_state = policy.get_initial_state()
+        self.use_lstm = len(self.prev_state) > 0
+        self.prev_action = policy.action_space.sample()
+        self.prev_reward = 0 
 
-            action = action if multiagent else action[_DUMMY_AGENT_ID]
-            next_obs, reward, done, info = env.step(action)
-            if multiagent:
-                for agent_id, r in reward.items():
-                    prev_rewards[agent_id] = r
-            else:
-                prev_rewards[_DUMMY_AGENT_ID] = reward
+        self._last_frame = None
 
-            if multiagent:
-                done = done["__all__"]
-                reward_total += sum(reward.values())
-            else:
-                reward_total += reward
-            obs = next_obs
+        self.init_get_action(rllib_config, checkpoint, show_images)
+        self.__frame_sub = rospy.Subscriber(FRAME_TOPIC, Frame_msg, self.store_frame, queue_size=1)
+        self.__agent_action_pub = rospy.Publisher(ACTION_TOPIC, Twist, queue_size=1)
 
-            time.sleep(0.0001)
-            if rospy.is_shutdown():
-                print('ROS shutdown')
-                break
+    def store_frame(self, data):
+        self._last_frame = data
 
-        print("Episode reward", reward_total)
-        rewards.append(reward_total)
+    def publish_action(self, action):
+        assert self.kinematics == 'holonomic':
+        vx, vy = action
+        vel_msg = Twist()
+        vel_msg.linear.x = vx
+        vel_msg.linear.y = vy
+        __agent_action_pub.publish(vel_msg)
+        return vel_msg
 
-    if not show_images:
-        if save_trajectory:
-            env.render('traj', video_file)
-            output_path = video_file
-            if not output_path[-4:] == '.mp4':
-                output_path += '_.mp4'
-            env.render('video', output_path)
-    else:
-        logging.info('Video creation is disabled since show_images is true.')
-
-
-    logging.info('It takes %.2f seconds to finish. Final status is %s', env.global_time, info)
-    if env.robot.visible and info == 'reach goal':
-        human_times = env.get_human_times()
-        logging.info('Average time for humans to reach goal: %.2f', sum(human_times) / len(human_times))
-
-    return rewards
-    
+    def compute_robot_action(self):
+        # NEED TO CONVERT self.last_frame TO OBS VARIABLE
+        ros_obs = np.zeros(p.observation_space) # NEEDS TO MATCH OBS SIZE
+        
+        if self.use_lstm:
+            a_action, self.prev_state, _ = agent.compute_action(
+                ros_obs,
+                state=self.prev_state
+                prev_action=self.prev_action,
+                prev_reward=self.prev_reward,
+                policy_id=self.robot_id)
+        else:
+            a_action = agent.compute_action(
+                ros_obs,
+                prev_action=self.prev_action,
+                prev_reward=self.prev_reward,
+                policy_id=self.robot_id)
+        
+        a_action = _flatten_action(a_action)  # tuple actions
+        self.prev_action = a_action
+        self.prev_state = ros_obs
+        return self.prev_action
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
@@ -182,8 +103,12 @@ def main():
 
     ray.init(num_cpus=args.num_cpus)
 
-    run_rollout(rllib_config, checkpoint, args.traj, args.video_file, args.show_images, args.num_rollouts)
+    robooty_controller = RobootyVisionControl(rllib_config, checkpoint)
 
+    while(True):
+        action = robooty_controller.compute_robot_action()
+        self.publish_action(action)
+        
 
 if __name__ == '__main__':
     main()
