@@ -159,7 +159,7 @@ if __name__=="__main__":
     exp_dict, args = setup_exps(sys.argv[1:])
 
     date = datetime.now(tz=pytz.utc)
-    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
+    date = date.astimezone(pytz.timezone('US/Eastern')).strftime("%m-%d-%Y")
     s3_string = 's3://sim2real/' \
                 + date + '/' + args.exp_title
     if args.use_s3:
@@ -168,11 +168,10 @@ if __name__=="__main__":
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
-        ray.init()
+        ray.init(memory=int(1e11))
 
     run_tune(**exp_dict, queue_trials=False)
 
-    # Now we add code to loop through the results and create scores of the results
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results'), date), args.exp_title)

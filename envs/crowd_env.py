@@ -507,10 +507,10 @@ class CrowdSimEnv(gym.Env):
 
             # compute the observation
             if self.robot.sensor == 'coordinates':
-                ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
+                ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
                 normalized_pos = np.asarray(self.robot.get_position()) / self.accessible_space
                 normalized_goal = np.asarray(self.robot.get_goal_position()) / self.accessible_space
-                ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
+                ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal))) / self.obs_norm
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
         else:
@@ -826,7 +826,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         self.perturb_state = config.getboolean('ma_train_details', 'perturb_state')
         self.num_iters = 0
         # We don't want to perturb until we actually have a reasonably good policy to start with
-        self.adversary_start_iter = int(1.5e4)
+        self.adversary_start_iter = int(4e4)
         self.num_adversaries = 0
         # self.curr_adversary = 0
         if not self.perturb_state and not self.perturb_actions:
