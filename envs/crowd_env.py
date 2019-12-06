@@ -112,7 +112,7 @@ class CrowdSimEnv(gym.Env):
     @property
     def action_space(self):
         # TODO(@evinitsky) what are the right bounds
-        return Box(low=-1.0 * self.time_step, high=1.0 * self.time_step, shape=(2, ))
+        return Box(low=0, high=1.0 * self.time_step, shape=(2, ))
 
     def generate_random_human_position(self, human_num, rule):
         """
@@ -348,10 +348,10 @@ class CrowdSimEnv(gym.Env):
 
         # get current observation
         if self.robot.sensor == 'coordinates':
-            ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
+            ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
             normalized_pos = np.asarray(self.robot.get_position())/self.accessible_space
             normalized_goal = np.asarray(self.robot.get_goal_position())/self.accessible_space
-            ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
+            ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))  / self.obs_norm
 
         elif self.robot.sensor == 'RGB':
             raise NotImplementedError
@@ -396,9 +396,17 @@ class CrowdSimEnv(gym.Env):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
         """
+
+        # rescale the actions so that they are within the bounds of the robot motions
+        r, v = np.copy(action)
+        # scale r to be between - self.rad_lim and self.rad_lim
+        r = 2 * ((r * self.rad_lim) - (self.rad_lim / 2))
+        v = v * self.v_lim / self.time_step
+        scaled_action = np.array([r, v])
+
         if self.add_gauss_noise_action:
-            action = action + (np.random.normal(scale=self.gauss_noise_action_stddev, size=action.shape) * self.time_step)
-            action = np.clip(action, a_min=self.action_space.low, a_max=self.action_space.high)
+            scaled_action = scaled_action + (np.random.normal(scale=self.gauss_noise_action_stddev, size=scaled_action.shape) * self.time_step)
+            scaled_action = np.clip(scaled_action, a_min=self.action_space.low, a_max=self.action_space.high)
 
         human_actions = []
         for human in self.humans:
@@ -417,14 +425,10 @@ class CrowdSimEnv(gym.Env):
             px = human.px - self.robot.px
             py = human.py - self.robot.py
             if self.robot.kinematics == 'holonomic':
-                robot_vx, robot_vy = action
+                robot_vx, robot_vy = scaled_action
                 vx = human.vx - robot_vx
                 vy = human.vy - robot_vy
             else:
-                # rescale the actions so that they are within the bounds of the robot motions
-                r, v = action
-                r = r * self.rad_lim
-                v = v * self.v_lim
                 vx = human.vx - v * np.cos(r + self.robot.theta)
                 vy = human.vy - v * np.sin(r + self.robot.theta)
             ex = px + vx * self.time_step
@@ -450,7 +454,7 @@ class CrowdSimEnv(gym.Env):
                     logging.debug('Collision happens between humans in step()')
 
         # check if reaching the goal
-        end_position = np.array(self.robot.compute_position(action, self.time_step))
+        end_position = np.array(self.robot.compute_position(scaled_action, self.time_step))
         cur_dist_to_goal = norm(self.robot.get_position() - np.array(self.robot.get_goal_position()))
         next_dist_to_goal = norm(end_position - np.array(self.robot.get_goal_position()))
         reaching_goal = next_dist_to_goal < self.robot.radius
@@ -496,7 +500,7 @@ class CrowdSimEnv(gym.Env):
             # store state, action value and attention weights
             self.states.append([self.robot.get_full_state(), [human.get_full_state() for human in self.humans]])
             # update all agents
-            self.robot.step(action)
+            self.robot.step(scaled_action)
             for i, human_action in enumerate(human_actions):
                 self.humans[i].step(human_action)
             self.global_time += self.time_step
@@ -515,7 +519,7 @@ class CrowdSimEnv(gym.Env):
                 raise NotImplementedError
         else:
             if self.robot.sensor == 'coordinates':
-                ob = np.concatenate([human.get_next_observable_state(action).as_array()
+                ob = np.concatenate([human.get_next_observable_state(scaled_action).as_array()
                                  for human, action in zip(self.humans, human_actions)]) / self.obs_norm
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
