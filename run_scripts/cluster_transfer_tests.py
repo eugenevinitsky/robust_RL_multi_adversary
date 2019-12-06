@@ -37,6 +37,13 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results"
         outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
         config, checkpoint_path = get_config_from_path(folder, str(args.checkpoint_num))
+
+        if 'num_adversaries' in config:
+            del config['num_adversaries']
+
+        if 'kl_diff_weight' in config:
+            del config['kl_diff_weight']
+
         if 'run' not in config['env_config']:
             config['env_config'].update({'run': 'PPO'})
         run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)

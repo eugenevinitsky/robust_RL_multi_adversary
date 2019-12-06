@@ -15,7 +15,7 @@ from ray import tune
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
-from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy
+# from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy
 from visualize.transfer_test import run_transfer_tests
 from utils.env_creator import ma_env_creator, construct_config
 
