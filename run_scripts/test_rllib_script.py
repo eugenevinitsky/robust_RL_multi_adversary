@@ -112,7 +112,7 @@ if __name__ == "__main__":
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
-        ray.init()
+        ray.init(memory=int(1e11))
 
     run_tune(**exp_dict, queue_trials=False)
 

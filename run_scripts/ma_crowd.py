@@ -159,7 +159,7 @@ if __name__=="__main__":
     exp_dict, args = setup_exps(sys.argv[1:])
 
     date = datetime.now(tz=pytz.utc)
-    date = date.astimezone(pytz.timezone('US/Eastern')).strftime("%m-%d-%Y")
+    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
     s3_string = 's3://sim2real/' \
                 + date + '/' + args.exp_title
     if args.use_s3:
