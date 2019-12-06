@@ -17,7 +17,7 @@ parser.add_argument('checkpoint_num', type=int)
 args = parser.parse_args()
 
 
-date = "12-02-19"
+date = "12-02-2019"
 
 ray.init()
 
