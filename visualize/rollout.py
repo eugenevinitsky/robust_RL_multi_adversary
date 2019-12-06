@@ -131,6 +131,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             action = action_dict
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
+            print(action)
 
             # TODO(@evinitsky) make this a config option
             #the adversaries shouldn't be active anymore
