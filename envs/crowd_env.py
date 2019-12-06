@@ -826,7 +826,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         self.perturb_state = config.getboolean('ma_train_details', 'perturb_state')
         self.num_iters = 0
         # We don't want to perturb until we actually have a reasonably good policy to start with
-        self.adversary_start_iter = int(1.5e4)
+        self.adversary_start_iter = 1e4
         self.num_adversaries = 0
         # self.curr_adversary = 0
         if not self.perturb_state and not self.perturb_actions:

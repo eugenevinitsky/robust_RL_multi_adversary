@@ -32,6 +32,7 @@ def env_parser(parser):
     parser.add_argument('--policy_params', type=str,
                         default=os.path.abspath(os.path.join(script_path, '../configs/policy_params.config')))
     parser.add_argument('--policy', type=str, default='cadrl')
+    parser.add_argument('--algo', type=str, default='ppo')
     parser.add_argument('--train_config', type=str, default=os.path.join(script_path, '../configs/train.config'))
     parser.add_argument("--show_images", action="store_true", default=False, help="Whether to display the observations")
     parser.add_argument('--train_on_images', action='store_true', default=False, help='Whether to train on images')

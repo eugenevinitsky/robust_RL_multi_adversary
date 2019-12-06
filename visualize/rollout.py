@@ -4,6 +4,7 @@ import configparser
 import logging
 import os
 import sys
+import pickle
 
 import gym
 import numpy as np
@@ -23,6 +24,7 @@ except ImportError:
     from ray.rllib.agents.registry import get_agent_class
 
 from utils.env_creator import env_creator, ma_env_creator
+# from graph import graph ## Don't know if this is right 
 
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
@@ -92,6 +94,9 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
 
     rewards = []
 
+    # For graphing
+    actions = {}
+
     # actually do the rollout
     for r_itr in range(num_rollouts):
         mapping_cache = {}  # in case policy_agent_mapping is stochastic
@@ -128,6 +133,10 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
                     a_action = _flatten_action(a_action)  # tuple actions
                     action_dict[agent_id] = a_action
                     prev_actions[agent_id] = a_action
+                    if agent_id not in actions:
+                        actions[agent_id] = [a_action]
+                    else:
+                        actions[agent_id].append(a_action)
             action = action_dict
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
@@ -156,15 +165,28 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
         print("Episode reward", reward_total)
         rewards.append(reward_total)
 
-        if not show_images:
-            if save_trajectory:
-                # env.render('traj', video_file)
-                output_path = 'videos/' + str(r_itr) + video_file
-                if not output_path[-4:] == '.mp4':
-                    output_path += '.mp4'
-                env.render('video', output_path)
+        # if not show_images:
+        #     if save_trajectory:
+        #         # env.render('traj', video_file)
+        #         output_path = 'videos/' + str(r_itr) + "kathy"#+ video_file
+        #         if not output_path[-4:] == '.mp4':
+        #             output_path += '_.mp4'
+        #         env.render('video', output_path)
     else:
         logging.info('Video creation is disabled since show_images is true.')
+
+
+    # ## Pickle stuff
+    # output_file = "adv_actions.pkl"
+    # with open(output_file, 'wb') as f:
+    #     pickle.dump(actions, f, pickle.HIGHEST_PROTOCOL)
+
+    #### Graph #### Hardcode for tomorrow
+    import ipdb; ipdb.set_trace()
+    params_parser = configparser.RawConfigParser()
+    graph(actions)
+
+
 
 
     logging.info('It takes %.2f seconds to finish. Final status is %s', env.global_time, info)
@@ -185,10 +207,13 @@ def main():
                         datefmt="%Y-%m-%d %H:%M:%S")
 
     rllib_config, checkpoint = get_config(args)
+    
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
 
     ray.init(num_cpus=args.num_cpus)
+    del rllib_config['num_adversaries']
+    del rllib_config['kl_diff_weight']
 
     run_rollout(rllib_config, checkpoint, args.save_video, 'rollout', args.show_images, args.num_rollouts)
 

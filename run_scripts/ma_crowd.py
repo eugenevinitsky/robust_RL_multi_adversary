@@ -10,12 +10,17 @@ import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 from ray.rllib.agents.ppo.ppo import PPOTrainer
 import ray.rllib.agents.ppo as ppo
+
+import ray.rllib.agents.ddpg as ddpg
+from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
+from ray.rllib.agents.ddpg.ddpg_policy import DDPGTFPolicy
+
 from ray.rllib.models import ModelCatalog
 from ray import tune
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
-from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy
+# from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy
 from visualize.transfer_test import run_transfer_tests
 from utils.env_creator import ma_env_creator, construct_config
 
@@ -30,7 +35,13 @@ def setup_ma_config(config):
     env = ma_env_creator(config['env_config'])
     policies_to_train = ['robot']
 
-    policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+    if config['env_config']['run'] == 'ppo':
+        policy = PPOTFPolicy
+    elif config['env_config']['run'] == 'ddpg':
+        policy = DDPGTFPolicy
+
+
+    policy_graphs = {'robot': (policy, env.observation_space, env.action_space, {})}
     num_adversaries = config['env_config']['num_adversaries']
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     # adversary_config = config
@@ -39,7 +50,7 @@ def setup_ma_config(config):
     # TODO(@evinitsky) put this back
     # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
     #                                              env.adv_action_space, adversary_config) for i in range(num_adversaries)})
-    policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
+    policy_graphs.update({adv_policies[i]: (policy, env.adv_observation_space,
                                             env.adv_action_space, adversary_config) for i in range(num_adversaries)})
 
     policies_to_train += adv_policies
@@ -69,18 +80,22 @@ def setup_exps(args):
     parser = ma_env_parser(parser)
     args = parser.parse_args(args)
 
-    alg_run = 'PPO'
-    config = ppo.DEFAULT_CONFIG.copy()
+    alg_run = args.algo
+    if alg_run == "ppo":
+        config = ppo.DEFAULT_CONFIG.copy()
+    elif alg_run == "ddpg":
+        config = ddpg.DEFAULT_CONFIG.copy()
+    else:
+        raise("The algorithm you have entered is not supported.")
+
     config['num_workers'] = args.num_cpus
     config['gamma'] = 0.99
-    config["sgd_minibatch_size"] = 500
-    config["num_sgd_iter"] = 10
+    # config["sgd_minibatch_size"] = 500
+    # config["num_sgd_iter"] = 10
     config["lr"] = tune.grid_search([5e-4, 5e-5, 5e-3])
     # config['num_adversaries'] = args.num_adv
     # TODO(@evinitsky) put this back
     # config['kl_diff_weight'] = args.kl_diff_weight
-
-    config['env_config']['run'] = alg_run
 
     with open(args.env_params, 'r') as file:
         env_params = file.read()
@@ -88,7 +103,7 @@ def setup_exps(args):
     with open(args.policy_params, 'r') as file:
         policy_params = file.read()
     config['env_config'] = construct_config(env_params, policy_params, args)
-
+    config['env_config']['run'] = alg_run
     config['env_config']['perturb_state'] = args.perturb_state
     config['env_config']['perturb_actions'] = args.perturb_actions
     config['env_config']['num_adversaries'] = args.num_adv
@@ -120,8 +135,8 @@ def setup_exps(args):
         config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
-        config['vf_share_layers'] = True
-        config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
+        # config['vf_share_layers'] = True
+        # config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
     config['train_batch_size'] = args.train_batch_size
 
     config['env'] = 'MultiAgentCrowdSimEnv'
@@ -138,11 +153,16 @@ def setup_exps(args):
     def trial_str_creator(trial):
         return "{}_{}".format(trial.trainable_name, trial.experiment_tag)
 
+    if args.algo == 'ppo':
+        trainer = PPOTrainer
+    elif args.algo == 'ddpg':
+        trainer = DDPGTrainer
+
     exp_dict = {
         'name': args.exp_title,
         # TODO (@evinitsky) put this back
         # 'run_or_experiment': KLPPOTrainer,
-        'run_or_experiment': PPOTrainer,
+        'run_or_experiment': trainer,
         'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
