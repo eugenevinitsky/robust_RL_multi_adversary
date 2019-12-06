@@ -47,7 +47,9 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results"
         if 'run' not in config['env_config']:
             config['env_config'].update({'run': 'PPO'})
         run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)
-p1 = subprocess.Popen(
-    "aws s3 sync {} {}".format(output_path, "s3://sim2real/transfer_results/{}/{}".format(date, args.exp_title)).split(
-        ' '))
-p1.wait()
+        p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+                                                         "s3://sim2real/transfer_results/{}/{}/{}".format(date, args.exp_title,
+                                                                                                          tune_name)).split(
+            ' '))
+
+        p1.wait()
