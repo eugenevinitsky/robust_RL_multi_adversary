@@ -406,7 +406,9 @@ class CrowdSimEnv(gym.Env):
 
         if self.add_gauss_noise_action:
             scaled_action = scaled_action + (np.random.normal(scale=self.gauss_noise_action_stddev, size=scaled_action.shape) * self.time_step)
-            scaled_action = np.clip(scaled_action, a_min=self.action_space.low, a_max=self.action_space.high)
+            low = [-self.rad_lim, 0]
+            high = [self.rad_lim, self.v_lim]
+            scaled_action = np.clip(scaled_action, a_min=low, a_max=high)
 
         human_actions = []
         for human in self.humans:
@@ -902,7 +904,9 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             if self.perturb_actions:
                 robot_action = action['robot'] + action_perturbation
                 # apply clipping so that it can't exceed the bounds of what the robot can do
-                robot_action = np.clip(robot_action, a_min=self.action_space.low, a_max=self.action_space.high)
+                low = [-self.rad_lim, 0]
+                high = [self.rad_lim, self.v_lim]
+                robot_action = np.clip(robot_action, a_min=low, a_max=high)
 
         ob, reward, done, info = super().step(robot_action, update)
 
