@@ -112,7 +112,7 @@ class CrowdSimEnv(gym.Env):
     @property
     def action_space(self):
         # TODO(@evinitsky) what are the right bounds
-        return Box(low=0, high=1.0 * self.time_step, shape=(2, ))
+        return Box(low=0.0, high=1.0, shape=(2, ), dtype=np.float32)
 
     def generate_random_human_position(self, human_num, rule):
         """
@@ -400,8 +400,8 @@ class CrowdSimEnv(gym.Env):
         # rescale the actions so that they are within the bounds of the robot motions
         r, v = np.copy(action)
         # scale r to be between - self.rad_lim and self.rad_lim
-        r = 2 * ((r * self.rad_lim) - (self.rad_lim / 2))
-        v = v * self.v_lim / self.time_step
+        r = 2 * ((r * self.rad_lim) - (self.rad_lim / 2.0)) * self.time_step
+        v = v * self.v_lim
         scaled_action = np.array([r, v])
 
         if self.add_gauss_noise_action:
@@ -862,7 +862,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         observation space.
         """
         obs_size = super().observation_space.shape
-        box_space =  Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32)
+        box_space = Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32)
         return box_space
 
     @property
@@ -881,7 +881,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             obs_size = obs_size[0]
         act_size = super().action_space.shape[0]
         shape = obs_size * self.perturb_state + act_size * self.perturb_actions
-        box = Box(low=-1.0 * self.time_step, high=1.0 * self.time_step, shape=(shape,), dtype=np.float32)
+        box = Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32)
         return box
 
     def step(self, action, update=True):
@@ -902,7 +902,12 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
                 state_perturbation = action[adversary_key] * self.adversary_state_scaling
 
             if self.perturb_actions:
-                robot_action = action['robot'] + action_perturbation
+                r, v = np.copy(action_perturbation)
+                r = r * self.time_step * self.rad_lim
+                v = v * self.v_lim
+                scaled_perturbation = np.array([r, v])
+
+                robot_action = action['robot'] + scaled_perturbation
                 # apply clipping so that it can't exceed the bounds of what the robot can do
                 low = [-self.rad_lim, 0]
                 high = [self.rad_lim, self.v_lim]
