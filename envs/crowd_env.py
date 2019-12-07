@@ -5,11 +5,6 @@ import logging
 import cv2
 import gym
 from gym.spaces import Box, Dict
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-from matplotlib import animation
-from matplotlib import patches
 import numpy as np
 from numpy.linalg import norm
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
