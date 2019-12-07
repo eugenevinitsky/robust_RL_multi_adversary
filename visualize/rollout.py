@@ -174,6 +174,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
         human_times = env.get_human_times()
         logging.info('Average time for humans to reach goal: %.2f', sum(human_times) / len(human_times))
 
+    print('the average reward is ', np.mean(rewards))
     return rewards
     
 
