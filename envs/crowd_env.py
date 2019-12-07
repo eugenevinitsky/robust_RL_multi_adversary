@@ -1,15 +1,20 @@
 """This code is adapted from https://github.com/vita-epfl/CrowdNav"""
 
 import logging
+import sys
 
 import cv2
 import gym
 from gym.spaces import Box, Dict
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-from matplotlib import animation
-from matplotlib import patches
+if sys.platform == 'darwin':
+    try:
+        import matplotlib
+        matplotlib.use('TkAgg')
+        import matplotlib.pyplot as plt
+        from matplotlib import animation
+        from matplotlib import patches
+    except:
+        pass
 import numpy as np
 from numpy.linalg import norm
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
@@ -93,6 +98,7 @@ class CrowdSimEnv(gym.Env):
         self.obs_norm = 100
         self.v_lim = 0.2
         self.rad_lim = 1.2
+        self.num_iters = 0
 
         # generate a set of humans so we have something in the observation space
         self.generate_random_human_position(self.human_num, rule=self.train_val_sim)
@@ -284,6 +290,10 @@ class CrowdSimEnv(gym.Env):
         Set px, py, gx, gy, vx, vy, theta for robot and humans
         :return:
         """
+
+        # increment the counter
+        self.num_iters += 1
+
         # Set up the colors
         self.robot_color = ROBOT_COLOR
         self.human_color = HUMAN_COLOR
@@ -310,9 +320,12 @@ class CrowdSimEnv(gym.Env):
                               'val': 0, 'test': self.case_capacity['val']}
             if self.randomize_goals:
                 random_goal = self.generate_random_goals()
+                random_goal *= min(1, (self.num_iters / 2e4) + 0.2)
                 self.robot.set(0, 0, random_goal[0], random_goal[1], 0, 0, np.pi / 2)
             else:
-                self.robot.set(0, 0, 0, self.circle_radius, 0, 0, np.pi / 2) #default goal is directly above robot
+                goal = self.circle_radius
+                goal *= min(1, (self.num_iters / 2e4) + 0.2)
+                self.robot.set(0, 0, 0, goal, 0, 0, np.pi / 2) #default goal is directly above robot
 
 
             # By setting np.random.seed with essentially the iteration number, they can ensure that the 
@@ -830,7 +843,6 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         self.adversary_state_scaling = config.getfloat('env', 'adversary_state_scaling')
         self.perturb_actions = config.getboolean('ma_train_details', 'perturb_actions')
         self.perturb_state = config.getboolean('ma_train_details', 'perturb_state')
-        self.num_iters = 0
         # We don't want to perturb until we actually have a reasonably good policy to start with
         self.adversary_start_iter = int(4e4)
         self.num_adversaries = 0
@@ -949,7 +961,6 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         Set px, py, gx, gy, vx, vy, theta for robot and humans
         :return:
         """
-        self.num_iters += 1
         # self.curr_adversary = int(np.random.randint(low=0, high=self.num_adversaries))
         ob = super().reset(phase, test_case)
         if self.num_iters > self.adversary_start_iter:
