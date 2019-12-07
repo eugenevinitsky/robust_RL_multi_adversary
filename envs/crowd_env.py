@@ -510,7 +510,7 @@ class CrowdSimEnv(gym.Env):
         if (np.abs(np.abs(end_position) - self.accessible_space) < self.edge_discomfort_dist).any():
             reward += self.edge_penalty
         #if getting closer to goal, add reward
-        if cur_dist_to_goal - next_dist_to_goal > 0.1:
+        if cur_dist_to_goal - next_dist_to_goal > 0.0:
             reward += self.closer_goal
 
         if update:
