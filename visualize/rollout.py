@@ -86,9 +86,11 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
     # We always have to remake the env since we may want to overwrite the config
     if 'multiagent' in rllib_config and rllib_config['multiagent']['policies']:
         env = ma_env_creator(rllib_config['env_config'])
-        env.num_iters = 1e8
     else:
         env = env_creator(rllib_config['env_config'])
+
+    # increase the num iters so we don't have any lingering warm-up effects
+    env.num_iters = 1e8
 
     rewards = []
 
@@ -131,7 +133,6 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             action = action_dict
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
-            print(action)
 
             # TODO(@evinitsky) make this a config option
             #the adversaries shouldn't be active anymore
