@@ -321,12 +321,12 @@ class CrowdSimEnv(gym.Env):
             if self.randomize_goals:
                 random_goal = self.generate_random_goals()
                 # print('random goal before ', random_goal)
-                random_goal *= min(1.0, (self.num_iters / 2e4) + 0.2)
+                random_goal *= min(1.0, (self.num_iters / 1e4) + 0.2)
                 # print('random goal after ', random_goal)
                 self.robot.set(0, 0, random_goal[0], random_goal[1], 0, 0, np.pi / 2)
             else:
                 goal = self.circle_radius
-                goal *= min(1, (self.num_iters / 2e4) + 0.2)
+                goal *= min(1, (self.num_iters / 1e4) + 0.2)
                 self.robot.set(0, 0, 0, goal, 0, 0, np.pi / 2) #default goal is directly above robot
 
 
