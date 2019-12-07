@@ -93,12 +93,15 @@ class CrowdSimEnv(gym.Env):
         logging.info('Training simulation: {}, test simulation: {}'.format(self.train_val_sim, self.test_sim))
         logging.info('Square width: {}, circle width: {}'.format(self.square_width, self.circle_radius))
 
+        # HARDCODED CONSTANTS. MOVE THESE OUT
         self.robot = robot
         self.attention_weights = None
         self.obs_norm = 100
         self.v_lim = 0.2
         self.rad_lim = 1.2
         self.num_iters = 0
+        self.curriculum_length = 1e4
+        self.use_curriculum = False
 
         # generate a set of humans so we have something in the observation space
         self.generate_random_human_position(self.human_num, rule=self.train_val_sim)
@@ -321,12 +324,14 @@ class CrowdSimEnv(gym.Env):
             if self.randomize_goals:
                 random_goal = self.generate_random_goals()
                 # print('random goal before ', random_goal)
-                random_goal *= min(1.0, (self.num_iters / 1e4) + 0.2)
+                if self.use_curriculum:
+                    random_goal *= min(1.0, (self.num_iters / self.curriculum_length) + 0.2)
                 # print('random goal after ', random_goal)
                 self.robot.set(0, 0, random_goal[0], random_goal[1], 0, 0, np.pi / 2)
             else:
                 goal = self.circle_radius
-                goal *= min(1, (self.num_iters / 1e4) + 0.2)
+                if self.use_curriculum:
+                    goal *= min(1, (self.num_iters / self.curriculum_length) + 0.2)
                 self.robot.set(0, 0, 0, goal, 0, 0, np.pi / 2) #default goal is directly above robot
 
 
@@ -511,7 +516,7 @@ class CrowdSimEnv(gym.Env):
             reward += self.edge_penalty
         #if getting closer to goal, add reward
         if cur_dist_to_goal - next_dist_to_goal > 0.0:
-            reward += self.closer_goal
+            reward += self.closer_goal * min(1.0, (1 - self.num_iters / self.curriculum_length))
 
         if update:
             # store state, action value and attention weights

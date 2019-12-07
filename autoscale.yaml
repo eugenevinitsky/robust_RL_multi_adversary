@@ -117,7 +117,7 @@ setup_commands:
     - cd ~/adversarial_sim2real && git fetch; git checkout origin/kl_div; git pull origin kl_div
     - source activate tensorflow_p36 && pip install -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.8.0.dev6-cp36-cp36m-manylinux1_x86_64.whl && pip install pytz
 #    - source activate tensorflow_p36 && python ~/adversarial_sim2real/utils/replace_rnn_sequence.py
-    - source activate tensorflow_p36 && pip install tabulate
+    - source activate tensorflow_p36 && pip install tabulate && pip install psutil
 
     # Consider uncommenting these if you also want to run apt-get commands during setup
     # - sudo pkill -9 apt-get || true
