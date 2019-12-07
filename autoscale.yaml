@@ -1,5 +1,5 @@
 # An unique identifier for the head node and workers of this cluster.
-cluster_name: kj_ddpg0
+cluster_name: kj_ddpg1
 
 # The minimum number of workers nodes to launch in addition to the head
 # node. This number should be >= 0.
@@ -60,7 +60,7 @@ auth:
 # By default Ray creates a new private keypair, but you can also use your own.
 # If you do so, make sure to also set "KeyName" in the head and worker node
 # configurations below.
-    ssh_private_key: /Users/eugenevinitsky/.ssh/MyKeyPair.pem
+    # ssh_private_key: /Users/eugenevinitsky/.ssh/MyKeyPair.pem
 
 # Provider-specific config for the head node, e.g. instance type. By default
 # Ray will auto-configure unspecified fields such as SubnetId and KeyName.
@@ -115,8 +115,9 @@ setup_commands:
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
     - cd ~/adversarial_sim2real && git fetch; git checkout origin/queen; git pull origin queen
-    - source activate tensorflow_p36 && pip install -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.8.0.dev6-cp36-cp36m-manylinux1_x86_64.whl && pip install pytz
-#    - source activate tensorflow_p36 && python ~/adversarial_sim2real/utils/replace_rnn_sequence.py
+    # - source activate tensorflow_p36 && pip install -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.8.0.dev6-cp36-cp36m-manylinux1_x86_64.whl && pip install pytz
+    - pip install --upgrade ray==0.7.6
+    - source activate tensorflow_p36 && python ~/adversarial_sim2real/utils/replace_rnn_sequence.py
     - source activate tensorflow_p36 && pip install tabulate
 
     # Consider uncommenting these if you also want to run apt-get commands during setup
