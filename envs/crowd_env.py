@@ -320,7 +320,9 @@ class CrowdSimEnv(gym.Env):
                               'val': 0, 'test': self.case_capacity['val']}
             if self.randomize_goals:
                 random_goal = self.generate_random_goals()
-                random_goal *= min(1, (self.num_iters / 2e4) + 0.2)
+                # print('random goal before ', random_goal)
+                random_goal *= min(1.0, (self.num_iters / 2e4) + 0.2)
+                # print('random goal after ', random_goal)
                 self.robot.set(0, 0, random_goal[0], random_goal[1], 0, 0, np.pi / 2)
             else:
                 goal = self.circle_radius
@@ -361,10 +363,10 @@ class CrowdSimEnv(gym.Env):
 
         # get current observation
         if self.robot.sensor == 'coordinates':
-            ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
-            normalized_pos = np.asarray(self.robot.get_position())/self.accessible_space
-            normalized_goal = np.asarray(self.robot.get_goal_position())/self.accessible_space
-            ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal))) / self.obs_norm
+            ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
+            normalized_pos = np.asarray(self.robot.get_position()) / self.accessible_space
+            normalized_goal = np.asarray(self.robot.get_goal_position()) / self.accessible_space
+            ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
 
         elif self.robot.sensor == 'RGB':
             raise NotImplementedError
@@ -526,10 +528,10 @@ class CrowdSimEnv(gym.Env):
 
             # compute the observation
             if self.robot.sensor == 'coordinates':
-                ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
+                ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
                 normalized_pos = np.asarray(self.robot.get_position()) / self.accessible_space
                 normalized_goal = np.asarray(self.robot.get_goal_position()) / self.accessible_space
-                ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal))) / self.obs_norm
+                ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
         else:
