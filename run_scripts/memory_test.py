@@ -29,22 +29,17 @@ def env_creator(env_config):
     return DummyEnv()
 
 if __name__=='__main__':
-    ray.init(object_store_memory=(5e9), redis_max_memory=int(1e9), memory=int(5e9))
+    ray.init(object_store_memory=int(1e9), redis_max_memory=int(1e9), memory=int(1e9))
 
     alg_run = 'PPO'
     config = ppo.DEFAULT_CONFIG.copy()
     register_env('DummyEnv', env_creator)
 
-    config['env'] = 'CrowdSim'
+    config['env'] = 'DummyEnv'
     config['num_workers'] = 2
     config['lr'] = tune.grid_search([1e-3, 1e-4, 1e-5, 1e-6])
     config['train_batch_size'] = 3000
-    register_env('CrowdSim', env_creator)
-
-
-    def trial_str_creator(trial):
-        return "{}_{}".format(trial.trainable_name, trial.experiment_tag)
-
+    register_env('DummyEnv', env_creator)
 
     exp_dict = {
         'name': 'Test',
