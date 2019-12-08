@@ -110,8 +110,11 @@ class CrowdSimEnv(gym.Env):
     @property
     def observation_space(self):
         if not self.train_on_images:
-            temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
-            return Box(low=-1.0, high=1.0, shape=(temp_obs.shape[0] + 4, ))
+            num_obs = 4 # goal pos, robot pos
+            if len(self.humans) > 0:
+                temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
+                num_obs += temp_obs.shape[0]
+            return Box(low=-1.0, high=1.0, shape=(num_obs, ))
         else:
             img_shape = self.image.shape
             new_tuple = (img_shape[0], img_shape[1], img_shape[2] * self.num_stacked_frames)
@@ -368,7 +371,10 @@ class CrowdSimEnv(gym.Env):
 
         # get current observation
         if self.robot.sensor == 'coordinates':
-            ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
+            if len(self.humans) > 0:
+                ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
+            else:
+                ob = []
             normalized_pos = np.asarray(self.robot.get_position()) / self.accessible_space
             normalized_goal = np.asarray(self.robot.get_goal_position()) / self.accessible_space
             ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
@@ -516,6 +522,7 @@ class CrowdSimEnv(gym.Env):
             reward += self.edge_penalty
         #if getting closer to goal, add reward
         if cur_dist_to_goal - next_dist_to_goal > 0.0:
+            # this runs on a curriculum so as to not change the resultant policy once fully trained
             reward += self.closer_goal * min(1.0, (1 - self.num_iters / self.curriculum_length))
 
         if update:
@@ -533,7 +540,10 @@ class CrowdSimEnv(gym.Env):
 
             # compute the observation
             if self.robot.sensor == 'coordinates':
-                ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
+                if len(self.humans) > 0:
+                    ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
+                else:
+                    ob = []
                 normalized_pos = np.asarray(self.robot.get_position()) / self.accessible_space
                 normalized_goal = np.asarray(self.robot.get_goal_position()) / self.accessible_space
                 ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
