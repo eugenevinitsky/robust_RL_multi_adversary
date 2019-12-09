@@ -78,7 +78,8 @@ class CrowdSimEnv(gym.Env):
             self.test_sim = config.get('sim', 'test_sim')
             self.square_width = config.getfloat('sim', 'square_width')
             self.circle_radius = config.getfloat('sim', 'circle_radius')
-            self.accessible_space = config.getfloat('sim', 'accessible_space')
+            self.accessible_space_x = config.getfloat('sim', 'accessible_space_x')
+            self.accessible_space_y = config.getfloat('sim', 'accessible_space_y')
             self.goal_region = config.getfloat('sim', 'goal_region')
             self.human_num = config.getint('sim', 'human_num')
         else:
@@ -375,8 +376,8 @@ class CrowdSimEnv(gym.Env):
                 ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
             else:
                 ob = []
-            normalized_pos = np.asarray(self.robot.get_position()) / self.accessible_space
-            normalized_goal = np.asarray(self.robot.get_goal_position()) / self.accessible_space
+            normalized_pos = np.asarray(self.robot.get_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
+            normalized_goal = np.asarray(self.robot.get_goal_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
             ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
 
         elif self.robot.sensor == 'RGB':
@@ -518,7 +519,7 @@ class CrowdSimEnv(gym.Env):
             info = Nothing()
 
         #if too close to the edge, add penalty
-        if (np.abs(np.abs(end_position) - self.accessible_space) < self.edge_discomfort_dist).any():
+        if (np.abs(np.abs(end_position) - np.asarray([self.accessible_space_x, self.accessible_space_y])) < self.edge_discomfort_dist).any():
             reward += self.edge_penalty
         #if getting closer to goal, add reward
         if cur_dist_to_goal - next_dist_to_goal > 0.0:
@@ -544,8 +545,8 @@ class CrowdSimEnv(gym.Env):
                     ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
                 else:
                     ob = []
-                normalized_pos = np.asarray(self.robot.get_position()) / self.accessible_space
-                normalized_goal = np.asarray(self.robot.get_goal_position()) / self.accessible_space
+                normalized_pos = np.asarray(self.robot.get_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
+                normalized_goal = np.asarray(self.robot.get_goal_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
                 ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
@@ -715,8 +716,8 @@ class CrowdSimEnv(gym.Env):
         elif mode == 'video':
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.tick_params(labelsize=16)
-            ax.set_xlim(-self.accessible_space, self.accessible_space)
-            ax.set_ylim(-self.accessible_space, self.accessible_space)
+            ax.set_xlim(-self.accessible_space_x, self.accessible_space_x)
+            ax.set_ylim(-self.accessible_space_y, self.accessible_space_y)
             ax.set_xlabel('x(m)', fontsize=16)
             ax.set_ylabel('y(m)', fontsize=16)
 
@@ -849,7 +850,7 @@ class CrowdSimEnv(gym.Env):
         if self.restrict_goal_region:
             goal_reg = self.goal_region
         else:
-            goal_reg = self.accessible_space #unrestricted goal region, goal can be anywhere in accessible space
+            goal_reg = np.asarray([self.accessible_space_x, self.accessible_space_y]) #unrestricted goal region, goal can be anywhere in accessible space
         return (np.random.rand(2) - 0.5) * 2 * goal_reg
 
 class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
