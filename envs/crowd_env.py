@@ -430,12 +430,12 @@ class CrowdSimEnv(gym.Env):
         r, v = np.copy(action)
         # scale r to be between - self.rad_lim and self.rad_lim
         r = 2 * ((r * self.rad_lim) - (self.rad_lim / 2.0)) * self.time_step
-        v = v * self.v_lim
+        v = 2 * (v-0.5) * self.v_lim
         scaled_action = np.array([r, v])
 
         if self.add_gauss_noise_action:
             scaled_action = scaled_action + (np.random.normal(scale=self.gauss_noise_action_stddev, size=scaled_action.shape) * self.time_step)
-            low = [-self.rad_lim, 0]
+            low = [-self.rad_lim, -self.v_lim]
             high = [self.rad_lim, self.v_lim]
             scaled_action = np.clip(scaled_action, a_min=low, a_max=high)
 
@@ -854,6 +854,7 @@ class CrowdSimEnv(gym.Env):
         else:
             goal_reg = np.asarray([self.accessible_space_x, self.accessible_space_y]) #unrestricted goal region, goal can be anywhere in accessible space
         return (np.random.rand(2) - 0.5) * 2 * goal_reg
+
 
 class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
