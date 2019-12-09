@@ -28,7 +28,8 @@ class Agent(object):
         self.theta = 0.0
         self.time_step = 0.0
         self.reward = 0
-        self.accessible_space = config.getfloat('sim', 'accessible_space')
+        self.accessible_space_x = config.getfloat('sim', 'accessible_space_x')
+        self.accessible_space_y = config.getfloat('sim', 'accessible_space_y')
 
         # If true all of the actions will be slightly less than intended by a constant factor
         self.friction = config.getboolean('transfer', 'friction')
@@ -120,7 +121,7 @@ class Agent(object):
         pass
         # assert action.shape[0] == 2, "Actions don't have shape 2"
 
-    def check_valid_action(self, new_px, new_py, cur_px, cur_py, world_dim):
+    def check_valid_action(self, new_px, new_py, cur_px, cur_py):
         """
         Check if action will take the agent out of the grid space
         :param new_px: new x position
@@ -128,9 +129,9 @@ class Agent(object):
         :param world_dim: size of the world in one dimension
         :return: Valid px, py
         """
-        if np.abs(new_px) > world_dim:
+        if np.abs(new_px) > self.accessible_space_x:
             new_px = cur_px
-        if np.abs(new_py) > world_dim:
+        if np.abs(new_py) > self.accessible_space_y:
             new_py = cur_py
 
         return new_px, new_py
@@ -153,7 +154,7 @@ class Agent(object):
             px = self.px + np.cos(theta) * v * delta_t
             py = self.py + np.sin(theta) * v * delta_t
 
-        return self.check_valid_action(px,py, self.px, self.py, self.accessible_space)
+        return self.check_valid_action(px,py, self.px, self.py)
 
     def step(self, action):
         """
