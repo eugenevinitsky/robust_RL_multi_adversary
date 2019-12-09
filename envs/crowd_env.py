@@ -325,18 +325,20 @@ class CrowdSimEnv(gym.Env):
         else:
             counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
                               'val': 0, 'test': self.case_capacity['val']}
+            random_start_pos = self.generate_random_goals()
+            rand_heading = np.random.random() * 2*np.pi
             if self.randomize_goals:
                 random_goal = self.generate_random_goals()
                 # print('random goal before ', random_goal)
                 if self.use_curriculum:
                     random_goal *= min(1.0, (self.num_iters / self.curriculum_length) + 0.2)
                 # print('random goal after ', random_goal)
-                self.robot.set(0, 0, random_goal[0], random_goal[1], 0, 0, np.pi / 2)
+                self.robot.set(random_start_pos[0], random_start_pos[1], random_goal[0], random_goal[1], 0, 0, rand_heading)
             else:
-                goal = self.circle_radius
+                goal = 0
                 if self.use_curriculum:
                     goal *= min(1, (self.num_iters / self.curriculum_length) + 0.2)
-                self.robot.set(0, 0, 0, goal, 0, 0, np.pi / 2) #default goal is directly above robot
+                self.robot.set(random_start_pos[0], random_start_pos[1], 0, goal, 0, 0, rand_heading) #default goal is directly above robot
 
 
             # By setting np.random.seed with essentially the iteration number, they can ensure that the 
