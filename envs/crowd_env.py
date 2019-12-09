@@ -523,9 +523,7 @@ class CrowdSimEnv(gym.Env):
         if (np.abs(np.abs(end_position) - np.asarray([self.accessible_space_x, self.accessible_space_y])) < self.edge_discomfort_dist).any():
             reward += self.edge_penalty
         #if getting closer to goal, add reward
-        if cur_dist_to_goal - next_dist_to_goal > 0.0:
-            # this runs on a curriculum so as to not change the resultant policy once fully trained
-            reward += self.closer_goal * min(1.0, (1 - self.iter_num / self.curriculum_length))
+        reward += self.closer_goal  * (cur_dist_to_goal - next_dist_to_goal) # * min(1.0, (1 - self.iter_num / self.curriculum_length))
         if update:
             # store state, action value and attention weights
             self.states.append([self.robot.get_full_state(), [human.get_full_state() for human in self.humans]])
