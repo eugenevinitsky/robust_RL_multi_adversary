@@ -161,7 +161,8 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
         if not show_images:
             if save_trajectory:
                 # env.render('traj', video_file)
-                output_path = 'videos/' + str(r_itr) + video_file
+                # output_path = 'videos/' + str(r_itr) + video_file
+                output_path = "rollout.mp4"
                 if not output_path[-4:] == '.mp4':
                     output_path += '.mp4'
                 env.render('video', output_path)

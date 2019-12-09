@@ -150,7 +150,7 @@ class Agent(object):
             if self.friction:
                 r = r - (np.pi / 2) * self.friction_coef * r
                 v = v - self.friction_coef * v
-            theta = self.theta + r
+            theta = self.theta + r * delta_t
             px = self.px + np.cos(theta) * v * delta_t
             py = self.py + np.sin(theta) * v * delta_t
 
@@ -169,7 +169,7 @@ class Agent(object):
             self.vy = vy
         else:
             r, v = action
-            self.theta = (self.theta + r) % (2 * np.pi)
+            self.theta = (self.theta + r * self.time_step) % (2 * np.pi)
             self.vx = v * np.cos(self.theta)
             self.vy = v * np.sin(self.theta)
 
