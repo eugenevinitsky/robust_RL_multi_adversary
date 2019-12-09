@@ -100,7 +100,7 @@ class CrowdSimEnv(gym.Env):
         self.obs_norm = 100
         self.v_lim = 0.2
         self.rad_lim = 1.2
-        self.num_iters = 0
+        self.iter_num = 0
         self.curriculum_length = 1e4
         self.use_curriculum = False
 
@@ -299,7 +299,7 @@ class CrowdSimEnv(gym.Env):
         """
 
         # increment the counter
-        self.num_iters += 1
+        self.iter_num += 1
 
         # Set up the colors
         self.robot_color = ROBOT_COLOR
@@ -331,13 +331,13 @@ class CrowdSimEnv(gym.Env):
                 random_goal = self.generate_random_goals()
                 # print('random goal before ', random_goal)
                 if self.use_curriculum:
-                    random_goal *= min(1.0, (self.num_iters / self.curriculum_length) + 0.2)
+                    random_goal *= min(1.0, (self.iter_num / self.curriculum_length) + 0.2)
                 # print('random goal after ', random_goal)
                 self.robot.set(random_start_pos[0], random_start_pos[1], random_goal[0], random_goal[1], 0, 0, rand_heading)
             else:
                 goal = 0
                 if self.use_curriculum:
-                    goal *= min(1, (self.num_iters / self.curriculum_length) + 0.2)
+                    goal *= min(1, (self.iter_num / self.curriculum_length) + 0.2)
                 self.robot.set(random_start_pos[0], random_start_pos[1], 0, goal, 0, 0, rand_heading) #default goal is directly above robot
 
 
@@ -429,12 +429,12 @@ class CrowdSimEnv(gym.Env):
         # rescale the actions so that they are within the bounds of the robot motions
         r, v = np.copy(action)
         # scale r to be between - self.rad_lim and self.rad_lim
-        r = 2 * ((r * self.rad_lim) - (self.rad_lim / 2.0)) * self.time_step
+        r = 2 * ((r * self.rad_lim) - (self.rad_lim / 2.0))
         v = 2 * (v-0.5) * self.v_lim
         scaled_action = np.array([r, v])
 
         if self.add_gauss_noise_action:
-            scaled_action = scaled_action + (np.random.normal(scale=self.gauss_noise_action_stddev, size=scaled_action.shape) * self.time_step)
+            scaled_action = scaled_action + (np.random.normal(scale=self.gauss_noise_action_stddev, size=scaled_action.shape))
             low = [-self.rad_lim, -self.v_lim]
             high = [self.rad_lim, self.v_lim]
             scaled_action = np.clip(scaled_action, a_min=low, a_max=high)
@@ -519,15 +519,13 @@ class CrowdSimEnv(gym.Env):
             reward = 0
             done = False
             info = Nothing()
-
         #if too close to the edge, add penalty
         if (np.abs(np.abs(end_position) - np.asarray([self.accessible_space_x, self.accessible_space_y])) < self.edge_discomfort_dist).any():
             reward += self.edge_penalty
         #if getting closer to goal, add reward
         if cur_dist_to_goal - next_dist_to_goal > 0.0:
             # this runs on a curriculum so as to not change the resultant policy once fully trained
-            reward += self.closer_goal * min(1.0, (1 - self.num_iters / self.curriculum_length))
-
+            reward += self.closer_goal * min(1.0, (1 - self.iter_num / self.curriculum_length))
         if update:
             # store state, action value and attention weights
             self.states.append([self.robot.get_full_state(), [human.get_full_state() for human in self.humans]])
@@ -716,7 +714,7 @@ class CrowdSimEnv(gym.Env):
             plt.legend([robot], ['Robot'], fontsize=16)
             plt.show()
         elif mode == 'video':
-            fig, ax = plt.subplots(figsize=(7, 7))
+            fig, ax = plt.subplots(figsize=(20*self.accessible_space_x, 20*self.accessible_space_y))
             ax.tick_params(labelsize=16)
             ax.set_xlim(-self.accessible_space_x, self.accessible_space_x)
             ax.set_ylim(-self.accessible_space_y, self.accessible_space_y)
@@ -788,15 +786,15 @@ class CrowdSimEnv(gym.Env):
                 for i, human in enumerate(humans):
                     human.center = human_positions[frame_num][i]
                     human_numbers[i].set_position((human.center[0] - x_offset, human.center[1] - y_offset))
-                    for arrow in arrows:
-                        arrow.remove()
-                    arrows = [patches.FancyArrowPatch(*orientation[frame_num], color=arrow_color,
-                                                      arrowstyle=arrow_style) for orientation in orientations]
-                    for arrow in arrows:
-                        ax.add_artist(arrow)
                     if self.attention_weights is not None:
                         human.set_color(str(self.attention_weights[frame_num][i]))
                         attention_scores[i].set_text('human {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))
+                for arrow in arrows:
+                    arrow.remove()
+                arrows = [patches.FancyArrowPatch(*orientation[frame_num], color=arrow_color,
+                                                    arrowstyle=arrow_style) for orientation in orientations]
+                for arrow in arrows:
+                        ax.add_artist(arrow)
 
                 time.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
@@ -925,7 +923,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         adversary_key = 'adversary'
 
         robot_action = action['robot']
-        if self.num_iters > self.adversary_start_iter:
+        if self.iter_num > self.adversary_start_iter:
             if self.perturb_state and self.perturb_actions:
                 action_perturbation = action[adversary_key][:2] * self.adversary_action_scaling
                 state_perturbation = action[adversary_key][2:] * self.adversary_state_scaling
@@ -936,7 +934,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
             if self.perturb_actions:
                 r, v = np.copy(action_perturbation)
-                r = r * self.time_step * self.rad_lim
+                r = r * self.rad_lim
                 v = v * self.v_lim
                 scaled_perturbation = np.array([r, v])
 
@@ -953,7 +951,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
                                a_max=self.observation_space.high[0])}
         reward_dict = {'robot': reward}
 
-        if self.num_iters > self.adversary_start_iter:
+        if self.iter_num > self.adversary_start_iter:
             # for i in range(self.num_adversaries):
         #             #     is_active = 1 if self.curr_adversary == i else 0
         #             #     curr_obs.update({'adversary{}'.format(i): {'obs': ob, 'is_active': np.array([is_active])}})
@@ -984,7 +982,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         """
         # self.curr_adversary = int(np.random.randint(low=0, high=self.num_adversaries))
         ob = super().reset(phase, test_case)
-        if self.num_iters > self.adversary_start_iter:
+        if self.iter_num > self.adversary_start_iter:
             curr_obs = {'robot': ob, 'adversary': ob}
         else:
             curr_obs = {'robot': ob}
