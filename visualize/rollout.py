@@ -93,6 +93,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
     env.num_iters = 1e8
 
     rewards = []
+    num_steps = []
 
     # actually do the rollout
     for r_itr in range(num_rollouts):
@@ -105,6 +106,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
         prev_rewards = collections.defaultdict(lambda: 0.)
         done = False
         reward_total = 0.0
+        step_num = 0
         while not done:
             multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
             action_dict = {}
@@ -141,6 +143,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             #         if key != 'robot':
             #             action[key] = np.zeros(value.shape)
             next_obs, reward, done, info = env.step(action)
+            step_num += 1
             if multiagent:
                 for agent_id, r in reward.items():
                     prev_rewards[agent_id] = r
@@ -156,13 +159,16 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
                 reward_total += reward
             obs = next_obs
         print("Episode reward", reward_total)
+        print("Episode length", step_num)
+
         rewards.append(reward_total)
+        num_steps.append(step_num)
 
         if not show_images:
             if save_trajectory:
                 # env.render('traj', video_file)
-                # output_path = 'videos/' + str(r_itr) + video_file
-                output_path = "rollout.mp4"
+                output_path = 'videos/' + str(r_itr) + video_file
+                # output_path = "rollout.mp4"
                 if not output_path[-4:] == '.mp4':
                     output_path += '.mp4'
                 env.render('video', output_path)
@@ -176,7 +182,8 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
         logging.info('Average time for humans to reach goal: %.2f', sum(human_times) / len(human_times))
 
     print('the average reward is ', np.mean(rewards))
-    return rewards
+    print('the average number of steps to goal is ', np.mean(num_steps))
+    return rewards, num_steps
     
 
 def main():
