@@ -111,3 +111,8 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/test_rllib_script.py --exp_title SA_h3_3hum_unfixedgoal --use_s3 \
 --train_batch_size 30000 --checkpoint_freq 50 --num_iters 400 --num_cpus 9 --run_transfer_tests --human_num 3" --tmux --start --cluster-name=ev_sa_test3
+
+####################################################################################################
+# 12/11/19 add heading to state space, remove LSTM
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/test_rllib_script.py --exp_title SA_h0_noLSTM_heading --use_s3 \
+--train_batch_size 30000 --checkpoint_freq 50 --num_iters 400 --num_cpus 9 --run_transfer_tests --human_num 0" --tmux --start --cluster-name=ev_sa_test1
