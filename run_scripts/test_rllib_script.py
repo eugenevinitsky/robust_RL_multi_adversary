@@ -68,7 +68,7 @@ def setup_exps(args):
         config['vf_share_layers'] = True
     else:
         config['model']['fcnet_hiddens'] = [64]
-        config['model']['use_lstm'] = True
+        config['model']['use_lstm'] = False
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
         config['vf_share_layers'] = True
