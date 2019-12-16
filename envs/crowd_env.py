@@ -78,7 +78,8 @@ class CrowdSimEnv(gym.Env):
             self.test_sim = config.get('sim', 'test_sim')
             self.square_width = config.getfloat('sim', 'square_width')
             self.circle_radius = config.getfloat('sim', 'circle_radius')
-            self.accessible_space = config.getfloat('sim', 'accessible_space')
+            self.accessible_space_x = config.getfloat('sim', 'accessible_space_x')
+            self.accessible_space_y = config.getfloat('sim', 'accessible_space_y')
             self.goal_region = config.getfloat('sim', 'goal_region')
             self.human_num = config.getint('sim', 'human_num')
         else:
@@ -99,7 +100,7 @@ class CrowdSimEnv(gym.Env):
         self.obs_norm = 100
         self.v_lim = 0.2
         self.rad_lim = 1.2
-        self.num_iters = 0
+        self.iter_num = 0
         self.curriculum_length = 1e4
         self.use_curriculum = False
 
@@ -123,7 +124,6 @@ class CrowdSimEnv(gym.Env):
 
     @property
     def action_space(self):
-        # TODO(@evinitsky) what are the right bounds
         return Box(low=0.0, high=1.0, shape=(2, ), dtype=np.float32)
 
     def generate_random_human_position(self, human_num, rule):
@@ -298,7 +298,7 @@ class CrowdSimEnv(gym.Env):
         """
 
         # increment the counter
-        self.num_iters += 1
+        self.iter_num += 1
 
         # Set up the colors
         self.robot_color = ROBOT_COLOR
@@ -324,18 +324,20 @@ class CrowdSimEnv(gym.Env):
         else:
             counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
                               'val': 0, 'test': self.case_capacity['val']}
+            random_start_pos = self.generate_random_goals()
+            rand_heading = np.random.random() * 2*np.pi
             if self.randomize_goals:
                 random_goal = self.generate_random_goals()
                 # print('random goal before ', random_goal)
                 if self.use_curriculum:
-                    random_goal *= min(1.0, (self.num_iters / self.curriculum_length) + 0.2)
+                    random_goal *= min(1.0, (self.iter_num / self.curriculum_length) + 0.2)
                 # print('random goal after ', random_goal)
-                self.robot.set(0, 0, random_goal[0], random_goal[1], 0, 0, np.pi / 2)
+                self.robot.set(random_start_pos[0], random_start_pos[1], random_goal[0], random_goal[1], 0, 0, rand_heading)
             else:
-                goal = self.circle_radius
+                goal = 0
                 if self.use_curriculum:
-                    goal *= min(1, (self.num_iters / self.curriculum_length) + 0.2)
-                self.robot.set(0, 0, 0, goal, 0, 0, np.pi / 2) #default goal is directly above robot
+                    goal *= min(1, (self.iter_num / self.curriculum_length) + 0.2)
+                self.robot.set(random_start_pos[0], random_start_pos[1], 0, goal, 0, 0, rand_heading) #default goal is directly above robot
 
 
             # By setting np.random.seed with essentially the iteration number, they can ensure that the 
@@ -367,7 +369,10 @@ class CrowdSimEnv(gym.Env):
             agent.time_step = self.time_step
             agent.policy.time_step = self.time_step
 
-        self.states = list()
+        self.states = []
+        self.predicted_next_state = [{'pred_px': self.robot.px, 'pred_py': self.robot.py,
+                                      'pred_theta': self.robot.theta, 'pred_vx': self.robot.vx,
+                                      'pred_vy': self.robot.vy}]
 
         # get current observation
         if self.robot.sensor == 'coordinates':
@@ -375,8 +380,8 @@ class CrowdSimEnv(gym.Env):
                 ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
             else:
                 ob = []
-            normalized_pos = np.asarray(self.robot.get_position()) / self.accessible_space
-            normalized_goal = np.asarray(self.robot.get_goal_position()) / self.accessible_space
+            normalized_pos = np.asarray(self.robot.get_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
+            normalized_goal = np.asarray(self.robot.get_goal_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
             ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
 
         elif self.robot.sensor == 'RGB':
@@ -426,13 +431,28 @@ class CrowdSimEnv(gym.Env):
         # rescale the actions so that they are within the bounds of the robot motions
         r, v = np.copy(action)
         # scale r to be between - self.rad_lim and self.rad_lim
-        r = 2 * ((r * self.rad_lim) - (self.rad_lim / 2.0)) * self.time_step
-        v = v * self.v_lim
+        r = 2 * ((r * self.rad_lim) - (self.rad_lim / 2.0))
+        v = 2 * (v-0.5) * self.v_lim
         scaled_action = np.array([r, v])
 
+        # save the predicted next state
+        # TODO(@ev) you can't read this out, you need to read it out of the last state
+        prev_x = self.predicted_next_state[-1]['pred_px']
+        prev_y = self.predicted_next_state[-1]['pred_py']
+        prev_theta = self.predicted_next_state[-1]['pred_theta']
+        predicted_theta = (prev_theta + r * self.time_step) % (2 * np.pi)
+        predicted_px = prev_x + np.cos(predicted_theta) * v * self.time_step
+        predicted_py = prev_y + np.sin(predicted_theta) * v * self.time_step
+        predicted_vx = v * np.cos(predicted_theta)
+        predicted_vy = v * np.sin(predicted_theta)
+
+        self.predicted_next_state.append({'pred_theta': predicted_theta, 'pred_px': predicted_px,
+                                          'pred_py': predicted_py, 'pred_vx': predicted_vx,
+                                          'pred_vy': predicted_vy})
+
         if self.add_gauss_noise_action:
-            scaled_action = scaled_action + (np.random.normal(scale=self.gauss_noise_action_stddev, size=scaled_action.shape) * self.time_step)
-            low = [-self.rad_lim, 0]
+            scaled_action = scaled_action + (np.random.normal(scale=self.gauss_noise_action_stddev, size=scaled_action.shape))
+            low = [-self.rad_lim, -self.v_lim]
             high = [self.rad_lim, self.v_lim]
             scaled_action = np.clip(scaled_action, a_min=low, a_max=high)
 
@@ -516,20 +536,17 @@ class CrowdSimEnv(gym.Env):
             reward = 0
             done = False
             info = Nothing()
-
         #if too close to the edge, add penalty
-        if (np.abs(np.abs(end_position) - self.accessible_space) < self.edge_discomfort_dist).any():
+        if (np.abs(np.abs(end_position) - np.asarray([self.accessible_space_x, self.accessible_space_y])) < self.edge_discomfort_dist).any():
             reward += self.edge_penalty
         #if getting closer to goal, add reward
-        if cur_dist_to_goal - next_dist_to_goal > 0.0:
-            # this runs on a curriculum so as to not change the resultant policy once fully trained
-            reward += self.closer_goal * min(1.0, (1 - self.num_iters / self.curriculum_length))
-
+        reward += self.closer_goal  * (cur_dist_to_goal - next_dist_to_goal) # * min(1.0, (1 - self.iter_num / self.curriculum_length))
         if update:
             # store state, action value and attention weights
             self.states.append([self.robot.get_full_state(), [human.get_full_state() for human in self.humans]])
             # update all agents
             self.robot.step(scaled_action)
+
             for i, human_action in enumerate(human_actions):
                 self.humans[i].step(human_action)
             self.global_time += self.time_step
@@ -544,8 +561,8 @@ class CrowdSimEnv(gym.Env):
                     ob = np.concatenate([human.get_observable_state().as_array() for human in self.humans]) / self.obs_norm
                 else:
                     ob = []
-                normalized_pos = np.asarray(self.robot.get_position()) / self.accessible_space
-                normalized_goal = np.asarray(self.robot.get_goal_position()) / self.accessible_space
+                normalized_pos = np.asarray(self.robot.get_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
+                normalized_goal = np.asarray(self.robot.get_goal_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
                 ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
@@ -660,6 +677,8 @@ class CrowdSimEnv(gym.Env):
         robot_color = 'yellow'
         goal_color = 'red'
         arrow_color = 'red'
+        pred_robot_color = 'blue'
+        pred_arrow_color = 'green'
         arrow_style = patches.ArrowStyle("->", head_length=4, head_width=2)
 
         if mode == 'human':
@@ -713,22 +732,26 @@ class CrowdSimEnv(gym.Env):
             plt.legend([robot], ['Robot'], fontsize=16)
             plt.show()
         elif mode == 'video':
-            fig, ax = plt.subplots(figsize=(7, 7))
+            fig, ax = plt.subplots(figsize=(20*self.accessible_space_x, 20*self.accessible_space_y))
             ax.tick_params(labelsize=16)
-            ax.set_xlim(-self.accessible_space, self.accessible_space)
-            ax.set_ylim(-self.accessible_space, self.accessible_space)
+            ax.set_xlim(-self.accessible_space_x, self.accessible_space_x)
+            ax.set_ylim(-self.accessible_space_y, self.accessible_space_y)
             ax.set_xlabel('x(m)', fontsize=16)
             ax.set_ylabel('y(m)', fontsize=16)
 
             # add robot and its goal
             robot_positions = [state[0].position for state in self.states]
+            pred_robot_pos = [(pred_state['pred_px'], pred_state['pred_py']) for pred_state
+                              in self.predicted_next_state]
             goal_positions = [state[0].goal_position for state in self.states]
 
             goal = plt.Circle(goal_positions[0], radius=self.robot.radius, color=goal_color, fill=True, label='Goal')
             robot = plt.Circle(robot_positions[0], self.robot.radius, fill=True, color=robot_color)
+            pred_robot = plt.Circle(pred_robot_pos[0], self.robot.radius, fill=False, color=pred_robot_color)
             ax.add_artist(robot)
             ax.add_artist(goal)
-            plt.legend([robot, goal], ['Robot', 'Goal'], fontsize=16)
+            ax.add_artist(pred_robot)
+            plt.legend([robot, goal, pred_robot], ['Robot', 'Goal', 'Pred Robot'], fontsize=16)
 
             # add humans and their numbers
             human_positions = [[state[1][j].position for j in range(len(self.humans))] for state in self.states]
@@ -772,28 +795,48 @@ class CrowdSimEnv(gym.Env):
                     orientations.append(orientation)
             arrows = [patches.FancyArrowPatch(*orientation[0], color=arrow_color, arrowstyle=arrow_style)
                       for orientation in orientations]
+
+            thetas = [np.arctan2(state['pred_vy'], state['pred_vx']) for state in self.predicted_next_state]
+            pred_orientation = [((state['pred_px'], state['pred_py']), (state['pred_px'] + radius * np.cos(theta),
+                                                             state['pred_py'] + radius * np.sin(theta))) for theta, state
+                               in zip(thetas, self.predicted_next_state)]
+            pred_arrows = [patches.FancyArrowPatch(*orientation[0], color=pred_arrow_color, arrowstyle=arrow_style)
+                      for orientation in pred_orientation]
             for arrow in arrows:
                 ax.add_artist(arrow)
+            for pred_arrow in pred_arrows:
+                ax.add_artist(pred_arrow)
+
             global_step = 0
 
             def update(frame_num):
                 nonlocal global_step
                 nonlocal arrows
+                nonlocal pred_arrows
                 global_step = frame_num
                 robot.center = robot_positions[frame_num]
                 goal.center = goal_positions[frame_num]
+                pred_robot.center = pred_robot_pos[frame_num]
                 for i, human in enumerate(humans):
                     human.center = human_positions[frame_num][i]
                     human_numbers[i].set_position((human.center[0] - x_offset, human.center[1] - y_offset))
-                    for arrow in arrows:
-                        arrow.remove()
-                    arrows = [patches.FancyArrowPatch(*orientation[frame_num], color=arrow_color,
-                                                      arrowstyle=arrow_style) for orientation in orientations]
-                    for arrow in arrows:
-                        ax.add_artist(arrow)
                     if self.attention_weights is not None:
                         human.set_color(str(self.attention_weights[frame_num][i]))
                         attention_scores[i].set_text('human {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))
+                # add the actual orientation arrows
+                for arrow in arrows:
+                    arrow.remove()
+                arrows = [patches.FancyArrowPatch(*orientation[frame_num], color=arrow_color,
+                                                    arrowstyle=arrow_style) for orientation in orientations]
+                for arrow in arrows:
+                        ax.add_artist(arrow)
+
+                # now do the same thing for the predicted arrows
+                for arrow in pred_arrows:
+                    arrow.remove()
+                pred_arrows = [patches.FancyArrowPatch(*pred_orientation[frame_num], color=pred_arrow_color, arrowstyle=arrow_style)]
+                for pred_arrow in pred_arrows:
+                        ax.add_artist(pred_arrow)
 
                 time.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
@@ -849,8 +892,9 @@ class CrowdSimEnv(gym.Env):
         if self.restrict_goal_region:
             goal_reg = self.goal_region
         else:
-            goal_reg = self.accessible_space #unrestricted goal region, goal can be anywhere in accessible space
+            goal_reg = np.asarray([self.accessible_space_x, self.accessible_space_y]) #unrestricted goal region, goal can be anywhere in accessible space
         return (np.random.rand(2) - 0.5) * 2 * goal_reg
+
 
 class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
@@ -921,7 +965,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         adversary_key = 'adversary'
 
         robot_action = action['robot']
-        if self.num_iters > self.adversary_start_iter:
+        if self.iter_num > self.adversary_start_iter:
             if self.perturb_state and self.perturb_actions:
                 action_perturbation = action[adversary_key][:2] * self.adversary_action_scaling
                 state_perturbation = action[adversary_key][2:] * self.adversary_state_scaling
@@ -932,7 +976,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
             if self.perturb_actions:
                 r, v = np.copy(action_perturbation)
-                r = r * self.time_step * self.rad_lim
+                r = r * self.rad_lim
                 v = v * self.v_lim
                 scaled_perturbation = np.array([r, v])
 
@@ -949,7 +993,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
                                a_max=self.observation_space.high[0])}
         reward_dict = {'robot': reward}
 
-        if self.num_iters > self.adversary_start_iter:
+        if self.iter_num > self.adversary_start_iter:
             # for i in range(self.num_adversaries):
         #             #     is_active = 1 if self.curr_adversary == i else 0
         #             #     curr_obs.update({'adversary{}'.format(i): {'obs': ob, 'is_active': np.array([is_active])}})
@@ -980,7 +1024,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         """
         # self.curr_adversary = int(np.random.randint(low=0, high=self.num_adversaries))
         ob = super().reset(phase, test_case)
-        if self.num_iters > self.adversary_start_iter:
+        if self.iter_num > self.adversary_start_iter:
             curr_obs = {'robot': ob, 'adversary': ob}
         else:
             curr_obs = {'robot': ob}
