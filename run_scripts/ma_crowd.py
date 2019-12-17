@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 import pytz
+import numpy as np
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 from ray.rllib.agents.ppo.ppo import PPOTrainer
@@ -44,14 +45,14 @@ def setup_ma_config(config):
 
     policies_to_train += adv_policies
 
-    # def policy_mapping_fn(agent_id):
-    #     return agent_id
-
     def policy_mapping_fn(agent_id):
-        if agent_id == 'robot':
-            return agent_id
-        if agent_id.startswith('adversary'):
-            return random.choice(adv_policies)
+        return agent_id
+
+    # def policy_mapping_fn(agent_id):
+    #     if agent_id == 'robot':
+    #         return agent_id
+    #     if agent_id.startswith('adversary'):
+    #         return random.choice(adv_policies)
 
     config.update({
         'multiagent': {
@@ -75,7 +76,9 @@ def setup_exps(args):
     config['gamma'] = 0.99
     config["sgd_minibatch_size"] = 500
     config["num_sgd_iter"] = 10
-    config["lr"] = tune.grid_search([5e-4, 5e-5, 5e-3])
+    if args.grid_search:
+        config["lr"] = tune.grid_search([5e-4, 5e-5, 5e-3])
+
     # config['num_adversaries'] = args.num_adv
     # TODO(@evinitsky) put this back
     # config['kl_diff_weight'] = args.kl_diff_weight
@@ -121,7 +124,8 @@ def setup_exps(args):
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
         config['vf_share_layers'] = True
-        config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
+        if args.grid_search:
+            config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
     config['train_batch_size'] = args.train_batch_size
 
     config['env'] = 'MultiAgentCrowdSimEnv'
@@ -129,12 +133,11 @@ def setup_exps(args):
 
     setup_ma_config(config)
 
-    # def on_train_result(info):
-    #     num_episodes = info["result"]["episodes_this_iter"]
-    #     import ipdb; ipdb.set_trace()
-    #
-    # config["callbacks"] = {"on_train_result": tune.function(on_train_result)}
+    # add the callbacks
+    config["callbacks"] = {"on_train_result": tune.function(on_train_result),
+                           "on_episode_start": tune.function(on_episode_start)}
 
+    # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
         return "{}_{}".format(trial.trainable_name, trial.experiment_tag)
 
@@ -152,6 +155,25 @@ def setup_exps(args):
         'num_samples': args.num_samples,
     }
     return exp_dict, args
+
+
+def on_train_result(info):
+    """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
+    result = info["result"]
+    robot_reward = result['policy_reward_mean']['robot']
+    trainer = info["trainer"]
+    trainer.workers.foreach_worker(
+        lambda ev: ev.foreach_env(
+            lambda env: env.update_mean_rew(robot_reward)))
+
+
+def on_episode_start(info):
+    """Select the currently active adversary"""
+    env = info["env"].envs[0]
+    if env.adversary_range > 0:
+        env.curr_adversary = np.random.randint(low=0, high=env.adversary_range)
+    else:
+        env.curr_adversary = 0
 
 
 if __name__=="__main__":

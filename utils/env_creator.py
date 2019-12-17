@@ -70,6 +70,8 @@ def ma_env_creator(passed_config):
     env.perturb_state = passed_config['perturb_state']
     env.num_adversaries = passed_config['num_adversaries']
 
+    env.update_initializer()
+
     # configure policy
     configure_policy(passed_config, env, robot)
     return env
