@@ -57,7 +57,7 @@ def setup_ma_config(config):
     config.update({
         'multiagent': {
             'policies': policy_graphs,
-            'policy_mapping_fn': tune.function(policy_mapping_fn),
+            'policy_mapping_fn': policy_mapping_fn,
             'policies_to_train': policies_to_train
         }
     })
@@ -134,8 +134,8 @@ def setup_exps(args):
     setup_ma_config(config)
 
     # add the callbacks
-    config["callbacks"] = {"on_train_result": tune.function(on_train_result),
-                           "on_episode_start": tune.function(on_episode_start)}
+    config["callbacks"] = {"on_train_result": on_train_result,
+                           "on_episode_end": on_episode_end}
 
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
@@ -166,8 +166,12 @@ def on_train_result(info):
         lambda ev: ev.foreach_env(
             lambda env: env.update_mean_rew(robot_reward)))
 
+    trainer.workers.foreach_worker(
+        lambda ev: ev.foreach_env(
+            lambda env: env.update_adversary_range()))
 
-def on_episode_start(info):
+
+def on_episode_end(info):
     """Select the currently active adversary"""
     env = info["env"].envs[0]
     if env.adversary_range > 0:
@@ -190,7 +194,8 @@ if __name__=="__main__":
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
-        ray.init(memory=int(1e11))
+        # TODO(@evinitsky) remove this!!
+        ray.init(local_mode=True)
 
     run_tune(**exp_dict, queue_trials=False)
 
