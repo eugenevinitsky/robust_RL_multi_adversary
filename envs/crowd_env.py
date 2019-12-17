@@ -910,12 +910,15 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         # for each iteration we are above the mean score
         self.adversary_range = 0
 
+        # This is the frequency at which we check if the adversaries should be incremented
+        self.num_iters = 0
+        self.adv_increase_freq = config.getfloat('ma_train_details', 'adv_increase_freq')
+
         if not self.perturb_state and not self.perturb_actions:
             logging.exception("Either one of perturb actions or perturb state must be true")
 
     def update_initializer(self):
         """Perform all the initialization that is hard to do before the adversaries are initialized correctly"""
-
         # How strong each of the adversaries are
         self.action_strength_vals = np.linspace(start=self.adversary_action_scaling / self.num_adversaries,
                                                 stop=self.adversary_action_scaling, num=self.num_adversaries)
@@ -927,6 +930,19 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
     def update_mean_rew(self, mean_rew):
         self.mean_rew = mean_rew
 
+    def update_adversary_range(self):
+        """Increase the number of adversaries that are allowed in the system"""
+
+        if self.num_iters % self.adv_increase_freq == 0:
+            if self.mean_rew > self.adversary_on_score:
+                self.adversary_range += 1
+                self.adversary_range = min(self.num_adversaries, self.adversary_range)
+            else:
+                self.adversary_range -= 1
+                self.adversary_range = max(0, self.adversary_range)
+
+        self.num_iters += 1
+        self.num_iters %= self.adv_increase_freq
 
     # @property
     # def adv_observation_space(self):
@@ -986,12 +1002,17 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
         """
-        # adversary_key = 'adversary{}'.format(self.curr_adversary)
-        adversary_key = 'adversary'
 
-        # TODO(pick out the action scaling based on the
+        self.num_steps += 1
+
+        adversary_key = 'adversary{}'.format(self.curr_adversary)
+
         robot_action = action['robot']
-        if self.mean_rew > self.adversary_on_score:
+
+        # Adversaries are only active if this condition is satisfied. The second condition is because a trial may not
+        # be fully completed when the training batch returns
+        if self.mean_rew > self.adversary_on_score and 'adversary' in action.keys():
+            import ipdb; ipdb.set_trace()
             if self.perturb_state and self.perturb_actions:
                 action_perturbation = action[adversary_key][:2] * self.action_strength_vals[self.curr_adversary]
                 state_perturbation = action[adversary_key][2:] * self.state_strength_vals[self.curr_adversary]
@@ -1041,7 +1062,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             reward_dict.update({'adversary{}'.format(self.curr_adversary): -reward})
 
         done = {'__all__': done}
-        
+
         return curr_obs, reward_dict, done, info
 
     def reset(self, phase='test', test_case=None):
@@ -1049,6 +1070,9 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         Set px, py, gx, gy, vx, vy, theta for robot and humans
         :return:
         """
+
+        self.num_steps = 0
+
         # self.curr_adversary = int(np.random.randint(low=0, high=self.num_adversaries))
         ob = super().reset(phase, test_case)
         if self.mean_rew > self.adversary_on_score:
