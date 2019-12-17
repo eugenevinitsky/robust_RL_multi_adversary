@@ -944,6 +944,13 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         self.num_iters += 1
         self.num_iters %= self.adv_increase_freq
 
+    def select_new_adversary(self):
+        if self.mean_rew > self.adversary_on_score:
+            if self.adversary_range > 0:
+                self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
+            else:
+                self.curr_adversary = 0
+
     # @property
     # def adv_observation_space(self):
     #     """
@@ -1011,8 +1018,9 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
         # Adversaries are only active if this condition is satisfied. The second condition is because a trial may not
         # be fully completed when the training batch returns
-        if self.mean_rew > self.adversary_on_score and 'adversary' in action.keys():
-            import ipdb; ipdb.set_trace()
+
+        # TODO(@evinitsky) why is this latter condition necessary?! If the first condition is true the latter should be true
+        if self.mean_rew > self.adversary_on_score and np.any(['adversary' in key for key in action.keys()]):
             if self.perturb_state and self.perturb_actions:
                 action_perturbation = action[adversary_key][:2] * self.action_strength_vals[self.curr_adversary]
                 state_perturbation = action[adversary_key][2:] * self.state_strength_vals[self.curr_adversary]

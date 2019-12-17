@@ -170,9 +170,15 @@ def on_train_result(info):
         lambda ev: ev.foreach_env(
             lambda env: env.update_adversary_range()))
 
+    trainer.workers.foreach_worker(
+        lambda ev: ev.foreach_env(
+            lambda env: env.select_new_adversary()))
+
 
 def on_episode_end(info):
     """Select the currently active adversary"""
+    # TODO(should we do this every episode or every training iteration)?
+    pass
     env = info["env"].envs[0]
     if env.adversary_range > 0:
         env.curr_adversary = np.random.randint(low=0, high=env.adversary_range)
@@ -195,7 +201,7 @@ if __name__=="__main__":
         ray.init(redis_address='localhost:6379')
     else:
         # TODO(@evinitsky) remove this!!
-        ray.init(local_mode=True)
+        ray.init()
 
     run_tune(**exp_dict, queue_trials=False)
 
