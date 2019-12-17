@@ -5,7 +5,7 @@ import sys
 
 import cv2
 import gym
-from gym.spaces import Box, Dict
+from gym.spaces import Box, Dict, Tuple, Discrete
 if sys.platform == 'darwin':
     try:
         import matplotlib
@@ -101,8 +101,6 @@ class CrowdSimEnv(gym.Env):
         self.v_lim = 0.2
         self.rad_lim = 1.2
         self.iter_num = 0
-        self.curriculum_length = 1e4
-        self.use_curriculum = False
 
         # generate a set of humans so we have something in the observation space
         self.generate_random_human_position(self.human_num, rule=self.train_val_sim)
@@ -328,15 +326,10 @@ class CrowdSimEnv(gym.Env):
             rand_heading = np.random.random() * 2*np.pi
             if self.randomize_goals:
                 random_goal = self.generate_random_goals()
-                # print('random goal before ', random_goal)
-                if self.use_curriculum:
-                    random_goal *= min(1.0, (self.iter_num / self.curriculum_length) + 0.2)
                 # print('random goal after ', random_goal)
                 self.robot.set(random_start_pos[0], random_start_pos[1], random_goal[0], random_goal[1], 0, 0, rand_heading)
             else:
                 goal = 0
-                if self.use_curriculum:
-                    goal *= min(1, (self.iter_num / self.curriculum_length) + 0.2)
                 self.robot.set(random_start_pos[0], random_start_pos[1], 0, goal, 0, 0, rand_heading) #default goal is directly above robot
 
 
@@ -536,11 +529,11 @@ class CrowdSimEnv(gym.Env):
             reward = 0
             done = False
             info = Nothing()
-        #if too close to the edge, add penalty
+        # if too close to the edge, add penalty
         if (np.abs(np.abs(end_position) - np.asarray([self.accessible_space_x, self.accessible_space_y])) < self.edge_discomfort_dist).any():
             reward += self.edge_penalty
-        #if getting closer to goal, add reward
-        reward += self.closer_goal  * (cur_dist_to_goal - next_dist_to_goal) # * min(1.0, (1 - self.iter_num / self.curriculum_length))
+        # if getting closer to goal, add reward
+        reward += self.closer_goal  * (cur_dist_to_goal - next_dist_to_goal)
         if update:
             # store state, action value and attention weights
             self.states.append([self.robot.get_full_state(), [human.get_full_state() for human in self.humans]])
@@ -900,16 +893,40 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
     def __init__(self, config, robot):
         super(MultiAgentCrowdSimEnv, self).__init__(config, robot)
-        self.adversary_action_scaling = config.getfloat('env', 'adversary_action_scaling')
-        self.adversary_state_scaling = config.getfloat('env', 'adversary_state_scaling')
+        self.adversary_action_scaling = config.getfloat('ma_train_details', 'top_adversary_action_scaling')
+        self.adversary_state_scaling = config.getfloat('ma_train_details', 'top_adversary_state_scaling')
         self.perturb_actions = config.getboolean('ma_train_details', 'perturb_actions')
         self.perturb_state = config.getboolean('ma_train_details', 'perturb_state')
+        self.prediction_reward = config.getboolean('ma_train_details', 'prediction_reward')
+
         # We don't want to perturb until we actually have a reasonably good policy to start with
-        self.adversary_start_iter = int(4e4)
+        self.adversary_on_score = config.getfloat('ma_train_details', 'adversary_on_score')
         self.num_adversaries = 0
-        # self.curr_adversary = 0
+        self.curr_adversary = 0
+
+        # Track the mean score so we know when to turn the adversaries off
+        self.mean_rew = 0
+        # Track which of the adversaries is valid to act. This range increases by X (currently 1)
+        # for each iteration we are above the mean score
+        self.adversary_range = 0
+
         if not self.perturb_state and not self.perturb_actions:
             logging.exception("Either one of perturb actions or perturb state must be true")
+
+    def update_initializer(self):
+        """Perform all the initialization that is hard to do before the adversaries are initialized correctly"""
+
+        # How strong each of the adversaries are
+        self.action_strength_vals = np.linspace(start=self.adversary_action_scaling / self.num_adversaries,
+                                                stop=self.adversary_action_scaling, num=self.num_adversaries)
+        # How strong each of the adversaries are
+        self.state_strength_vals = np.linspace(start=self.adversary_state_scaling / self.num_adversaries,
+                                                stop=self.adversary_state_scaling, num=self.num_adversaries)
+
+
+    def update_mean_rew(self, mean_rew):
+        self.mean_rew = mean_rew
+
 
     # @property
     # def adv_observation_space(self):
@@ -924,6 +941,14 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
     #     dict_space = Dict({'obs': Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32),
     #                        'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
     #     return dict_space
+
+    @property
+    def action_space(self):
+        if self.prediction_reward:
+            # the second element is a prediction of which adversary is active
+            return Tuple((super().action_space, Discrete(self.num_adversaries)))
+        else:
+            return super().action_space
 
     @property
     def adv_observation_space(self):
@@ -964,15 +989,16 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         # adversary_key = 'adversary{}'.format(self.curr_adversary)
         adversary_key = 'adversary'
 
+        # TODO(pick out the action scaling based on the
         robot_action = action['robot']
-        if self.iter_num > self.adversary_start_iter:
+        if self.mean_rew > self.adversary_on_score:
             if self.perturb_state and self.perturb_actions:
-                action_perturbation = action[adversary_key][:2] * self.adversary_action_scaling
-                state_perturbation = action[adversary_key][2:] * self.adversary_state_scaling
+                action_perturbation = action[adversary_key][:2] * self.action_strength_vals[self.curr_adversary]
+                state_perturbation = action[adversary_key][2:] * self.state_strength_vals[self.curr_adversary]
             elif not self.perturb_state and self.perturb_actions:
-                action_perturbation = action[adversary_key] * self.adversary_action_scaling
+                action_perturbation = action[adversary_key] * self.action_strength_vals[self.curr_adversary]
             else:
-                state_perturbation = action[adversary_key] * self.adversary_state_scaling
+                state_perturbation = action[adversary_key] * self.state_strength_vals[self.curr_adversary]
 
             if self.perturb_actions:
                 r, v = np.copy(action_perturbation)
@@ -993,7 +1019,8 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
                                a_max=self.observation_space.high[0])}
         reward_dict = {'robot': reward}
 
-        if self.iter_num > self.adversary_start_iter:
+        if self.mean_rew > self.adversary_on_score:
+            # Commented out code is used for the KL-div version of this
             # for i in range(self.num_adversaries):
         #             #     is_active = 1 if self.curr_adversary == i else 0
         #             #     curr_obs.update({'adversary{}'.format(i): {'obs': ob, 'is_active': np.array([is_active])}})
@@ -1004,14 +1031,14 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         #             #                                 a_max=self.observation_space.high)
         #             #
         #             # reward_dict.update({'adversary{}'.format(i): -reward for i in range(self.num_adversaries)})
-            curr_obs.update({'adversary': ob})
+            curr_obs.update({'adversary{}'.format(self.curr_adversary): ob})
 
             if self.perturb_state:
                 curr_obs['robot'] = np.clip(curr_obs['robot'] + state_perturbation,
                                             a_min=self.observation_space.low,
                                             a_max=self.observation_space.high)
 
-            reward_dict.update({'adversary': -reward})
+            reward_dict.update({'adversary{}'.format(self.curr_adversary): -reward})
 
         done = {'__all__': done}
         
@@ -1024,8 +1051,8 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         """
         # self.curr_adversary = int(np.random.randint(low=0, high=self.num_adversaries))
         ob = super().reset(phase, test_case)
-        if self.iter_num > self.adversary_start_iter:
-            curr_obs = {'robot': ob, 'adversary': ob}
+        if self.mean_rew > self.adversary_on_score:
+            curr_obs = {'robot': ob, 'adversary{}'.format(self.curr_adversary): ob}
         else:
             curr_obs = {'robot': ob}
         #     for i in range(self.num_adversaries):
