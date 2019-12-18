@@ -76,6 +76,7 @@ def setup_exps(args):
     config['gamma'] = 0.99
     config["sgd_minibatch_size"] = 500
     config["num_sgd_iter"] = 10
+    config["batch_mode"] = "complete_episodes"
     if args.grid_search:
         config["lr"] = tune.grid_search([5e-4, 5e-5, 5e-3])
 
