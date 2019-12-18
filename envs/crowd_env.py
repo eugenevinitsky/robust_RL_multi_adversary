@@ -1020,7 +1020,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         # be fully completed when the training batch returns
 
         # TODO(@evinitsky) why is this latter condition necessary?! If the first condition is true the latter should be true
-        if self.mean_rew > self.adversary_on_score: #and np.any(['adversary' in key for key in action.keys()]):
+        if self.mean_rew > self.adversary_on_score and np.any(['adversary' in key for key in action.keys()]):
             if self.perturb_state and self.perturb_actions:
                 action_perturbation = action[adversary_key][:2] * self.action_strength_vals[self.curr_adversary]
                 state_perturbation = action[adversary_key][2:] * self.state_strength_vals[self.curr_adversary]

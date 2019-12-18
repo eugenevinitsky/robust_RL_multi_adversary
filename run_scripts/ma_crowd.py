@@ -84,8 +84,6 @@ def setup_exps(args):
     # TODO(@evinitsky) put this back
     # config['kl_diff_weight'] = args.kl_diff_weight
 
-    config['env_config']['run'] = alg_run
-
     with open(args.env_params, 'r') as file:
         env_params = file.read()
 
@@ -96,6 +94,7 @@ def setup_exps(args):
     config['env_config']['perturb_state'] = args.perturb_state
     config['env_config']['perturb_actions'] = args.perturb_actions
     config['env_config']['num_adversaries'] = args.num_adv
+    config['env_config']['run'] = alg_run
 
     if not args.perturb_state and not args.perturb_actions:
         sys.exit('You need to select at least one of perturb actions or perturb state')
@@ -120,7 +119,7 @@ def setup_exps(args):
         config['model']['custom_model'] = "rnn"
         config['vf_share_layers'] = True
     else:
-        config['model']['fcnet_hiddens'] = [64]
+        config['model']['fcnet_hiddens'] = [64, 64]
         config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
@@ -171,6 +170,7 @@ def on_train_result(info):
         lambda ev: ev.foreach_env(
             lambda env: env.update_adversary_range()))
 
+    # TODO(@ev) sync the adversaries between the agents
     trainer.workers.foreach_worker(
         lambda ev: ev.foreach_env(
             lambda env: env.select_new_adversary()))
@@ -201,7 +201,6 @@ if __name__=="__main__":
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
-        # TODO(@evinitsky) remove this!!
         ray.init()
 
     run_tune(**exp_dict, queue_trials=False)
@@ -216,8 +215,7 @@ if __name__=="__main__":
                 if exc.errno != errno.EEXIST:
                     raise
         for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
-            # TODO(@evinitsky) this is pretty brittle, we should just remove the test folder from sim2real
-            if "checkpoint_{}".format(args.num_iters) in dirpath and 'test' not in dirpath:
+            if "checkpoint_{}".format(args.num_iters) in dirpath:
                 # grab the experiment name
                 folder = os.path.dirname(dirpath)
                 tune_name = folder.split("/")[-1]
