@@ -115,7 +115,7 @@ setup_commands:
     # Note: if you're developing Ray, you probably want to create an AMI that
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
-    - cd ~/adversarial_sim2real && git fetch; git checkout kl_div
+    - cd ~/adversarial_sim2real && git fetch && git checkout kl_div && git pull origin kl_div
     - source activate sim2real && pip install psutil
     - echo export PATH="$HOME/anaconda3/envs/sim2real/bin:$PATH" >> ~/.bashrc && source ~/.bashrc
 
