@@ -115,9 +115,9 @@ setup_commands:
     # Note: if you're developing Ray, you probably want to create an AMI that
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
-    - cd ~/adversarial_sim2real && git fetch && git checkout kl_div && git pull origin kl_div
-    - source activate sim2real && pip install psutil
-    - echo export PATH="$HOME/anaconda3/envs/sim2real/bin:$PATH" >> ~/.bashrc && source ~/.bashrc
+    - cd ~/adversarial_sim2real && git fetch; git checkout kl_div && git pull
+    - source activate sim2real && pip install psutil && pip install tensorflow==1.15.0 && pip install ray==0.7.7
+    - echo PATH="$HOME/anaconda3/envs/sim2real/bin:$PATH" >> /home/ubuntu/.bashrc && source /home/ubuntu/.bashrc
 
     # Consider uncommenting these if you also want to run apt-get commands during setup
     # - sudo pkill -9 apt-get || true
