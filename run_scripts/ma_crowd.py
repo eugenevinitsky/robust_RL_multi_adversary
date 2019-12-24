@@ -78,7 +78,7 @@ def setup_exps(args):
     config["num_sgd_iter"] = 10
     config["batch_mode"] = "complete_episodes"
     if args.grid_search:
-        config["lr"] = tune.grid_search([5e-4, 5e-5, 5e-3])
+        config["lr"] = tune.grid_search([5e-4, 5e-5])
 
     # config['num_adversaries'] = args.num_adv
     # TODO(@evinitsky) put this back

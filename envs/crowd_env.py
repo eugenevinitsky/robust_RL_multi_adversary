@@ -416,17 +416,23 @@ class CrowdSimEnv(gym.Env):
     def onestep_lookahead(self, action):
         return self.step(action, update=False)
 
+    def transform_actions(self, action):
+        """Returns the action transformed into appropriate units and coordinates"""
+        r, v = np.copy(action)
+        # scale r to be between - self.rad_lim and self.rad_lim
+        r = 2 * ((r * self.rad_lim) - (self.rad_lim / 2.0))
+        v = 2 * (v - 0.5) * self.v_lim
+        scaled_action = np.array([r, v])
+        return scaled_action
+
     def step(self, action, update=True):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
         """
 
         # rescale the actions so that they are within the bounds of the robot motions
-        r, v = np.copy(action)
-        # scale r to be between - self.rad_lim and self.rad_lim
-        r = 2 * ((r * self.rad_lim) - (self.rad_lim / 2.0))
-        v = 2 * (v-0.5) * self.v_lim
-        scaled_action = np.array([r, v])
+        scaled_action = self.transform_actions(action)
+        r, v = scaled_action
 
         # save the predicted next state
         # TODO(@ev) you can't read this out, you need to read it out of the last state
@@ -995,14 +1001,12 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         Therefore, its action space is the same size as the agent's
         observation space.
         """
-        obs_size = super().observation_space.shape
-        if len(obs_size) > 1:
-            obs_size = np.product(obs_size)
-        else:
-            obs_size = obs_size[0]
-        act_size = super().action_space.shape[0]
-        shape = obs_size * self.perturb_state + act_size * self.perturb_actions
-        box = Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32)
+        # shape = obs_size * self.perturb_state + act_size * self.perturb_actions
+        low = np.array(super().action_space.low.tolist() * self.perturb_actions + \
+              super().observation_space.low.tolist() * self.perturb_state)
+        high = np.array(super().action_space.high.tolist() * self.perturb_actions + \
+              super().observation_space.high.tolist() * self.perturb_state)
+        box = Box(low=low, high=high, shape=None, dtype=np.float32)
         return box
 
     def step(self, action, update=True):
@@ -1030,15 +1034,12 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
                 state_perturbation = action[adversary_key] * self.state_strength_vals[self.curr_adversary]
 
             if self.perturb_actions:
-                r, v = np.copy(action_perturbation)
-                r = r * self.rad_lim
-                v = v * self.v_lim
-                scaled_perturbation = np.array([r, v])
+                scaled_perturbation = self.transform_actions(action_perturbation)
 
                 robot_action = action['robot'] + scaled_perturbation
                 # apply clipping so that it can't exceed the bounds of what the robot can do
-                low = [-self.rad_lim, 0]
-                high = [self.rad_lim, self.v_lim]
+                low = self.adv_action_space.low[:2]
+                high = self.adv_action_space.high[:2]
                 robot_action = np.clip(robot_action, a_min=low, a_max=high)
 
         ob, reward, done, info = super().step(robot_action, update)
@@ -1048,7 +1049,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
                                a_max=self.observation_space.high[0])}
         reward_dict = {'robot': reward}
 
-        if self.mean_rew > self.adversary_on_score:
+        if self.mean_rew > self.adversary_on_score and 'adversary{}'.format(self.curr_adversary) in action.keys():
             # Commented out code is used for the KL-div version of this
             # for i in range(self.num_adversaries):
         #             #     is_active = 1 if self.curr_adversary == i else 0
