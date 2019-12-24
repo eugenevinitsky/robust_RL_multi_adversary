@@ -953,7 +953,10 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
     def select_new_adversary(self):
         if self.mean_rew > self.adversary_on_score:
             if self.adversary_range > 0:
-                self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
+                # use the mean rew to select the same adversary between all envs by using a deterministic function
+                rand_val = int(abs(self.mean_rew - round(self.mean_rew, 5)) * 1e7)
+                self.curr_adversary = rand_val % self.adversary_range
+                # self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
             else:
                 self.curr_adversary = 0
 

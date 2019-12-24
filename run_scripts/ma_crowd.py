@@ -170,7 +170,7 @@ def on_train_result(info):
         lambda ev: ev.foreach_env(
             lambda env: env.update_adversary_range()))
 
-    # TODO(@ev) sync the adversaries between the agents
+    # TODO(should we do this every episode or every training iteration)?
     trainer.workers.foreach_worker(
         lambda ev: ev.foreach_env(
             lambda env: env.select_new_adversary()))
@@ -178,9 +178,14 @@ def on_train_result(info):
 
 def on_episode_end(info):
     """Select the currently active adversary"""
-    # TODO(should we do this every episode or every training iteration)?
-    pass
+
+    # store info about how many adversaries there are
     env = info["env"].envs[0]
+    episode = info["episode"]
+    episode.custom_metrics["num_active_adversaries"] = env.adversary_range
+
+    # select a new adversary every episode. Currently disabled.
+    pass
     if env.adversary_range > 0:
         env.curr_adversary = np.random.randint(low=0, high=env.adversary_range)
     else:
