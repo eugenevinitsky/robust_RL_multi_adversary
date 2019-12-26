@@ -89,8 +89,8 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
     else:
         env = env_creator(rllib_config['env_config'])
 
-    # increase the num iters so we don't have any lingering warm-up effects
-    env.num_iters = 1e8
+    # set the mean rew to zero so that the curriculum is off
+    env.mean_rew = 0.0
 
     rewards = []
     num_steps = []
@@ -138,10 +138,10 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
 
             # TODO(@evinitsky) make this a config option
             #the adversaries shouldn't be active anymore
-            # if multiagent:
-            #     for key, value in action.items():
-            #         if key != 'robot':
-            #             action[key] = np.zeros(value.shape)
+            if multiagent:
+                for key, value in action.items():
+                    if key != 'robot':
+                        action[key] = np.zeros(value.shape)
             next_obs, reward, done, info = env.step(action)
             step_num += 1
             if multiagent:
