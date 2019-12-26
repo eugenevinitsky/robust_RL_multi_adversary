@@ -44,11 +44,6 @@ class CrowdSimEnv(gym.Env):
         self.show_images = config.getboolean('train_details', 'show_images')
 
         self.time_limit = config.getint('env', 'time_limit')
-        self.discretization = config.getint('env', 'discretization')
-        self.grid = np.linspace([-6, -6], [6, 6], self.discretization)
-        self.robot_grid_size = np.maximum(int(0.1 / np.abs(self.grid[0, 0] - self.grid[1, 0])), 2)
-        self.image = np.ones((self.discretization, self.discretization, 3)) * 255
-        self.observed_image = np.ones((self.discretization, self.discretization, 3 * self.num_stacked_frames)) * 255
         self.time_step = config.getfloat('env', 'time_step')
         self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
         self.gauss_noise_state_stddev = config.getfloat('env', 'gaussian_noise_state_stddev')
@@ -85,6 +80,13 @@ class CrowdSimEnv(gym.Env):
         else:
             raise NotImplementedError
         self.case_counter = {'train': 0, 'test': 0, 'val': 0}
+
+        self.discretization = config.getint('env', 'discretization')
+        self.grid = np.linspace([-self.accessible_space_x, -self.accessible_space_y],
+                                [self.accessible_space_x, self.accessible_space_y], self.discretization)
+        self.robot_grid_size = np.maximum(int(0.1 / np.abs(self.grid[0, 0] - self.grid[1, 0])), 2)
+        self.image = np.ones((self.discretization, self.discretization, 3)) * 255
+        self.observed_image = np.ones((self.discretization, self.discretization, 3 * self.num_stacked_frames)) * 255
 
         logging.info('human number: {}'.format(self.human_num))
         if self.randomize_attributes:
