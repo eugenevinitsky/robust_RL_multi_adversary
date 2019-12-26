@@ -925,6 +925,9 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         # for each iteration we are above the mean score
         self.adversary_range = 0
 
+        # track what fraction of time we predicted the correct adversary for
+        self.num_correct_predict = 0
+
         # This is the frequency at which we check if the adversaries should be incremented
         self.num_iters = 0
         self.adv_increase_freq = config.getfloat('ma_train_details', 'adv_increase_freq')
@@ -1034,7 +1037,10 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
         adversary_key = 'adversary{}'.format(self.curr_adversary)
 
-        robot_action = action['robot']
+        if self.prediction_reward:
+            robot_action = action['robot'][0]
+        else:
+            robot_action = action['robot']
 
         # Adversaries are only active if this condition is satisfied. The second condition is because a trial may not
         # be fully completed when the training batch returns
@@ -1052,7 +1058,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             if self.perturb_actions:
                 scaled_perturbation = self.transform_actions(action_perturbation)
 
-                robot_action = action['robot'] + scaled_perturbation
+                robot_action = robot_action + scaled_perturbation
                 # apply clipping so that it can't exceed the bounds of what the robot can do
                 low = self.adv_action_space.low[:2]
                 high = self.adv_action_space.high[:2]
@@ -1060,8 +1066,21 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
         ob, reward, done, info = super().step(robot_action, update)
 
+        # we don't penalize the adversary for the robot predicting it. Otherwise, I suspect we would get
+        # totally random adversaries
+        robot_reward = reward
+        # if there's only one adversary, you're going to wind up causing the prediction policy
+        # to degenerate and stop exploring
+        if self.prediction_reward and self.adversary_range > 1:
+            prediction = action['robot'][1]
+            if prediction == self.curr_adversary:
+                # if we predict right at every step we get a total extra reward of ~1
+                # TODO(@evinitsky) pick a more sensible scaling factor?
+                robot_reward += 1 / (30)
+                self.num_correct_predict += 1
+
         curr_obs = {'robot': np.clip(ob, a_min=self.observation_space.low[0], a_max=self.observation_space.high[0])}
-        reward_dict = {'robot': reward}
+        reward_dict = {'robot': robot_reward}
 
         if self.mean_rew > self.adversary_on_score and 'adversary{}'.format(self.curr_adversary) in action.keys():
             # Commented out code is used for the KL-div version of this
@@ -1095,10 +1114,11 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         """
 
         self.num_steps = 0
+        self.num_correct_predict = 0
 
         # self.curr_adversary = int(np.random.randint(low=0, high=self.num_adversaries))
         ob = super().reset(phase, test_case)
-        if self.mean_rew > self.adversary_on_score:
+        if self.mean_rew > self.adversary_on_score and self.adversary_range > 0:
             curr_obs = {'robot': ob, 'adversary{}'.format(self.curr_adversary): ob}
         else:
             curr_obs = {'robot': ob}

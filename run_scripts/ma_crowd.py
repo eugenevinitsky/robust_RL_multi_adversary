@@ -184,6 +184,9 @@ def on_episode_end(info):
     episode = info["episode"]
     episode.custom_metrics["num_active_adversaries"] = env.adversary_range
 
+    if env.prediction_reward and env.adversary_range > 1:
+        episode.custom_metrics["predict_frac"] = env.num_correct_predict / episode.length
+
     # select a new adversary every episode. Currently disabled.
     pass
     if env.adversary_range > 0:
