@@ -115,7 +115,7 @@ setup_commands:
     # Note: if you're developing Ray, you probably want to create an AMI that
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
-    - cd ~/adversarial_sim2real && git fetch; git checkout kl_div && git pull
+    - cd ~/adversarial_sim2real && git fetch; git checkout predict_head && git pull
     - source activate sim2real && pip install psutil && pip install tensorflow==1.15.0 && pip install ray==0.7.7
     - echo PATH="$HOME/anaconda3/envs/sim2real/bin:$PATH" >> /home/ubuntu/.bashrc && source /home/ubuntu/.bashrc
 
@@ -126,7 +126,7 @@ setup_commands:
 
 # Custom commands that will be run on the head node after common setup.
 head_setup_commands: []
-    # - pip install boto3==1.4.8  # 1.4.8 adds InstanceMarketOptions
+#    - pip install boto3==1.4.8  # 1.4.8 adds InstanceMarketOptions
 
 # Custom commands that will be run on worker nodes after common setup.
 worker_setup_commands: []
