@@ -81,13 +81,6 @@ class CrowdSimEnv(gym.Env):
             raise NotImplementedError
         self.case_counter = {'train': 0, 'test': 0, 'val': 0}
 
-        self.discretization = config.getint('env', 'discretization')
-        self.grid = np.linspace([-self.accessible_space_x, -self.accessible_space_y],
-                                [self.accessible_space_x, self.accessible_space_y], self.discretization)
-        self.robot_grid_size = np.maximum(int(0.1 / np.abs(self.grid[0, 0] - self.grid[1, 0])), 2)
-        self.image = np.ones((self.discretization, self.discretization, 3)) * 255
-        self.observed_image = np.ones((self.discretization, self.discretization, 3 * self.num_stacked_frames)) * 255
-
         logging.info('human number: {}'.format(self.human_num))
         if self.randomize_attributes:
             logging.info("Randomize human's radius and preferred speed")
@@ -104,6 +97,14 @@ class CrowdSimEnv(gym.Env):
         self.rad_lim = 1.2
         self.iter_num = 0
 
+        self.discretization = config.getint('env', 'discretization')
+        self.grid = np.linspace([-self.accessible_space_x, -self.accessible_space_y],
+                                [self.accessible_space_x, self.accessible_space_y], self.discretization)
+        self.robot_grid_size = np.maximum(int(self.robot.radius / np.abs(self.grid[0, 0] - self.grid[1, 0])), 2)
+        self.human_grid_size = np.maximum(int(config.getfloat('humans', 'radius') / np.abs(self.grid[0, 0] - self.grid[1, 0])), 2)
+        self.image = np.ones((self.discretization, self.discretization, 3)) * 255
+        self.observed_image = np.ones((self.discretization, self.discretization, 3 * self.num_stacked_frames)) * 255
+
         # generate a set of humans so we have something in the observation space
         self.generate_random_human_position(self.human_num, rule=self.train_val_sim)
 
@@ -112,6 +113,9 @@ class CrowdSimEnv(gym.Env):
     def observation_space(self):
         if not self.train_on_images:
             num_obs = 4 # goal pos, robot pos
+            # TODO(@evinitsky) enable
+            # num_obs = 5 # goal pos, robot pos, heading
+
             if len(self.humans) > 0:
                 temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
                 num_obs += temp_obs.shape[0]
@@ -377,6 +381,8 @@ class CrowdSimEnv(gym.Env):
                 ob = []
             normalized_pos = np.asarray(self.robot.get_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
             normalized_goal = np.asarray(self.robot.get_goal_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
+            # theta = np.asarray([self.robot.theta]) / (2 * np.pi)
+            # ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal), theta))
             ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
 
         elif self.robot.sensor == 'RGB':
@@ -537,11 +543,12 @@ class CrowdSimEnv(gym.Env):
             reward = 0
             done = False
             info = Nothing()
+
         # if too close to the edge, add penalty
         if (np.abs(np.abs(end_position) - np.asarray([self.accessible_space_x, self.accessible_space_y])) < self.edge_discomfort_dist).any():
             reward += self.edge_penalty
         # if getting closer to goal, add reward
-        reward += self.closer_goal  * (cur_dist_to_goal - next_dist_to_goal)
+        reward += self.closer_goal * (cur_dist_to_goal - next_dist_to_goal)
         if update:
             # store state, action value and attention weights
             self.states.append([self.robot.get_full_state(), [human.get_full_state() for human in self.humans]])
@@ -627,7 +634,7 @@ class CrowdSimEnv(gym.Env):
         # Fill in the human position
         for human in self.humans:
             pos = human.get_full_state().position
-            self.fill_grid(self.pos_to_coord(pos), self.robot_grid_size, self.human_color)
+            self.fill_grid(self.pos_to_coord(pos), self.human_grid_size, self.human_color)
 
         # Fill in the goal image
         goal_pos = self.robot.get_goal_position()
@@ -1049,9 +1056,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
         ob, reward, done, info = super().step(robot_action, update)
 
-        curr_obs = {'robot': np.clip(ob,
-                               a_min=self.observation_space.low[0],
-                               a_max=self.observation_space.high[0])}
+        curr_obs = {'robot': np.clip(ob, a_min=self.observation_space.low[0], a_max=self.observation_space.high[0])}
         reward_dict = {'robot': reward}
 
         if self.mean_rew > self.adversary_on_score and 'adversary{}'.format(self.curr_adversary) in action.keys():

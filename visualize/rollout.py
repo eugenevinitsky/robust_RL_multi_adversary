@@ -89,7 +89,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
     else:
         env = env_creator(rllib_config['env_config'])
 
-    # set the mean rew to zero so that the curriculum is off
+    # set the mean rew to zero so that the curriculum is off and the adversaries are gone
     env.mean_rew = 0.0
 
     rewards = []
@@ -138,10 +138,10 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
 
             # TODO(@evinitsky) make this a config option
             #the adversaries shouldn't be active anymore
-            if multiagent:
-                for key, value in action.items():
-                    if key != 'robot':
-                        action[key] = np.zeros(value.shape)
+            # if multiagent:
+            #     for key, value in action.items():
+            #         if key != 'robot':
+            #             action[key] = np.zeros(value.shape)
             next_obs, reward, done, info = env.step(action)
             step_num += 1
             if multiagent:
