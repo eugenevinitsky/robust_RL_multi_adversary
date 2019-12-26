@@ -913,6 +913,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         self.perturb_actions = config.getboolean('ma_train_details', 'perturb_actions')
         self.perturb_state = config.getboolean('ma_train_details', 'perturb_state')
         self.prediction_reward = config.getboolean('ma_train_details', 'prediction_reward')
+        self.prediction_reward_scaling = config.getfloat('ma_train_details', 'prediction_reward_scaling')
 
         # We don't want to perturb until we actually have a reasonably good policy to start with
         self.adversary_on_score = config.getfloat('ma_train_details', 'adversary_on_score')
@@ -992,7 +993,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
     @property
     def action_space(self):
-        if self.prediction_reward:
+        if self.prediction_reward and self.num_adversaries > 0:
             # the second element is a prediction of which adversary is active
             return Tuple((super().action_space, Discrete(self.num_adversaries)))
         else:
@@ -1037,7 +1038,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
         adversary_key = 'adversary{}'.format(self.curr_adversary)
 
-        if self.prediction_reward:
+        if self.prediction_reward and self.num_adversaries > 0:
             robot_action = action['robot'][0]
         else:
             robot_action = action['robot']
@@ -1075,8 +1076,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             prediction = action['robot'][1]
             if prediction == self.curr_adversary:
                 # if we predict right at every step we get a total extra reward of ~1
-                # TODO(@evinitsky) pick a more sensible scaling factor?
-                robot_reward += 1 / (30)
+                robot_reward += 1 / self.prediction_reward_scaling
                 self.num_correct_predict += 1
 
         curr_obs = {'robot': np.clip(ob, a_min=self.observation_space.low[0], a_max=self.observation_space.high[0])}
