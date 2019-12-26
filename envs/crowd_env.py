@@ -927,11 +927,15 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
     def update_initializer(self):
         """Perform all the initialization that is hard to do before the adversaries are initialized correctly"""
-        # How strong each of the adversaries are
-        self.action_strength_vals = np.linspace(start=self.adversary_action_scaling / self.num_adversaries,
+        if self.num_adversaries == 0:
+            self.action_strength_vals = 0
+            self.state_strength_vals = 0
+        else:
+            # How strong each of the adversaries are
+            self.action_strength_vals = np.linspace(start=self.adversary_action_scaling / self.num_adversaries,
                                                 stop=self.adversary_action_scaling, num=self.num_adversaries)
-        # How strong each of the adversaries are
-        self.state_strength_vals = np.linspace(start=self.adversary_state_scaling / self.num_adversaries,
+            # How strong each of the adversaries are
+            self.state_strength_vals = np.linspace(start=self.adversary_state_scaling / self.num_adversaries,
                                                 stop=self.adversary_state_scaling, num=self.num_adversaries)
 
 
