@@ -72,6 +72,8 @@ head_node:
     ImageId: ami-00a4c70a366c65379 # Adversarial Sim2Real AMI
     KeyName: MyKeyPair
 
+    InstanceMarketOptions:
+        MarketType: spot
     # You can provision additional disk space with a conf as follows
     BlockDeviceMappings:
         - DeviceName: /dev/sda1

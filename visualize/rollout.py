@@ -116,17 +116,20 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
                         agent_id, policy_agent_mapping(agent_id))
                     p_use_lstm = use_lstm[policy_id]
                     if p_use_lstm:
+                        import ipdb; ipdb.set_trace()
+                        prev_action = _flatten_action(prev_actions[agent_id])
                         a_action, p_state, _ = agent.compute_action(
                             a_obs,
                             state=agent_states[agent_id],
-                            prev_action=prev_actions[agent_id],
+                            prev_action=prev_action,
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id)
                         agent_states[agent_id] = p_state
                     else:
+                        prev_action = _flatten_action(prev_actions[agent_id])
                         a_action = agent.compute_action(
                             a_obs,
-                            prev_action=prev_actions[agent_id],
+                            prev_action=prev_action,
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id)
                     a_action = _flatten_action(a_action)  # tuple actions
