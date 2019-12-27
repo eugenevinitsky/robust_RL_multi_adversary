@@ -1035,7 +1035,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         # be fully completed when the training batch returns
 
         # TODO(@evinitsky) why is this latter condition necessary?! If the first condition is true the latter should be true
-        if self.mean_rew > self.adversary_on_score and 'adversary{}'.format(self.curr_adversary) in action.keys():
+        if self.mean_rew > self.adversary_on_score and self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in action.keys():
             if self.perturb_state and self.perturb_actions:
                 action_perturbation = action[adversary_key][:2] * self.action_strength_vals[self.curr_adversary]
                 state_perturbation = action[adversary_key][2:] * self.state_strength_vals[self.curr_adversary]
@@ -1060,7 +1060,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
                                a_max=self.observation_space.high[0])}
         reward_dict = {'robot': reward}
 
-        if self.mean_rew > self.adversary_on_score and 'adversary{}'.format(self.curr_adversary) in action.keys():
+        if self.mean_rew > self.adversary_on_score and self.adversary_range > 0 and  'adversary{}'.format(self.curr_adversary) in action.keys():
             # Commented out code is used for the KL-div version of this
             # for i in range(self.num_adversaries):
         #             #     is_active = 1 if self.curr_adversary == i else 0
@@ -1095,7 +1095,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
         # self.curr_adversary = int(np.random.randint(low=0, high=self.num_adversaries))
         ob = super().reset(phase, test_case)
-        if self.mean_rew > self.adversary_on_score:
+        if self.mean_rew > self.adversary_on_score and self.adversary_range > 0:
             curr_obs = {'robot': ob, 'adversary{}'.format(self.curr_adversary): ob}
         else:
             curr_obs = {'robot': ob}
