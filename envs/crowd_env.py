@@ -111,7 +111,7 @@ class CrowdSimEnv(gym.Env):
     @property
     def observation_space(self):
         if not self.train_on_images:
-            num_obs = 4 # goal pos, robot pos
+            num_obs = 5 # goal pos, robot pos
             if len(self.humans) > 0:
                 temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
                 num_obs += temp_obs.shape[0]
