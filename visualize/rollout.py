@@ -116,7 +116,6 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
                         agent_id, policy_agent_mapping(agent_id))
                     p_use_lstm = use_lstm[policy_id]
                     if p_use_lstm:
-                        import ipdb; ipdb.set_trace()
                         prev_action = _flatten_action(prev_actions[agent_id])
                         a_action, p_state, _ = agent.compute_action(
                             a_obs,
@@ -157,7 +156,9 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             if multiagent:
                 done = done["__all__"]
                 # TODO(@evinitsky) make this a config option
-                reward_total += reward['robot']
+                for key, val in reward.items():
+                    if key != 'robot':
+                        reward_total += val
             else:
                 reward_total += reward
             obs = next_obs
