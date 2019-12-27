@@ -377,7 +377,8 @@ class CrowdSimEnv(gym.Env):
                 ob = []
             normalized_pos = np.asarray(self.robot.get_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
             normalized_goal = np.asarray(self.robot.get_goal_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
-            ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
+            theta = np.asarray([self.robot.theta]) / (2 * np.pi)
+            ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal), theta))
 
         elif self.robot.sensor == 'RGB':
             raise NotImplementedError
@@ -564,7 +565,8 @@ class CrowdSimEnv(gym.Env):
                     ob = []
                 normalized_pos = np.asarray(self.robot.get_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
                 normalized_goal = np.asarray(self.robot.get_goal_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
-                ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))
+                theta = np.asarray([self.robot.theta]) / (2 * np.pi)
+                ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal), theta))
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
         else:
@@ -957,7 +959,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         self.num_iters %= self.adv_increase_freq
 
     def select_new_adversary(self):
-        if self.mean_rew > self.adversary_on_score:
+        if self.mean_rew > self.adversary_on_score and self.adversary_range > 0:
             if self.adversary_range > 0:
                 # use the mean rew to select the same adversary between all envs by using a deterministic function
                 rand_val = int(abs(self.mean_rew - round(self.mean_rew, 5)) * 1e7)
