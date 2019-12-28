@@ -89,9 +89,6 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
     else:
         env = env_creator(rllib_config['env_config'])
 
-    # set the mean rew to zero so that the curriculum is off and the adversaries are gone
-    env.mean_rew = 0.0
-
     rewards = []
     num_steps = []
 
@@ -131,20 +128,19 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
                             prev_action=prev_action,
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id)
-                    a_action = _flatten_action(a_action)  # tuple actions
+                    # handle the tuple case
+                    if len(a_action) > 1:
+                        if isinstance(a_action[0], np.ndarray):
+                            a_action[0] = a_action[0].flatten()
                     action_dict[agent_id] = a_action
-                    prev_actions[agent_id] = a_action
+                    prev_action = _flatten_action(a_action)  # tuple actions
+                    prev_actions[agent_id] = prev_action
             action = action_dict
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
 
-            # TODO(@evinitsky) make this a config option
-            #the adversaries shouldn't be active anymore
-            # if multiagent:
-            #     for key, value in action.items():
-            #         if key != 'robot':
-            #             action[key] = np.zeros(value.shape)
-            next_obs, reward, done, info = env.step(action)
+            # we turn the adversaries off so you only send in the robot keys
+            next_obs, reward, done, info = env.step(action['robot'])
             step_num += 1
             if multiagent:
                 for agent_id, r in reward.items():
@@ -153,14 +149,7 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
                 prev_rewards[_DUMMY_AGENT_ID] = reward
 
             # we only want the robot reward, not the adversary reward
-            if multiagent:
-                done = done["__all__"]
-                # TODO(@evinitsky) make this a config option
-                for key, val in reward.items():
-                    if key != 'robot':
-                        reward_total += val
-            else:
-                reward_total += reward
+            reward_total += info['robot']['robot_reward']
             obs = next_obs
         print("Episode reward", reward_total)
         print("Episode length", step_num)

@@ -1077,12 +1077,14 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         ob, reward, done, info = super().step(robot_action, update)
 
         # we don't penalize the adversary for the robot predicting it. Otherwise, I suspect we would get
-        # totally random adversaries
+        # totally random adversaries. So, we separate out the robot reward that has this extra prediction reward.
         robot_reward = reward
+        # store the reward
+        info = {'robot': {'robot_reward': robot_reward}}
+
         # if there's only one adversary, you're going to wind up causing the prediction policy
-        # to degenerate and stop exploring
+        # to degenerate and stop exploring so only turn this on only if there's more than 1 adversary active
         if self.prediction_reward and self.adversary_range > 1:
-            # look in env_params.config for an explanation of this one
             if self.boxed_prediction:
                 # if you are using DDPG it doesn't support Tuple spaces. So, instead your prediction is continuous and bounded
                 # between 0 and 1. If say, there are four adversaries, then 0 - 0.25 predicts adversary 1, 0.25 - 0.5 is adversary 2
