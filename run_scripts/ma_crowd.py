@@ -9,8 +9,12 @@ import pytz
 import numpy as np
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
+from ray.rllib.agents.ddpg.ddpg_policy import DDPGTFPolicy
 from ray.rllib.agents.ppo.ppo import PPOTrainer
+from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
+
 import ray.rllib.agents.ppo as ppo
+import ray.rllib.agents.ddpg as ddpg
 from ray.rllib.models import ModelCatalog
 from ray import tune
 from ray.tune import run as run_tune
@@ -31,17 +35,24 @@ def setup_ma_config(config):
     env = ma_env_creator(config['env_config'])
     policies_to_train = ['robot']
 
-    policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
     num_adversaries = config['env_config']['num_adversaries']
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    # adversary_config = config
-    # adversary_config.update({"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}})
     adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
     # TODO(@evinitsky) put this back
     # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
     #                                              env.adv_action_space, adversary_config) for i in range(num_adversaries)})
-    policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
-                                            env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    # policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
+    #                                         env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    if config['env_config']['run'] == 'DDPG':
+        policy_graphs = {'robot': (DDPGTFPolicy, env.observation_space, env.action_space, {})}
+        policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
+                                                env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    elif config['env_config']['run'] == 'PPO':
+        policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+        policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
+                                                env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    else:
+        sys.exit('How did you get here friend? Was there no error catching before this?')
 
     policies_to_train += adv_policies
 
@@ -70,16 +81,30 @@ def setup_exps(args):
     parser = ma_env_parser(parser)
     args = parser.parse_args(args)
 
-    alg_run = 'PPO'
-    config = ppo.DEFAULT_CONFIG.copy()
-    config['num_workers'] = args.num_cpus
-    config['gamma'] = 0.99
-    config["sgd_minibatch_size"] = 500
-    config["num_sgd_iter"] = 10
-    config["batch_mode"] = "complete_episodes"
-    if args.grid_search:
-        config["lr"] = tune.grid_search([5e-4, 5e-5])
+    alg_run = args.algorithm
 
+    if args.algorithm == 'PPO':
+        trainer = PPOTrainer
+        config = ppo.DEFAULT_CONFIG.copy()
+        config["sgd_minibatch_size"] = 500
+        config["num_sgd_iter"] = 10
+        config['train_batch_size'] = args.train_batch_size
+        if args.grid_search:
+            config["lr"] = tune.grid_search([5e-4, 5e-5])
+        config['num_workers'] = args.num_cpus
+    elif args.algorithm == 'DDPG':
+        trainer = DDPGTrainer
+        config = ddpg.DEFAULT_CONFIG.copy()
+        if args.grid_search:
+            config["critic_lr"] = tune.grid_search([1e-4, 1e-3, 1e-2])
+            config["actor_lr"] = tune.grid_search([1e-4, 1e-3, 1e-2])
+            config["exploration_should_anneal"] = tune.grid_search([True, False])
+    else:
+        sys.exit('Only PPO and DDPG algorithms are currently supported. Pick a different algorithm bruv.')
+
+    # Universal hyperparams
+    config['gamma'] = 0.99
+    config["batch_mode"] = "complete_episodes"
     # config['num_adversaries'] = args.num_adv
     # TODO(@evinitsky) put this back
     # config['kl_diff_weight'] = args.kl_diff_weight
@@ -123,10 +148,10 @@ def setup_exps(args):
         config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
-        config['vf_share_layers'] = True
-        if args.grid_search:
-            config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
-    config['train_batch_size'] = args.train_batch_size
+        if args.algorithm == 'PPO':
+            config['vf_share_layers'] = True
+            if args.grid_search:
+                config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
     config['env'] = 'MultiAgentCrowdSimEnv'
     register_env('MultiAgentCrowdSimEnv', ma_env_creator)
@@ -145,7 +170,7 @@ def setup_exps(args):
         'name': args.exp_title,
         # TODO (@evinitsky) put this back
         # 'run_or_experiment': KLPPOTrainer,
-        'run_or_experiment': PPOTrainer,
+        'run_or_experiment': trainer,
         'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {

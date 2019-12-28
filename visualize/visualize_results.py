@@ -42,23 +42,25 @@ unique_rew_results = []
 for result in rew_results:
     temp_results = []
     result_arr = np.array(result)
-    names_arr = result_arr[:, 2]
-    for name in np.unique(names_arr):
-        indices = np.where(names_arr == name)
-        max_value = np.argmax(np.squeeze(result_arr[indices, 0].astype(np.float)))
-        temp_results.append(result[indices[0][max_value]])
-    unique_rew_results.append(temp_results)
+    if len(result_arr) > 0:
+        names_arr = result_arr[:, 2]
+        for name in np.unique(names_arr):
+            indices = np.where(names_arr == name)
+            max_value = np.argmax(np.squeeze(result_arr[indices, 0].astype(np.float)))
+            temp_results.append(result[indices[0][max_value]])
+        unique_rew_results.append(temp_results)
 
 unique_step_results = []
 for result in steps_results:
     temp_results = []
     result_arr = np.array(result)
-    names_arr = result_arr[:, 2]
-    for name in np.unique(names_arr):
-        indices = np.where(names_arr == name)
-        max_value = np.argmin(np.squeeze(result_arr[indices, 0].astype(np.float)))
-        temp_results.append(result[indices[0][max_value]])
-    unique_step_results.append(temp_results)
+    if len(result_arr) > 0:
+        names_arr = result_arr[:, 2]
+        for name in np.unique(names_arr):
+            indices = np.where(names_arr == name)
+            max_value = np.argmin(np.squeeze(result_arr[indices, 0].astype(np.float)))
+            temp_results.append(result[indices[0][max_value]])
+        unique_step_results.append(temp_results)
 
 for i, result in enumerate(unique_rew_results):
     result = sorted(result, key=lambda x: x[2])
