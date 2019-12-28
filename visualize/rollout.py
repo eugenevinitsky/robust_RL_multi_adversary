@@ -140,7 +140,9 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             action = action if multiagent else action[_DUMMY_AGENT_ID]
 
             # we turn the adversaries off so you only send in the robot keys
-            next_obs, reward, done, info = env.step(action['robot'])
+            new_dict = {}
+            new_dict.update({'robot': action['robot']})
+            next_obs, reward, done, info = env.step(new_dict)
             step_num += 1
             if multiagent:
                 for agent_id, r in reward.items():

@@ -9,6 +9,8 @@ import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument('results_path', type=str, help='Pass the path to the folder containing all yuor results files')
+parser.add_argument('--num_humans', type=str, default='1', help='Number of humans in experiment')
+
 
 args = parser.parse_args()
 prefix_list = ['base', 'friction', 'color', 'unrestrict_goal_reg', 'chase_robot',
@@ -16,18 +18,18 @@ prefix_list = ['base', 'friction', 'color', 'unrestrict_goal_reg', 'chase_robot'
 rew_results = [[] for _ in range(len(prefix_list))]
 steps_results = [[] for _ in range(len(prefix_list))]
 
-base_value = 0
+base_value = 9
 # Now lets walk through the folder
 # TODO(@evinitsky) remove all these loops
 for (dirpath, dirnames, filenames) in os.walk(args.results_path):
     for file in filenames:
         for i, prefix in enumerate(prefix_list):
-            if prefix in file and '.png' not in file and file.split('.txt')[-2][-3:] == 'rew' and 'h1' in file:
+            if prefix in file and '.png' not in file and file.split('.txt')[-2][-3:] == 'rew' and 'h'+args.num_humans in file:
                 file_output = np.loadtxt(os.path.join(dirpath, file))
                 mean = np.mean(file_output - base_value)
                 var = np.var(file_output - base_value)
                 rew_results[i].append((mean, var, file))
-            elif prefix in file and '.png' not in file and file.split('.txt')[-2][-3:] != 'rew' and 'h1' in file:
+            elif prefix in file and '.png' not in file and file.split('.txt')[-2][-3:] != 'rew' and 'h'+args.num_humans in file:
                 file_output = np.loadtxt(os.path.join(dirpath, file))
                 mean = np.mean(file_output - base_value)
                 var = np.var(file_output - base_value)

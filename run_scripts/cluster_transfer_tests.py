@@ -13,11 +13,13 @@ from utils.rllib_utils import get_config_from_path
 parser = argparse.ArgumentParser()
 parser.add_argument('exp_title', type=str)
 parser.add_argument('checkpoint_num', type=int)
+parser.add_argument('date', type=str, help='A date in M-DD-YYYY format')
+
 
 args = parser.parse_args()
 
 
-date = "12-02-2019"
+date = args.date
 
 ray.init()
 
@@ -29,7 +31,6 @@ if not os.path.exists(output_path):
         if exc.errno != errno.EEXIST:
             raise
 for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
-    # TODO(@evinitsky) this is pretty brittle, we should just remove the test folder from sim2real
     if "checkpoint_{}".format(args.checkpoint_num) in dirpath and 'test' not in dirpath:
         # grab the experiment name
         folder = os.path.dirname(dirpath)
@@ -38,14 +39,6 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results"
         script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
         config, checkpoint_path = get_config_from_path(folder, str(args.checkpoint_num))
 
-        if 'num_adversaries' in config:
-            del config['num_adversaries']
-
-        if 'kl_diff_weight' in config:
-            del config['kl_diff_weight']
-
-        if 'run' not in config['env_config']:
-            config['env_config'].update({'run': 'PPO'})
         run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)
         p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                          "s3://sim2real/transfer_results/{}/{}/{}".format(date, args.exp_title,
