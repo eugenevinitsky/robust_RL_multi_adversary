@@ -23,6 +23,10 @@ def ray_parser(parser):
     parser.add_argument('--run_transfer_tests', action='store_true', default=False,
                         help='If true run the transfer tests on the results and upload them to AWS')
     parser.add_argument('--render', type=str, default=False)
+    parser.add_argument('--algorithm', type=str, default='PPO', help='Algorithm of choice. Options are PPO and DDPG.'
+                                                                     'If using DDPG make sure boxed_predict is true in'
+                                                                     'the env_params.config file. If PPO is on'
+                                                                     'make sure it is False!')
     return parser
 
 

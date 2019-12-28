@@ -66,6 +66,12 @@ def ma_env_creator(passed_config):
     robot = Robot(env_params, 'robot')
     env = MultiAgentCrowdSimEnv(env_params, robot)
 
+    # control whether the last prediction element is continuous or discrete
+    if passed_config['run'] == 'PPO':
+        env.boxed_prediction = False
+    elif passed_config['run'] == 'DDPG':
+        env.boxed_prediction = True
+
     env.perturb_actions = passed_config['perturb_actions']
     env.perturb_state = passed_config['perturb_state']
     env.num_adversaries = passed_config['num_adversaries']

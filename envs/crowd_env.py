@@ -995,7 +995,13 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
     def action_space(self):
         if self.prediction_reward and self.num_adversaries > 0:
             # the second element is a prediction of which adversary is active
-            return Tuple((super().action_space, Discrete(self.num_adversaries)))
+            if self.boxed_prediction:
+                action_space = super().action_space
+                low = np.concatenate((action_space.low, [0]))
+                high = np.concatenate((action_space.high, [1]))
+                return Box(low=low, high=high)
+            else:
+                return Tuple((super().action_space, Discrete(self.num_adversaries)))
         else:
             return super().action_space
 
@@ -1039,7 +1045,10 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         adversary_key = 'adversary{}'.format(self.curr_adversary)
 
         if self.prediction_reward and self.num_adversaries > 0:
-            robot_action = action['robot'][0]
+            if self.boxed_prediction:
+                robot_action = action['robot'][0:2]
+            else:
+                robot_action = action['robot'][0]
         else:
             robot_action = action['robot']
 
@@ -1073,7 +1082,16 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         # if there's only one adversary, you're going to wind up causing the prediction policy
         # to degenerate and stop exploring
         if self.prediction_reward and self.adversary_range > 1:
-            prediction = action['robot'][1]
+            # look in env_params.config for an explanation of this one
+            if self.boxed_prediction:
+                # if you are using DDPG it doesn't support Tuple spaces. So, instead your prediction is continuous and bounded
+                # between 0 and 1. If say, there are four adversaries, then 0 - 0.25 predicts adversary 1, 0.25 - 0.5 is adversary 2
+                # and so on and so forth
+                prediction_range = np.linspace(0, 1, self.num_adversaries)
+                prediction = np.digitize(action['robot'][-1], prediction_range) - 1
+            # the value of the prediction is output directly in the action tuple
+            else:
+                prediction = action['robot'][1]
             if prediction == self.curr_adversary:
                 # if we predict right at every step we get a total extra reward of ~1
                 robot_reward += 1 / self.prediction_reward_scaling
