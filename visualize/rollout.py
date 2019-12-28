@@ -143,6 +143,8 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
             new_dict = {}
             new_dict.update({'robot': action['robot']})
             next_obs, reward, done, info = env.step(new_dict)
+            if isinstance(done, dict):
+                done = done['__all__']
             step_num += 1
             if multiagent:
                 for agent_id, r in reward.items():
