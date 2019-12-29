@@ -111,7 +111,7 @@ class CrowdSimEnv(gym.Env):
     @property
     def observation_space(self):
         if not self.train_on_images:
-            num_obs = 5 # goal pos, robot pos
+            num_obs = 4 # goal pos, robot pos
             if len(self.humans) > 0:
                 temp_obs = np.concatenate([human.get_observable_state().as_array() for human in self.humans])
                 num_obs += temp_obs.shape[0]
@@ -377,8 +377,8 @@ class CrowdSimEnv(gym.Env):
                 ob = []
             normalized_pos = np.asarray(self.robot.get_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
             normalized_goal = np.asarray(self.robot.get_goal_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
-            theta = np.asarray([self.robot.theta]) / (2 * np.pi)
-            ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal), theta))
+            #theta = np.asarray([self.robot.theta]) / (2 * np.pi)
+            ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))#, theta))
 
         elif self.robot.sensor == 'RGB':
             raise NotImplementedError
@@ -565,8 +565,8 @@ class CrowdSimEnv(gym.Env):
                     ob = []
                 normalized_pos = np.asarray(self.robot.get_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
                 normalized_goal = np.asarray(self.robot.get_goal_position()) / np.asarray([self.accessible_space_x, self.accessible_space_y])
-                theta = np.asarray([self.robot.theta]) / (2 * np.pi)
-                ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal), theta))
+                #theta = np.asarray([self.robot.theta]) / (2 * np.pi)
+                ob = np.concatenate((ob, list(normalized_pos), list(normalized_goal)))#, theta))
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
         else:
