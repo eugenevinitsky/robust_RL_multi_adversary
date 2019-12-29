@@ -43,7 +43,7 @@ def default_policy_agent_mapping(unused_agent_id):
     return DEFAULT_POLICY_ID
 
 
-def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_images, num_rollouts):
+def instantiate_rollout(rllib_config, checkpoint, show_images):
     rllib_config['num_workers'] = 0
 
     # Determine agent and checkpoint
@@ -82,12 +82,22 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
     else:
         multiagent = False
         use_lstm = {DEFAULT_POLICY_ID: False}
+        state_init = {}
+        action_init = {}
 
     # We always have to remake the env since we may want to overwrite the config
     if 'multiagent' in rllib_config and rllib_config['multiagent']['policies']:
         env = ma_env_creator(rllib_config['env_config'])
     else:
         env = env_creator(rllib_config['env_config'])
+
+    return env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init
+
+
+def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_images, num_rollouts):
+
+    env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
+        instantiate_rollout(rllib_config, checkpoint, show_images)
 
     rewards = []
     num_steps = []
@@ -169,8 +179,8 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
                 if not output_path[-4:] == '.mp4':
                     output_path += '.mp4'
                 env.render('video', output_path)
-    else:
-        logging.info('Video creation is disabled since show_images is true.')
+        else:
+            logging.info('Video creation is disabled since show_images is true.')
 
 
     logging.info('It takes %.2f seconds to finish. Final status is %s', env.global_time, info)
