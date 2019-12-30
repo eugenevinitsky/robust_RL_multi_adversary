@@ -21,6 +21,7 @@ from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
 # from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy
+from visualize.visualize_adversaries import visualize_adversaries
 from visualize.transfer_test import run_transfer_tests
 from utils.env_creator import ma_env_creator, construct_config
 
@@ -256,6 +257,8 @@ if __name__=="__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)
+                run_transfer_tests(config, checkpoint_path, 1, args.exp_title, output_path, save_trajectory=False)
+                # TODO(@evinitsky) this will break for state adversaries
+                visualize_adversaries(config, checkpoint_path, 20, 1, output_path)
                 p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path, "s3://sim2real/transfer_results/{}/{}/{}".format(date, args.exp_title, tune_name)).split(' '))
                 p1.wait()
