@@ -197,9 +197,9 @@ def on_train_result(info):
             lambda env: env.update_adversary_range()))
 
     # TODO(should we do this every episode or every training iteration)?
-    trainer.workers.foreach_worker(
-        lambda ev: ev.foreach_env(
-            lambda env: env.select_new_adversary()))
+    # trainer.workers.foreach_worker(
+    #     lambda ev: ev.foreach_env(
+    #         lambda env: env.select_new_adversary()))
 
 
 def on_episode_end(info):
@@ -214,7 +214,6 @@ def on_episode_end(info):
         episode.custom_metrics["predict_frac"] = env.num_correct_predict / episode.length
 
     # select a new adversary every episode. Currently disabled.
-    pass
     if env.adversary_range > 0:
         env.curr_adversary = np.random.randint(low=0, high=env.adversary_range)
     else:
