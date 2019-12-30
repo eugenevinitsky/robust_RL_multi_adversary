@@ -1,6 +1,8 @@
 import argparse
 import collections
+import errno
 import logging
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +15,7 @@ from visualize.rollout import instantiate_rollout, DefaultMapping
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 
-def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts):
+def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, outdir):
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
         instantiate_rollout(rllib_config, checkpoint, False)
 
@@ -28,7 +30,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts):
 
     # actually do the rollout
     for r_itr in range(num_rollouts):
-        print('On iteration {}'.format(i))
+        print('On iteration {}'.format(r_itr))
         mapping_cache = {}  # in case policy_agent_mapping is stochastic
         agent_states = DefaultMapping(
             lambda agent_id: state_init[mapping_cache[agent_id]])
@@ -106,12 +108,22 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts):
             reward_total += info['robot']['robot_reward']
             obs = next_obs
 
+    file_path = os.path.dirname(os.path.abspath(__file__))
+    output_file_path = os.path.join(file_path, outdir)
+    if not os.path.exists(output_file_path):
+        try:
+            os.makedirs(os.path.dirname(output_file_path))
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
+
     for adversary, adv_dict in adversary_grid_dict.items():
         heat_map = adv_dict['grid']
         # ax = sns.heatmap(heat_map, annot=True, fmt="d")
         plt.figure()
         sns.heatmap(heat_map)
-        plt.savefig(adversary + 'action_heatmap.png')
+        output_str = '{}/{}'.format(outdir, adversary + 'action_heatmap.png')
+        plt.savefig(output_str)
 
 
 
@@ -119,6 +131,8 @@ def main():
     parser = argparse.ArgumentParser('Parse configuration file')
     parser = replay_parser(parser)
     parser.add_argument('--grid_size', type=int, default=50, help='How fine to make the adversary action grid')
+    parser.add_argument('--output_dir', type=str, default='transfer_results',
+                        help='Directory to output the files into')
     args = parser.parse_args()
 
     # configure logging and device
@@ -131,7 +145,7 @@ def main():
 
     ray.init(num_cpus=args.num_cpus)
 
-    visualize_adversaries(rllib_config, checkpoint, args.grid_size, args.num_rollouts)
+    visualize_adversaries(rllib_config, checkpoint, args.grid_size, args.num_rollouts, args.output_dir)
 
 
 if __name__ == '__main__':
