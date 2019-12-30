@@ -276,10 +276,25 @@
 #--train_batch_size 15000 --checkpoint_freq 50 --num_iters 1600 --kl_diff_weight 0 --num_adv 10 --perturb_actions --num_cpus 8 --run_transfer_tests --human_num 0 --grid_search" \
 #--tmux --start --stop --cluster-name=ev_ma_test4
 
-ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/ma_crowd.py --exp_title MA_5ad_PA_h0_pred_freq1_sc5_DDPG --use_s3 --num_samples 1 \
---train_batch_size 15000 --checkpoint_freq 500 --num_iters 4000 --kl_diff_weight 0 --num_adv 5 --perturb_actions --num_cpus 8 --run_transfer_tests --human_num 0 --grid_search --algorithm DDPG" \
---tmux --start --stop --cluster-name=ev_ma_test5
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/ma_crowd.py --exp_title MA_5ad_PA_h0_pred_freq1_sc5_DDPG --use_s3 --num_samples 1 \
+#--train_batch_size 15000 --checkpoint_freq 500 --num_iters 4000 --kl_diff_weight 0 --num_adv 5 --perturb_actions --num_cpus 8 --run_transfer_tests --human_num 0 --grid_search --algorithm DDPG" \
+#--tmux --start --stop --cluster-name=ev_ma_test5
+#
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/ma_crowd.py --exp_title MA_10ad_PA_h0_pred_freq1_sc5_DDPG --use_s3 --num_samples 1 \
+#--train_batch_size 15000 --checkpoint_freq 500 --num_iters 4000 --kl_diff_weight 0 --num_adv 10 --perturb_actions --num_cpus 8 --run_transfer_tests --human_num 0 --grid_search --algorithm DDPG" \
+#--tmux --start --stop --cluster-name=ev_ma_test6
 
-ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/ma_crowd.py --exp_title MA_10ad_PA_h0_pred_freq1_sc5_DDPG --use_s3 --num_samples 1 \
---train_batch_size 15000 --checkpoint_freq 500 --num_iters 4000 --kl_diff_weight 0 --num_adv 10 --perturb_actions --num_cpus 8 --run_transfer_tests --human_num 0 --grid_search --algorithm DDPG" \
---tmux --start --stop --cluster-name=ev_ma_test6
+######################################################################################################################################
+## 12/29/19 tests
+
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/ma_crowd.py --exp_title MA_0ad_PA_h0 --use_s3 --num_samples 1 \
+#--train_batch_size 30000 --checkpoint_freq 50 --num_iters 800 --kl_diff_weight 0 --num_adv 0 --perturb_actions --num_cpus 8 --run_transfer_tests --human_num 0 --grid_search" \
+#--tmux --start --stop --cluster-name=ev_ma_test1
+##
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/ma_crowd.py --exp_title MA_10ad_PA_h0_pred_freq1 --use_s3 --num_samples 1 \
+#--train_batch_size 30000 --checkpoint_freq 50 --num_iters 800 --kl_diff_weight 0 --num_adv 10 --perturb_actions --num_cpus 8 --run_transfer_tests --human_num 0 --grid_search" \
+#--tmux --start --stop --cluster-name=ev_ma_test2
+
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/ma_crowd.py --exp_title MA_10ad_PA_h0_pred_freq1_switch --use_s3 --num_samples 1 \
+--train_batch_size 30000 --checkpoint_freq 50 --num_iters 800 --kl_diff_weight 0 --num_adv 10 --perturb_actions --num_cpus 8 --run_transfer_tests --human_num 0 --grid_search" \
+--tmux --start --stop --cluster-name=ev_ma_test2
