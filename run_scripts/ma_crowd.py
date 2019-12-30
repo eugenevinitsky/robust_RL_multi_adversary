@@ -38,7 +38,7 @@ def setup_ma_config(config):
 
     num_adversaries = config['env_config']['num_adversaries']
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
+    adversary_config = {}#{"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
     # TODO(@evinitsky) put this back
     # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
     #                                              env.adv_action_space, adversary_config) for i in range(num_adversaries)})
@@ -257,8 +257,8 @@ if __name__=="__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                run_transfer_tests(config, checkpoint_path, 1, args.exp_title, output_path, save_trajectory=False)
+                run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)
                 # TODO(@evinitsky) this will break for state adversaries
-                visualize_adversaries(config, checkpoint_path, 20, 1, output_path)
+                visualize_adversaries(config, checkpoint_path, 20, 500, output_path)
                 p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path, "s3://sim2real/transfer_results/{}/{}/{}".format(date, args.exp_title, tune_name)).split(' '))
                 p1.wait()
