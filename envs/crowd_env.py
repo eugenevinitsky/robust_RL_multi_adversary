@@ -977,19 +977,19 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             else:
                 self.curr_adversary = 0
 
-    # @property
-    # def adv_observation_space(self):
-    #     """
-    #     Simple action space for an adversary that can perturb
-    #     every element of the agent's observation space.
-    #
-    #     Therefore, its action space is the same size as the agent's
-    #     observation space.
-    #     """
-    #     obs_size = super().observation_space.shape
-    #     dict_space = Dict({'obs': Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32),
-    #                        'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
-    #     return dict_space
+    @property
+    def adv_observation_space(self):
+        """
+        Simple action space for an adversary that can perturb
+        every element of the agent's observation space.
+
+        Therefore, its action space is the same size as the agent's
+        observation space.
+        """
+        obs_size = super().observation_space.shape
+        dict_space = Dict({'obs': Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32),
+                           'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
+        return dict_space
 
     @property
     def action_space(self):
@@ -1005,18 +1005,18 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         else:
             return super().action_space
 
-    @property
-    def adv_observation_space(self):
-        """
-        Simple action space for an adversary that can perturb
-        every element of the agent's observation space.
-
-        Therefore, its action space is the same size as the agent's
-        observation space.
-        """
-        obs_size = super().observation_space.shape
-        box_space = Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32)
-        return box_space
+    # @property
+    # def adv_observation_space(self):
+    #     """
+    #     Simple action space for an adversary that can perturb
+    #     every element of the agent's observation space.
+    #
+    #     Therefore, its action space is the same size as the agent's
+    #     observation space.
+    #     """
+    #     obs_size = super().observation_space.shape
+    #     box_space = Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32)
+    #     return box_space
 
     @property
     def adv_action_space(self):
@@ -1104,24 +1104,25 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
 
         if self.mean_rew > self.adversary_on_score and 'adversary{}'.format(self.curr_adversary) in action.keys():
             # Commented out code is used for the KL-div version of this
-            # for i in range(self.num_adversaries):
-        #             #     is_active = 1 if self.curr_adversary == i else 0
-        #             #     curr_obs.update({'adversary{}'.format(i): {'obs': ob, 'is_active': np.array([is_active])}})
-        #             #
-        #             # if self.perturb_state:
-        #             #     curr_obs['robot'] = np.clip(curr_obs['robot'] + state_perturbation,
-        #             #                                 a_min=self.observation_space.low,
-        #             #                                 a_max=self.observation_space.high)
-        #             #
-        #             # reward_dict.update({'adversary{}'.format(i): -reward for i in range(self.num_adversaries)})
-            curr_obs.update({'adversary{}'.format(self.curr_adversary): ob})
+            for i in range(self.num_adversaries):
+                    is_active = 1 if self.curr_adversary == i else 0
+                    curr_obs.update({'adversary{}'.format(i): {'obs': ob, 'is_active': np.array([is_active])}})
 
-            if self.perturb_state:
-                curr_obs['robot'] = np.clip(curr_obs['robot'] + state_perturbation,
-                                            a_min=self.observation_space.low,
-                                            a_max=self.observation_space.high)
+                    if self.perturb_state:
+                        curr_obs['robot'] = np.clip(curr_obs['robot'] + state_perturbation,
+                                                    a_min=self.observation_space.low,
+                                                    a_max=self.observation_space.high)
 
-            reward_dict.update({'adversary{}'.format(self.curr_adversary): -reward})
+                    reward_dict.update({'adversary{}'.format(i): -reward for i in range(self.num_adversaries)})
+
+            # curr_obs.update({'adversary{}'.format(self.curr_adversary): ob})
+        #
+        #     if self.perturb_state:
+        #         curr_obs['robot'] = np.clip(curr_obs['robot'] + state_perturbation,
+        #                                     a_min=self.observation_space.low,
+        #                                     a_max=self.observation_space.high)
+        #
+        #     reward_dict.update({'adversary{}'.format(self.curr_adversary): -reward})
 
         done = {'__all__': done}
 
@@ -1139,13 +1140,15 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
         # self.curr_adversary = int(np.random.randint(low=0, high=self.num_adversaries))
         ob = super().reset(phase, test_case)
         if self.mean_rew > self.adversary_on_score and self.adversary_range > 0:
-            curr_obs = {'robot': ob, 'adversary{}'.format(self.curr_adversary): ob}
+            # curr_obs = {'robot': ob, 'adversary{}'.format(self.curr_adversary): ob}
+            curr_obs = {'robot': ob}
+            for i in range(self.num_adversaries):
+                is_active = 1 if self.curr_adversary == i else 0
+                curr_obs.update({'adversary{}'.format(i):
+                                     {'obs': np.clip(ob, a_min=self.observation_space.low, a_max=self.observation_space.high),
+                                      'is_active': np.array([is_active])}})
         else:
             curr_obs = {'robot': ob}
-        #     for i in range(self.num_adversaries):
-        #         is_active = 1 if self.curr_adversary == i else 0
-        #         curr_obs.update({'adversary{}'.format(i):
-        #                              {'obs': np.clip(ob, a_min=self.observation_space.low, a_max=self.observation_space.high),
-        #                               'is_active': np.array([is_active])}})
+
         return curr_obs
         

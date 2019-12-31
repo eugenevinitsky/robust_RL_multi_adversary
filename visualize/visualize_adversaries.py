@@ -44,7 +44,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
         while not done:
             multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
             obs = multi_obs['robot']
-            multi_obs = {'adversary{}'.format(i): obs for i in range(env.num_adversaries)}
+            multi_obs = {'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([1])} for i in range(env.num_adversaries)}
             multi_obs.update({'robot': obs})
             action_dict = {}
             for agent_id, a_obs in multi_obs.items():

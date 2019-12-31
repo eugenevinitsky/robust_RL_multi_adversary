@@ -22,6 +22,9 @@ BEHAVIOUR_LOGITS = "behaviour_logits"
 
 def get_logits(model, train_batch, index):
     """
+    This method is used to compute the logits that the model would have on the adversary batch of agent index.
+    That is, if model had been deployed instead of adversary `index`, this computes the logits we would have gotten
+    in that case.
     :param model: an RLlib model object
     :param train_batch: (dict)
     :param index: (int)
@@ -85,9 +88,9 @@ def new_postprocess_ppo_gae(policy,
         # go through and fill in as many kl objects as you will need
         for i in range(policy.num_adversaries - 1):
             action_dim = sample_batch[SampleBatch.PREV_ACTIONS].shape[1]
-            postprocess["kj_log_std_{}".format(i)] = np.zeros((batch_size, action_dim))
-            postprocess["kj_std_{}".format(i)] = np.zeros((batch_size, action_dim))
-            postprocess["kj_mean_{}".format(i)] = np.zeros((batch_size, action_dim))
+            postprocess["kj_log_std_{}".format(i)] = np.zeros((batch_size, action_dim)).astype(np.float32)
+            postprocess["kj_std_{}".format(i)] = np.zeros((batch_size, action_dim)).astype(np.float32)
+            postprocess["kj_mean_{}".format(i)] = np.zeros((batch_size, action_dim)).astype(np.float32)
             postprocess[SampleBatch.CUR_OBS + '_' + str(i)] = sample_batch[SampleBatch.CUR_OBS]
             postprocess[SampleBatch.PREV_ACTIONS + '_' + str(i)] = sample_batch[SampleBatch.PREV_ACTIONS]
             postprocess[SampleBatch.PREV_REWARDS + '_' + str(i)] = sample_batch[SampleBatch.PREV_REWARDS]
@@ -139,11 +142,10 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     # with respect to the valid mask, which tracks padding for RNNs
     if policy.num_adversaries > 1:
         kl_loss = policy.config['kl_diff_weight'] * reduce_mean_valid(policy.kl_diff_loss)
-        return kl_loss + standard_loss
+        return -kl_loss + standard_loss
     else:
         return standard_loss
     # return reduce_mean_valid(pre_mean_loss * tf.squeeze(is_active))
-
 
 
 def new_kl_and_loss_stats(policy, train_batch):

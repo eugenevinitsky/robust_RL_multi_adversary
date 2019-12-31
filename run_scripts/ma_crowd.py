@@ -20,7 +20,7 @@ from ray import tune
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
-# from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy
+from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy
 from visualize.visualize_adversaries import visualize_adversaries
 from visualize.transfer_test import run_transfer_tests
 from utils.env_creator import ma_env_creator, construct_config
@@ -38,22 +38,23 @@ def setup_ma_config(config):
 
     num_adversaries = config['env_config']['num_adversaries']
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    adversary_config = {}#{"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
+    adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}}
     # TODO(@evinitsky) put this back
-    # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
-    #                                              env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+    policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
+                                                 env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     # policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
     #                                         env.adv_action_space, adversary_config) for i in range(num_adversaries)})
-    if config['env_config']['run'] == 'DDPG':
-        policy_graphs = {'robot': (DDPGTFPolicy, env.observation_space, env.action_space, {})}
-        policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
-                                                env.adv_action_space, adversary_config) for i in range(num_adversaries)})
-    elif config['env_config']['run'] == 'PPO':
-        policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
-        policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
-                                                env.adv_action_space, adversary_config) for i in range(num_adversaries)})
-    else:
-        sys.exit('How did you get here friend? Was there no error catching before this?')
+    # if config['env_config']['run'] == 'DDPG':
+    #     policy_graphs = {'robot': (DDPGTFPolicy, env.observation_space, env.action_space, {})}
+    #     policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
+    #                                             env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    # elif config['env_config']['run'] == 'PPO':
+    #     policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+    #     policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
+    #                                             env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    # else:
+    #     sys.exit('How did you get here friend? Was there no error catching before this?')
 
     policies_to_train += adv_policies
 
@@ -106,9 +107,9 @@ def setup_exps(args):
     # Universal hyperparams
     config['gamma'] = 0.99
     config["batch_mode"] = "complete_episodes"
-    # config['num_adversaries'] = args.num_adv
     # TODO(@evinitsky) put this back
-    # config['kl_diff_weight'] = args.kl_diff_weight
+    config['num_adversaries'] = args.num_adv
+    config['kl_diff_weight'] = args.kl_diff_weight
 
     with open(args.env_params, 'r') as file:
         env_params = file.read()
@@ -162,6 +163,7 @@ def setup_exps(args):
     # add the callbacks
     config["callbacks"] = {"on_train_result": on_train_result,
                            "on_episode_end": on_episode_end}
+    # config["eager"] = True
 
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
@@ -170,8 +172,8 @@ def setup_exps(args):
     exp_dict = {
         'name': args.exp_title,
         # TODO (@evinitsky) put this back
-        # 'run_or_experiment': KLPPOTrainer,
-        'run_or_experiment': trainer,
+        'run_or_experiment': KLPPOTrainer,
+        # 'run_or_experiment': trainer,
         'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
