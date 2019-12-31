@@ -30,6 +30,7 @@ from utils.rllib_utils import get_config_from_path
 
 from ray.rllib.models.catalog import MODEL_DEFAULTS
 from models.conv_lstm import ConvLSTM
+from models.recurrent_tf_model_v2 import LSTM
 
 
 def setup_ma_config(config):
@@ -145,8 +146,9 @@ def setup_exps(args):
         config['model']['custom_model'] = "rnn"
         config['vf_share_layers'] = True
     else:
+        ModelCatalog.register_custom_model("rnn", LSTM)
         config['model']['fcnet_hiddens'] = [64, 64]
-        config['model']['use_lstm'] = True
+        # config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
         if args.algorithm == 'PPO':
@@ -162,6 +164,9 @@ def setup_exps(args):
     # add the callbacks
     config["callbacks"] = {"on_train_result": on_train_result,
                            "on_episode_end": on_episode_end}
+
+    config["eager_tracing"] = True
+    config["eager"] = True
 
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
