@@ -140,7 +140,7 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
 
     # Since we are happy to evaluate the kl diff over obs in which we weren't active, we only mask this
     # with respect to the valid mask, which tracks padding for RNNs
-    if policy.num_adversaries > 1:
+    if policy.num_adversaries > 1 and policy.config['kl_diff_weight'] > 0:
         kl_loss = policy.config['kl_diff_weight'] * reduce_mean_valid(policy.kl_diff_loss)
         return -kl_loss + standard_loss
     else:
