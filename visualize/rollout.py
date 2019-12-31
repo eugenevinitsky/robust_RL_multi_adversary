@@ -28,8 +28,10 @@ from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 
 from models.conv_lstm import ConvLSTM
+from models.recurrent_tf_model_v2 import LSTM
 
 ModelCatalog.register_custom_model("rnn", ConvLSTM)
+ModelCatalog.register_custom_model("rnn", LSTM)
 
 class DefaultMapping(collections.defaultdict):
     """default_factory now takes as an argument the missing key."""
