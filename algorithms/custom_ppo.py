@@ -1,10 +1,17 @@
+import logging
+logger = logging.getLogger(__name__)
+
+import numpy as np
+import tensorflow as tf
+
 from ray.rllib.models.model import restore_original_dimensions
 from ray.rllib.agents.ppo.ppo_policy import ppo_surrogate_loss
 from ray.rllib.agents.ppo.ppo_policy import postprocess_ppo_gae
 from ray.rllib.agents.ppo.ppo_policy import vf_preds_and_logits_fetches
 from ray.rllib.agents.ppo.ppo_policy import kl_and_loss_stats
 
-from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
+from ray.rllib.agents.ppo import PPOTrainer
+from ray.rllib.agents.ppo import DEFAULT_CONFIG as DEFAULT_PPO_CONFIG
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy, setup_mixins, \
     LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin, ValueNetworkMixin
 from ray.rllib.policy.sample_batch import SampleBatch
@@ -13,11 +20,18 @@ from ray.rllib.evaluation.postprocessing import compute_advantages, \
     Postprocessing
 from ray.rllib.policy.tf_policy import ACTION_LOGP
 
-import numpy as np
-import tensorflow as tf
 
 # Frozen logits of the policy that computed the action
 BEHAVIOUR_LOGITS = "behaviour_logits"
+
+DEFAULT_CONFIG = DEFAULT_PPO_CONFIG
+DEFAULT_CONFIG.update({
+    "num_adversaries": 2,
+    # Initial weight on the kl diff part of the loss
+    "kl_diff_weight": 1.0,
+    # Target KL between agents
+    "kl_diff_target": 1.0
+})
 
 
 def get_logits(model, train_batch, index):
@@ -113,7 +127,7 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
             other_logstd - log_std +
             (tf.square(std) + tf.square(mean - other_mean)) /
             (2.0 * tf.square(other_std)) - 0.5,
-            reduction_indices=[1]
+            axis=1
         )
     return kl_loss
 
@@ -153,7 +167,9 @@ def new_kl_and_loss_stats(policy, train_batch):
     # total_kl_diff = sum([batch['kl_diff'] for batch in batch_tensors])
     stats = kl_and_loss_stats(policy, train_batch)
     if policy.num_adversaries > 1:
-        info = {'kl_diff': policy.kl_diff_loss}
+        info = {'kl_diff': policy.kl_diff_loss,
+                "cur_kl_diff_coeff": tf.cast(policy.kl_diff_coeff_val, tf.float64),
+                }
         stats.update(info)
     return stats
 
@@ -287,15 +303,68 @@ def ppo_custom_surrogate_loss(policy, model, dist_class, train_batch):
     return policy.loss_obj.loss
 
 
+class KLDiffMixin(object):
+    def __init__(self, config):
+        # KL Coefficient
+        self.kl_diff_coeff_val = config["kl_diff_weight"]
+        self.kl_target = config["kl_diff_target"]
+        self.kl_diff_coeff = tf.Variable(self.kl_diff_coeff_val,
+            name="kl_diff_coeff",
+            shape=(),
+            trainable=False,
+            dtype=tf.float32)
+
+    def update_kl_diff(self, sampled_kl):
+        if sampled_kl > 2.0 * self.kl_target:
+            self.kl_diff_coeff_val *= 1.5
+        elif sampled_kl < 0.5 * self.kl_target:
+            self.kl_diff_coeff_val *= 0.5
+        self.kl_diff_coeff.load(self.kl_diff_coeff_val, session=self.get_session())
+        return self.kl_diff_coeff_val
+
+
 class SetUpConfig(object):
     def __init__(self, config):
         self.num_adversaries = config['num_adversaries']
-        self.kl_diff_weight = config['kl_diff_weight']
 
 
 def special_setup_mixins(policy, obs_space, action_space, config):
     setup_mixins(policy, obs_space, action_space, config)
     SetUpConfig.__init__(policy, config)
+    KLDiffMixin.__init__(policy, config)
+
+
+def update_kl(trainer, fetches):
+    """Update both the KL coefficient and the kl diff coefficient"""
+    if "kl_diff" in fetches:
+        # single-agent
+        trainer.workers.local_worker().for_policy(
+            lambda pi: pi.update_kl_difft(fetches["kl_diff"]))
+    else:
+        def update(pi, pi_id):
+            # The robot won't have kl_diff in fetches
+            if pi_id in fetches and "kl_diff" in fetches[pi_id]:
+                pi.update_kl_diff(fetches[pi_id]["kl_diff"])
+            else:
+                logger.debug("No data for {}, not updating kl_diff".format(pi_id))
+
+        # multi-agent
+        trainer.workers.local_worker().foreach_trainable_policy(update)
+
+    if "kl" in fetches:
+        # single-agent
+        trainer.workers.local_worker().for_policy(
+            lambda pi: pi.update_kl(fetches["kl"]))
+    else:
+
+        def update(pi, pi_id):
+            if pi_id in fetches:
+                pi.update_kl(fetches[pi_id]["kl"])
+            else:
+                logger.debug("No data for {}, not updating kl".format(pi_id))
+
+        # multi-agent
+        trainer.workers.local_worker().foreach_trainable_policy(update)
 
 
 CustomPPOPolicy = PPOTFPolicy.with_updates(
@@ -305,14 +374,12 @@ CustomPPOPolicy = PPOTFPolicy.with_updates(
     stats_fn=new_kl_and_loss_stats,
     extra_action_fetches_fn=new_vf_preds_and_logits_fetches,
     mixins=[SetUpConfig, LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin,
-            ValueNetworkMixin],
+            ValueNetworkMixin, KLDiffMixin],
     before_loss_init=special_setup_mixins
 )
 
-my_special_config = DEFAULT_CONFIG
-my_special_config["num_adversaries"] = 2
-my_special_config["kl_diff_weight"] = 1e-5
 KLPPOTrainer = PPOTrainer.with_updates(
     default_policy=CustomPPOPolicy,
-    default_config=my_special_config
+    default_config=DEFAULT_CONFIG,
+    after_optimizer_step = update_kl
 )
