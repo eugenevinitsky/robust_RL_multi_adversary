@@ -118,7 +118,7 @@ setup_commands:
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
     - cd ~/adversarial_sim2real && git fetch; git checkout kl_div2 && git pull
-    - source activate sim2real && pip install psutil && pip install tensorflow====2.0.0 && pip install ray==0.7.7 && pip install seaborn
+    - source activate sim2real && pip install psutil && pip install tensorflow==1.15.0 && pip install ray==0.7.7 && pip install seaborn
     - echo PATH="$HOME/anaconda3/envs/sim2real/bin:$PATH" >> /home/ubuntu/.bashrc && source /home/ubuntu/.bashrc
 
     # Consider uncommenting these if you also want to run apt-get commands during setup

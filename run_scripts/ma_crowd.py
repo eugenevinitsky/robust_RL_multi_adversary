@@ -89,7 +89,6 @@ def setup_exps(args):
     config['kl_diff_weight'] = args.kl_diff_weight
     config['kl_diff_target'] = args.kl_diff_target
     config['train_batch_size'] = args.train_batch_size
-    config['optimizer'] = 'simple_optimizer'
 
     with open(args.env_params, 'r') as file:
         env_params = file.read()

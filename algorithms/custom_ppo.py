@@ -135,7 +135,7 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
 # def new_ppo_surrogate_loss(policy, batch_tensors):
 def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     if policy.num_adversaries > 1:
-        policy.kl_diff_loss = setup_kl_loss(policy, model, dist_class, train_batch)
+        kl_diff_loss = setup_kl_loss(policy, model, dist_class, train_batch)
 
     # zero out the loss elements where you weren't actually acting
     original_space = restore_original_dimensions(train_batch['obs'], model.obs_space)
@@ -155,7 +155,8 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     # Since we are happy to evaluate the kl diff over obs in which we weren't active, we only mask this
     # with respect to the valid mask, which tracks padding for RNNs
     if policy.num_adversaries > 1 and policy.config['kl_diff_weight'] > 0:
-        kl_loss = policy.config['kl_diff_weight'] * reduce_mean_valid(policy.kl_diff_loss)
+        kl_loss = policy.config['kl_diff_weight'] * reduce_mean_valid(kl_diff_loss)
+        policy.kl_diff_loss = kl_loss
         return -kl_loss + standard_loss
     else:
         return standard_loss
@@ -168,7 +169,7 @@ def new_kl_and_loss_stats(policy, train_batch):
     stats = kl_and_loss_stats(policy, train_batch)
     if policy.num_adversaries > 1:
         info = {'kl_diff': policy.kl_diff_loss,
-                "cur_kl_diff_coeff": tf.cast(policy.kl_diff_coeff_val, tf.float64),
+                "cur_kl_diff_coeff": tf.cast(policy.kl_diff_coeff, tf.float64),
                 }
         stats.update(info)
     return stats
@@ -308,16 +309,18 @@ class KLDiffMixin(object):
         # KL Coefficient
         self.kl_diff_coeff_val = config["kl_diff_weight"]
         self.kl_target = config["kl_diff_target"]
-        self.kl_diff_coeff = tf.Variable(self.kl_diff_coeff_val,
-            name="kl_diff_coeff",
+        self.kl_diff_coeff = tf.get_variable(
+            initializer=tf.constant_initializer(self.kl_coeff_val),
+            name="kl_coeff_diff",
             shape=(),
             trainable=False,
             dtype=tf.float32)
 
+
     def update_kl_diff(self, sampled_kl):
-        if sampled_kl > 2.0 * self.kl_target:
+        if sampled_kl < 2.0 * self.kl_target:
             self.kl_diff_coeff_val *= 1.5
-        elif sampled_kl < 0.5 * self.kl_target:
+        elif sampled_kl > 0.5 * self.kl_target:
             self.kl_diff_coeff_val *= 0.5
         self.kl_diff_coeff.load(self.kl_diff_coeff_val, session=self.get_session())
         return self.kl_diff_coeff_val
@@ -381,5 +384,5 @@ CustomPPOPolicy = PPOTFPolicy.with_updates(
 KLPPOTrainer = PPOTrainer.with_updates(
     default_policy=CustomPPOPolicy,
     default_config=DEFAULT_CONFIG,
-    after_optimizer_step = update_kl
+    after_optimizer_step=update_kl
 )
