@@ -285,7 +285,7 @@
 #--tmux --start --stop --cluster-name=ev_ma_test6
 
 ######################################################################################################################################
-## 12/29/19 tests
+## 12/30/19 tests
 
 #ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/ma_crowd.py --exp_title MA_0ad_PA_h0 --use_s3 --num_samples 1 \
 #--train_batch_size 30000 --checkpoint_freq 50 --num_iters 800 --kl_diff_weight 0 --num_adv 0 --perturb_actions --num_cpus 8 --run_transfer_tests --human_num 0 --grid_search" \

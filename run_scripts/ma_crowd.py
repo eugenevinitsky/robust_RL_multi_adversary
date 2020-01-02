@@ -30,6 +30,7 @@ from utils.rllib_utils import get_config_from_path
 
 from ray.rllib.models.catalog import MODEL_DEFAULTS
 from models.conv_lstm import ConvLSTM
+from models.recurrent_tf_model_v2 import LSTM
 
 
 def setup_ma_config(config):
@@ -38,7 +39,7 @@ def setup_ma_config(config):
 
     num_adversaries = config['env_config']['num_adversaries']
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}}
+    adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
     # TODO(@evinitsky) put this back
     policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
     policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
@@ -146,8 +147,9 @@ def setup_exps(args):
         config['model']['custom_model'] = "rnn"
         config['vf_share_layers'] = True
     else:
+        ModelCatalog.register_custom_model("rnn", LSTM)
         config['model']['fcnet_hiddens'] = [64, 64]
-        config['model']['use_lstm'] = True
+        # config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
         if args.algorithm == 'PPO':
@@ -164,6 +166,9 @@ def setup_exps(args):
     config["callbacks"] = {"on_train_result": on_train_result,
                            "on_episode_end": on_episode_end}
     # config["eager"] = True
+
+    config["eager_tracing"] = True
+    config["eager"] = True
 
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):

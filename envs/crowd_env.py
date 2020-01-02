@@ -128,7 +128,7 @@ class CrowdSimEnv(gym.Env):
 
     @property
     def action_space(self):
-        return Box(low=0.0, high=1.0, shape=(2, ), dtype=np.float32)
+        return Box(low=-1.0, high=1.0, shape=(2, ), dtype=np.float32)
 
     def generate_random_human_position(self, human_num, rule):
         """
@@ -428,8 +428,8 @@ class CrowdSimEnv(gym.Env):
         """Returns the action transformed into appropriate units and coordinates"""
         r, v = np.copy(action)
         # scale r to be between - self.rad_lim and self.rad_lim
-        r = 2 * ((r * self.rad_lim) - (self.rad_lim / 2.0))
-        v = 2 * (v - 0.5) * self.v_lim
+        r = r * self.rad_lim
+        v = v * self.v_lim
         scaled_action = np.array([r, v])
         return scaled_action
 
@@ -1032,8 +1032,17 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
               super().observation_space.low.tolist() * self.perturb_state)
         high = np.array(super().action_space.high.tolist() * self.perturb_actions + \
               super().observation_space.high.tolist() * self.perturb_state)
-        box = Box(low=low, high=high, shape=None, dtype=np.float32)
+        box = Box(low=-1 * np.ones(low.shape), high=1 * np.ones(high.shape), shape=None, dtype=np.float32)
         return box
+
+    def transform_adversary_actions(self, action):
+        """Returns the action transformed into appropriate units and coordinates"""
+        r, v = np.copy(action)
+        # scale r to be between - self.rad_lim and self.rad_lim
+        r = r * self.rad_lim
+        v = v * self.v_lim
+        scaled_action = np.array([r, v])
+        return scaled_action
 
     def step(self, action, update=True):
         """
@@ -1066,7 +1075,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
                 state_perturbation = action[adversary_key] * self.state_strength_vals[self.curr_adversary]
 
             if self.perturb_actions:
-                scaled_perturbation = self.transform_actions(action_perturbation)
+                scaled_perturbation = self.transform_adversary_actions(action_perturbation)
 
                 robot_action = robot_action + scaled_perturbation
                 # apply clipping so that it can't exceed the bounds of what the robot can do
