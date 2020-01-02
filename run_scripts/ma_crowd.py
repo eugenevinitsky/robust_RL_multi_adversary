@@ -39,7 +39,7 @@ def setup_ma_config(config):
 
     num_adversaries = config['env_config']['num_adversaries']
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    adversary_config = {}#{"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
+    adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
     # TODO(@evinitsky) put this back
     # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
     #                                              env.adv_action_space, adversary_config) for i in range(num_adversaries)})
