@@ -13,8 +13,8 @@ parser.add_argument('--num_humans', type=str, default='1', help='Number of human
 
 
 args = parser.parse_args()
-prefix_list = ['base', 'friction', 'color', 'unrestrict_goal_reg', 'chase_robot',
-               'gaussian_state_noise', 'gaussian_action_noise', 'gaussian_state_action_noise']
+prefix_list = ['base', 'friction', 'color', 'restrict_goal_region', 'chase_robot',
+               'add_gaussian_noise_action', 'add_gaussian_noise_state', 'gaussian_state_action_noise']
 rew_results = [[] for _ in range(len(prefix_list))]
 steps_results = [[] for _ in range(len(prefix_list))]
 
