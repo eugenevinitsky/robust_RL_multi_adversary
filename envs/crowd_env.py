@@ -128,7 +128,7 @@ class CrowdSimEnv(gym.Env):
 
     @property
     def action_space(self):
-        return Box(low=0.0, high=1.0, shape=(2, ), dtype=np.float32)
+        return Box(low=-1.0, high=1.0, shape=(2, ), dtype=np.float32)
 
     def generate_random_human_position(self, human_num, rule):
         """
@@ -428,8 +428,8 @@ class CrowdSimEnv(gym.Env):
         """Returns the action transformed into appropriate units and coordinates"""
         r, v = np.copy(action)
         # scale r to be between - self.rad_lim and self.rad_lim
-        r = 2 * ((r * self.rad_lim) - (self.rad_lim / 2.0))
-        v = 2 * (v - 0.5) * self.v_lim
+        r = r * self.rad_lim
+        v = v * self.v_lim
         scaled_action = np.array([r, v])
         return scaled_action
 
