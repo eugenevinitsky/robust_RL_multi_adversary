@@ -9,18 +9,13 @@ import pytz
 import numpy as np
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
-from ray.rllib.agents.ddpg.ddpg_policy import DDPGTFPolicy
-from ray.rllib.agents.ppo.ppo import PPOTrainer
-from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
 
-import ray.rllib.agents.ppo as ppo
-import ray.rllib.agents.ddpg as ddpg
 from ray.rllib.models import ModelCatalog
 from ray import tune
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
-from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy
+from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy, DEFAULT_CONFIG
 from visualize.visualize_adversaries import visualize_adversaries
 from visualize.transfer_test import run_transfer_tests
 from utils.env_creator import ma_env_creator, construct_config
@@ -84,33 +79,17 @@ def setup_exps(args):
     parser = ma_env_parser(parser)
     args = parser.parse_args(args)
 
-    alg_run = args.algorithm
-
-    if args.algorithm == 'PPO':
-        trainer = PPOTrainer
-        config = ppo.DEFAULT_CONFIG.copy()
-        config["sgd_minibatch_size"] = 500
-        config["num_sgd_iter"] = 10
-        config['train_batch_size'] = args.train_batch_size
-        if args.grid_search:
-            config["lr"] = tune.grid_search([5e-4, 5e-5])
-        config['num_workers'] = args.num_cpus
-    elif args.algorithm == 'DDPG':
-        trainer = DDPGTrainer
-        config = ddpg.DEFAULT_CONFIG.copy()
-        if args.grid_search:
-            config["critic_lr"] = tune.grid_search([1e-4, 1e-3, 1e-2])
-            config["actor_lr"] = tune.grid_search([1e-4, 1e-3, 1e-2])
-            config["exploration_should_anneal"] = tune.grid_search([True, False])
-    else:
-        sys.exit('Only PPO and DDPG algorithms are currently supported. Pick a different algorithm bruv.')
+    alg_run = 'PPO'
 
     # Universal hyperparams
+    config = DEFAULT_CONFIG
     config['gamma'] = 0.99
     config["batch_mode"] = "complete_episodes"
-    # TODO(@evinitsky) put this back
     config['num_adversaries'] = args.num_adv
     config['kl_diff_weight'] = args.kl_diff_weight
+    config['kl_diff_target'] = args.kl_diff_target
+    config['train_batch_size'] = args.train_batch_size
+    config['optimizer'] = 'simple_optimizer'
 
     with open(args.env_params, 'r') as file:
         env_params = file.read()
@@ -152,10 +131,9 @@ def setup_exps(args):
         # config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 128
-        if args.algorithm == 'PPO':
-            config['vf_share_layers'] = True
-            if args.grid_search:
-                config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
+        config['vf_share_layers'] = True
+        if args.grid_search:
+            config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
     config['env'] = 'MultiAgentCrowdSimEnv'
     register_env('MultiAgentCrowdSimEnv', ma_env_creator)
@@ -167,8 +145,8 @@ def setup_exps(args):
                            "on_episode_end": on_episode_end}
     # config["eager"] = True
 
-    config["eager_tracing"] = True
-    config["eager"] = True
+    # config["eager_tracing"] = True
+    # config["eager"] = True
 
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
@@ -176,9 +154,7 @@ def setup_exps(args):
 
     exp_dict = {
         'name': args.exp_title,
-        # TODO (@evinitsky) put this back
         'run_or_experiment': KLPPOTrainer,
-        # 'run_or_experiment': trainer,
         'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
