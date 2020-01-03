@@ -57,17 +57,16 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     )
 
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = instantiate_rollout(rllib_config, checkpoint)
-    for change in change_list:
-        if len(change) > 0:
-            setattr(env, change[0], change[1])
-    rewards, steps = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
+    if len(change_list) > 0:
+        setattr(env, change_list[0], change_list[1])
+    rewards = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                  state_init, action_init, num_rollouts)
 
     with open(os.path.join(file_path, '{}/{}_{}_rew.txt'.format(outdir, output_file_name, test_name)),
               'wb') as file:
         np.savetxt(file, rewards, delimiter=', ')
 
-    print('The average {} reward, episode length is {}, {}'.format(test_name, np.mean(rewards), np.mean(steps)))
+    print('The average reward for task {} is {}'.format(test_name, np.mean(rewards)))
 
 
 def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir):
@@ -111,5 +110,4 @@ if __name__ == '__main__':
 
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
-    run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name, args.output_dir,
-                       save_trajectory=args.save_video, show_images=args.show_images)
+    run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name, args.output_dir)
