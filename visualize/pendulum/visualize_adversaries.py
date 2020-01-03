@@ -129,8 +129,6 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                                 obs_index = np.digitize(obs_elem, obs_bins[obs_loop_index, :]) - 1
                                 if obs_index == heat_map.shape[1]:
                                     obs_index -= 1
-                                if obs_loop_index == 0:
-                                    print('index, value', obs_index, obs[0])
 
                                 heat_map[action_index, obs_index, obs_loop_index] += 1
 
