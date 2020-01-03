@@ -28,14 +28,14 @@ class LSTM(RecurrentTFModelV2):
         input_layer = tf.keras.layers.Input((None,) + obs_space.shape, name="inputs")
 
         # If true we append the actions into the layer after the conv
-        self.lstm_use_prev_action_reward = model_config["custom_options"].get("lstm_use_prev_action_reward")
+        self.lstm_use_prev_action_reward = model_config.get("lstm_use_prev_action_reward")
         if self.lstm_use_prev_action_reward:
-            actions_layer = tf.keras.layers.Input(shape=(None, action_space.shape), name="agent_actions")
-            input_layer = tf.keras.layers.concatenate([input_layer, actions_layer])
+            actions_layer = tf.keras.layers.Input(shape=(None,) +  action_space.shape, name="agent_actions")
+            input_layer = tf.keras.layers.Concatenate()([input_layer, actions_layer])
 
         last_layer = input_layer
 
-        hiddens = model_config["custom_options"].get("fcnet_hiddens")
+        hiddens = model_config.get("fcnet_hiddens")
         i = 1
         fc_activation = get_activation_fn(model_config.get("fcnet_activation"))
         for size in hiddens:

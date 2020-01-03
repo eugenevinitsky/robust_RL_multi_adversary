@@ -1,10 +1,14 @@
 import collections
+import logging
+
+import numpy as np
 from ray.rllib.env import MultiAgentEnv
 from ray.rllib.policy.sample_batch import DEFAULT_POLICY_ID
+from ray.rllib.env.base_env import _DUMMY_AGENT_ID
+from ray.rllib.evaluation.episode import _flatten_action
 
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
-import ray
 try:
     from ray.rllib.agents.agent import get_agent_class
 except ImportError:
@@ -30,7 +34,7 @@ def default_policy_agent_mapping(unused_agent_id):
     return DEFAULT_POLICY_ID
 
 
-def instantiate_rollout(rllib_config, checkpoint, show_images):
+def instantiate_rollout(rllib_config, checkpoint):
     rllib_config['num_workers'] = 0
 
     # Determine agent and checkpoint
@@ -70,3 +74,76 @@ def instantiate_rollout(rllib_config, checkpoint, show_images):
     env = pendulum_env_creator(rllib_config['env_config'])
 
     return env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init
+
+
+def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init, num_rollouts):
+
+    rewards = []
+
+    # actually do the rollout
+    for r_itr in range(num_rollouts):
+        mapping_cache = {}  # in case policy_agent_mapping is stochastic
+        agent_states = DefaultMapping(
+            lambda agent_id: state_init[mapping_cache[agent_id]])
+        prev_actions = DefaultMapping(
+            lambda agent_id: action_init[mapping_cache[agent_id]])
+        obs = env.reset()
+        prev_rewards = collections.defaultdict(lambda: 0.)
+        done = False
+        reward_total = 0.0
+        while not done:
+            multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
+            action_dict = {}
+            for agent_id, a_obs in multi_obs.items():
+                if a_obs is not None:
+                    policy_id = mapping_cache.setdefault(
+                        agent_id, policy_agent_mapping(agent_id))
+                    p_use_lstm = use_lstm[policy_id]
+                    if p_use_lstm:
+                        prev_action = _flatten_action(prev_actions[agent_id])
+                        a_action, p_state, _ = agent.compute_action(
+                            a_obs,
+                            state=agent_states[agent_id],
+                            prev_action=prev_action,
+                            prev_reward=prev_rewards[agent_id],
+                            policy_id=policy_id)
+                        agent_states[agent_id] = p_state
+                    else:
+                        prev_action = _flatten_action(prev_actions[agent_id])
+                        a_action = agent.compute_action(
+                            a_obs,
+                            prev_action=prev_action,
+                            prev_reward=prev_rewards[agent_id],
+                            policy_id=policy_id)
+                    # handle the tuple case
+                    if len(a_action) > 1:
+                        if isinstance(a_action[0], np.ndarray):
+                            a_action[0] = a_action[0].flatten()
+                    action_dict[agent_id] = a_action
+                    prev_action = _flatten_action(a_action)  # tuple actions
+                    prev_actions[agent_id] = prev_action
+            action = action_dict
+
+            action = action if multiagent else action[_DUMMY_AGENT_ID]
+
+            # we turn the adversaries off so you only send in the robot keys
+            new_dict = {}
+            new_dict.update({'robot': action['robot']})
+            next_obs, reward, done, info = env.step(new_dict)
+            if isinstance(done, dict):
+                done = done['__all__']
+            if multiagent:
+                for agent_id, r in reward.items():
+                    prev_rewards[agent_id] = r
+            else:
+                prev_rewards[_DUMMY_AGENT_ID] = reward
+
+            # we only want the robot reward, not the adversary reward
+            reward_total += info['robot']['robot_reward']
+            obs = next_obs
+        print("Episode reward", reward_total)
+
+        rewards.append(reward_total)
+
+    print('the average reward is ', np.mean(rewards))
+    return rewards

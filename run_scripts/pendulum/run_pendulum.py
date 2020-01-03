@@ -9,14 +9,16 @@ import pytz
 import numpy as np
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
+from ray.rllib.agents.ppo.ppo import PPOTrainer, DEFAULT_CONFIG
 
 from ray.rllib.models import ModelCatalog
 from ray import tune
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
-from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy, DEFAULT_CONFIG
+# from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy, DEFAULT_CONFIG
 
+from visualize.pendulum.transfer_tests import run_transfer_tests
 from visualize.pendulum.visualize_adversaries import visualize_adversaries
 from utils.parsers import init_parser, ray_parser, ma_env_parser
 from utils.pendulum_env_creator import pendulum_env_creator
@@ -30,6 +32,8 @@ def setup_ma_config(config):
     policies_to_train = ['pendulum']
 
     num_adversaries = config['env_config']['num_adversaries']
+    if num_adversaries == 0:
+        return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
     policy_graphs = {'pendulum': (PPOTFPolicy, env.observation_space, env.action_space, {})}
@@ -66,9 +70,16 @@ def setup_exps(args):
 
     # Universal hyperparams
     config = DEFAULT_CONFIG
-    config['gamma'] = 0.99
+    config['gamma'] = 0.95
     config["batch_mode"] = "complete_episodes"
-    config['train_batch_size'] = args.train_batch_size
+    # config['train_batch_size'] = args.train_batch_size
+    config['train_batch_size'] = 2048
+    config['vf_clip_param'] = 10.0
+    config['lambda'] = 0.1
+    config['lr'] = 5e-3
+    config['sgd_minibatch_size'] = 64
+    config['num_envs_per_worker'] = 10
+    config['num_sgd_iter'] = 10
 
     if args.custom_ppo:
         config['num_adversaries'] = args.num_adv
@@ -82,13 +93,12 @@ def setup_exps(args):
     config['env_config']['run'] = alg_run
 
     ModelCatalog.register_custom_model("rnn", LSTM)
-    config['model']['custom_options']['fcnet_hiddens'] = [64, 64]
+    config['model']['fcnet_hiddens'] = [64, 64]
     # TODO(@evinitsky) turn this on
     config['model']['use_lstm'] = False
     # config['model']['custom_model'] = "rnn"
     config['model']['lstm_use_prev_action_reward'] = False
     config['model']['lstm_cell_size'] = 128
-    config['vf_share_layers'] = True
     if args.grid_search:
         config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
@@ -111,7 +121,8 @@ def setup_exps(args):
 
     exp_dict = {
         'name': args.exp_title,
-        'run_or_experiment': KLPPOTrainer,
+        # 'run_or_experiment': KLPPOTrainer,
+        'run_or_experiment': 'PPO',
         'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
@@ -126,11 +137,11 @@ def setup_exps(args):
 def on_train_result(info):
     """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
     result = info["result"]
-    pendulum_reward = result['policy_reward_mean']['pendulum']
+    # pendulum_reward = result['policy_reward_mean']['pendulum']
     trainer = info["trainer"]
 
     # TODO(should we do this every episode or every training iteration)?
-    pass
+    return
     trainer.workers.foreach_worker(
         lambda ev: ev.foreach_env(
             lambda env: env.select_new_adversary()))
@@ -140,14 +151,15 @@ def on_episode_end(info):
     """Select the currently active adversary"""
 
     # store info about how many adversaries there are
-    env = info["env"].envs[0]
-    episode = info["episode"]
+    if hasattr(info["env"], 'envs'):
+        env = info["env"].envs[0]
+        episode = info["episode"]
 
-    # if env.prediction_reward and env.adversary_range > 1:
-    #     episode.custom_metrics["predict_frac"] = env.num_correct_predict / episode.length
+        # if env.prediction_reward and env.adversary_range > 1:
+        #     episode.custom_metrics["predict_frac"] = env.num_correct_predict / episode.length
 
-    # select a new adversary every episode. Currently disabled.
-    # env.select_new_adversary()
+        # select a new adversary every episode. Currently disabled.
+        env.select_new_adversary()
 
 
 if __name__ == "__main__":
@@ -186,9 +198,9 @@ if __name__ == "__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                # run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)
-                # TODO(@evinitsky) this will break for state adversaries
                 if args.num_adv > 0:
+                    run_transfer_tests(config, checkpoint_path, 2, args.exp_title, output_path)
+
                     visualize_adversaries(config, checkpoint_path, 10, 20, output_path)
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
