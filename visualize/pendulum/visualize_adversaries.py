@@ -25,7 +25,7 @@ def compute_kl_diff(mean, log_std, other_mean, other_log_std):
 
 def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, outdir):
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
-        instantiate_rollout(rllib_config, checkpoint, False)
+        instantiate_rollout(rllib_config, checkpoint)
 
     # figure out how many adversaries you have and initialize their grids
     num_adversaries = env.num_adversaries
