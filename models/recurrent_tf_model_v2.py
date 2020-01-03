@@ -25,7 +25,7 @@ class LSTM(RecurrentTFModelV2):
         self.num_outputs = num_outputs
 
         ## Batch x Time x H x W x C
-        input_layer = tf.keras.layers.Input(obs_space.shape, name="inputs")
+        input_layer = tf.keras.layers.Input((None,) + obs_space.shape, name="inputs")
 
         # If true we append the actions into the layer after the conv
         self.lstm_use_prev_action_reward = model_config["custom_options"].get("lstm_use_prev_action_reward")
@@ -35,10 +35,10 @@ class LSTM(RecurrentTFModelV2):
 
         last_layer = input_layer
 
-        hiddens = model_config["custom_options"].get("fcnet_hiddens")  # should be list of lists
+        hiddens = model_config["custom_options"].get("fcnet_hiddens")
         i = 1
         fc_activation = get_activation_fn(model_config.get("fcnet_activation"))
-        for size in hiddens[0]:
+        for size in hiddens:
             last_layer = tf.keras.layers.Dense(
                 size,
                 name="fc_{}".format(i),
@@ -71,7 +71,7 @@ class LSTM(RecurrentTFModelV2):
             1, activation=None, name="values")(last_layer)
 
         inputs = [input_layer, seq_in, state_in_h, state_in_c]
-        if self.use_prev_action:
+        if self.lstm_use_prev_action_reward:
             inputs.insert(1, actions_layer)
         outputs = [action, values, state_h, state_c]
 
@@ -85,7 +85,7 @@ class LSTM(RecurrentTFModelV2):
     def forward(self, input_dict, state, seq_lens):
         """Adds time dimension to batch before sending inputs to forward_rnn().
         You should implement forward_rnn() in your subclass."""
-        if self.use_prev_action:
+        if self.lstm_use_prev_action_reward:
             output, new_state = self.forward_rnn(
                 add_time_dimension(input_dict["obs"], seq_lens), state,
                 seq_lens, add_time_dimension(input_dict["prev_action"], seq_lens))

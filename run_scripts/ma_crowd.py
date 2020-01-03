@@ -88,6 +88,8 @@ def setup_exps(args):
     config['num_adversaries'] = args.num_adv
     config['kl_diff_weight'] = args.kl_diff_weight
     config['kl_diff_target'] = args.kl_diff_target
+    # Keep in mind that kl_diff_clip is also the maximum value that kl_diff can take on
+    config['kl_diff_clip'] = 5.0
     config['train_batch_size'] = args.train_batch_size
 
     with open(args.env_params, 'r') as file:
@@ -126,9 +128,11 @@ def setup_exps(args):
         config['vf_share_layers'] = True
     else:
         ModelCatalog.register_custom_model("rnn", LSTM)
-        config['model']['fcnet_hiddens'] = [64, 64]
-        # config['model']['use_lstm'] = True
-        config['model']['lstm_use_prev_action_reward'] = True
+        config['model']['custom_options']['fcnet_hiddens'] = [64, 64]
+        # TODO(@evinitsky) turn this on
+        config['model']['use_lstm'] = False
+        # config['model']['custom_model'] = "rnn"
+        config['model']['lstm_use_prev_action_reward'] = False
         config['model']['lstm_cell_size'] = 128
         config['vf_share_layers'] = True
         if args.grid_search:
@@ -142,10 +146,10 @@ def setup_exps(args):
     # add the callbacks
     config["callbacks"] = {"on_train_result": on_train_result,
                            "on_episode_end": on_episode_end}
-    # config["eager"] = True
 
     # config["eager_tracing"] = True
-    # config["eager"] = True
+    config["eager"] = True
+    config["eager_tracing"] = True
 
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
@@ -239,8 +243,8 @@ if __name__=="__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)
+                # run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)
                 # TODO(@evinitsky) this will break for state adversaries
-                visualize_adversaries(config, checkpoint_path, 20, 500, output_path)
+                visualize_adversaries(config, checkpoint_path, 10, 20, output_path)
                 p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path, "s3://sim2real/transfer_results/{}/{}/{}".format(date, args.exp_title, tune_name)).split(' '))
                 p1.wait()

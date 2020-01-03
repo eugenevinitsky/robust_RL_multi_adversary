@@ -82,8 +82,11 @@ def new_postprocess_ppo_gae(policy,
                             episode=None):
     postprocess = postprocess_ppo_gae(policy, sample_batch, other_agent_batches, episode)
 
-    # if other_agent_batches:
     batch_size = sample_batch['obs'].shape[0]
+
+    # We store the observations of all of the other agents in postprocess as well as their corresponding logits.
+    # Then, we can take our agent and run its model on all of these observations. This gives us the logits of our
+    # agent had it seen these observations. We can then compute the KL between the two policies.
     if other_agent_batches:
         i = 0
         for other_agent_batch in enumerate(other_agent_batches.values()):
@@ -97,7 +100,7 @@ def new_postprocess_ppo_gae(policy,
                 postprocess[SampleBatch.PREV_REWARDS + '_' + str(i)] = sample_batch[SampleBatch.PREV_REWARDS]
                 i += 1
 
-    # handle the fake pass
+    # handle the fake pass. There aren't any other_agent_batches in the rllib fake pass
     if not other_agent_batches:
         # go through and fill in as many kl objects as you will need
         for i in range(policy.num_adversaries - 1):
@@ -114,6 +117,8 @@ def new_postprocess_ppo_gae(policy,
 
 
 def setup_kl_loss(policy, model, dist_class, train_batch):
+    """Since we are computing the logits of model on the observations of adversary i, we compute
+       the KL as \mathbb{E}_{adversary i} [log(p(adversary_i) \ p(model)] instead of the other way around."""
     kl_loss = 0.0
     for i in range(policy.num_adversaries - 1):
         logits, state = get_logits(model, train_batch, i)
@@ -123,6 +128,13 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
         other_std = train_batch["kj_std_{}".format(i)]
         other_mean = train_batch["kj_mean_{}".format(i)]
 
+        # we clip here lest it blow up due to some really small probabilities
+        # kl_loss += tf.clip_by_value(tf.reduce_sum(
+        #     other_logstd - log_std +
+        #     (tf.square(std) + tf.square(mean - other_mean)) /
+        #     (2.0 * tf.square(other_std)) - 0.5,
+        #     axis=1
+        # ), 0.0, policy.kl_diff_clip)
         kl_loss += tf.reduce_sum(
             other_logstd - log_std +
             (tf.square(std) + tf.square(mean - other_mean)) /
@@ -155,21 +167,22 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     # Since we are happy to evaluate the kl diff over obs in which we weren't active, we only mask this
     # with respect to the valid mask, which tracks padding for RNNs
     if policy.num_adversaries > 1 and policy.config['kl_diff_weight'] > 0:
-        kl_loss = policy.config['kl_diff_weight'] * reduce_mean_valid(kl_diff_loss)
-        policy.kl_diff_loss = kl_loss
-        return -kl_loss + standard_loss
+        policy.unscaled_kl_loss = kl_diff_loss
+        clipped_mean_loss = reduce_mean_valid(tf.clip_by_value(kl_diff_loss, 0, policy.kl_diff_clip))
+        policy.kl_var = tf.math.reduce_std(kl_diff_loss)
+        return -policy.config['kl_diff_weight'] * clipped_mean_loss + standard_loss
     else:
         return standard_loss
     # return reduce_mean_valid(pre_mean_loss * tf.squeeze(is_active))
 
 
 def new_kl_and_loss_stats(policy, train_batch):
-    # import ipdb; ipdb.set_trace()
-    # total_kl_diff = sum([batch['kl_diff'] for batch in batch_tensors])
+    """Add the kl stats to the fetches"""
     stats = kl_and_loss_stats(policy, train_batch)
     if policy.num_adversaries > 1:
-        info = {'kl_diff': policy.kl_diff_loss,
+        info = {'kl_diff': policy.unscaled_kl_loss,
                 "cur_kl_diff_coeff": tf.cast(policy.kl_diff_coeff, tf.float64),
+                'kl_diff_var': policy.kl_var
                 }
         stats.update(info)
     return stats
@@ -309,19 +322,25 @@ class KLDiffMixin(object):
         # KL Coefficient
         self.kl_diff_coeff_val = config["kl_diff_weight"]
         self.kl_target = config["kl_diff_target"]
-        self.kl_diff_coeff = tf.get_variable(
-            initializer=tf.constant_initializer(self.kl_coeff_val),
+        self.kl_diff_clip = config["kl_diff_clip"]
+        # self.kl_diff_coeff = tf.compat.v1.get_variable(
+        #     initializer=tf.constant_initializer(self.kl_diff_coeff_val),
+        #     name="kl_coeff_diff",
+        #     shape=(),
+        #     trainable=False,
+        #     dtype=tf.float32)
+        self.kl_diff_coeff = tf.Variable(self.kl_diff_coeff_val,
             name="kl_coeff_diff",
-            shape=(),
             trainable=False,
             dtype=tf.float32)
-
 
     def update_kl_diff(self, sampled_kl):
         if sampled_kl < 2.0 * self.kl_target:
             self.kl_diff_coeff_val *= 1.5
         elif sampled_kl > 0.5 * self.kl_target:
             self.kl_diff_coeff_val *= 0.5
+        # There is literally no reason to let this go off to infinity and subsequently overflow
+        self.kl_diff_coeff_val = max(self.kl_diff_coeff_val, 1e5)
         self.kl_diff_coeff.load(self.kl_diff_coeff_val, session=self.get_session())
         return self.kl_diff_coeff_val
 
@@ -354,20 +373,20 @@ def update_kl(trainer, fetches):
         # multi-agent
         trainer.workers.local_worker().foreach_trainable_policy(update)
 
-    if "kl" in fetches:
-        # single-agent
-        trainer.workers.local_worker().for_policy(
-            lambda pi: pi.update_kl(fetches["kl"]))
-    else:
-
-        def update(pi, pi_id):
-            if pi_id in fetches:
-                pi.update_kl(fetches[pi_id]["kl"])
-            else:
-                logger.debug("No data for {}, not updating kl".format(pi_id))
-
-        # multi-agent
-        trainer.workers.local_worker().foreach_trainable_policy(update)
+    # if "kl" in fetches:
+    #     # single-agent
+    #     trainer.workers.local_worker().for_policy(
+    #         lambda pi: pi.update_kl(fetches["kl"]))
+    # else:
+    #
+    #     def update(pi, pi_id):
+    #         if pi_id in fetches:
+    #             pi.update_kl(fetches[pi_id]["kl"])
+    #         else:
+    #             logger.debug("No data for {}, not updating kl".format(pi_id))
+    #
+    #     # multi-agent
+    #     trainer.workers.local_worker().foreach_trainable_policy(update)
 
 
 CustomPPOPolicy = PPOTFPolicy.with_updates(

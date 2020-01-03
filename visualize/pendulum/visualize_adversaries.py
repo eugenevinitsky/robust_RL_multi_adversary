@@ -11,7 +11,7 @@ from ray.rllib.env.base_env import _DUMMY_AGENT_ID
 from ray.rllib.evaluation.episode import _flatten_action
 import seaborn as sns; sns.set()
 
-from visualize.rollout import instantiate_rollout, DefaultMapping
+from visualize.pendulum.run_rollout import instantiate_rollout, DefaultMapping
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 
@@ -33,11 +33,16 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
     kl_grid = np.zeros((num_adversaries, num_adversaries))
     for i in range(num_adversaries):
         adversary_str = 'adversary' + str(i)
-        adversary_grid = np.zeros((grid_size - 1, grid_size - 1)).astype(int)
-        strength_list = np.linspace(env.adv_action_space.low, env.adv_action_space.high, grid_size).T
-        adversary_grid_dict[adversary_str] = {'grid': adversary_grid, 'bins': strength_list}
+        # each adversary grid is a map of agent action versus observation dimension
+        adversary_grid = np.zeros((grid_size - 1, grid_size - 1, env.observation_space.low.shape[0])).astype(int)
+        strength_grid = np.linspace(env.adv_action_space.low, env.adv_action_space.high, grid_size).T
+        obs_grid = np.linspace(env.observation_space.low, env.observation_space.high, grid_size).T
+        adversary_grid_dict[adversary_str] = {'grid': adversary_grid, 'action_bins': strength_grid, 'obs_bins': obs_grid,
+                                              'action_list': []}
 
     total_steps = 0
+
+    # env.should_render = True
 
     # actually do the rollout
     for r_itr in range(num_rollouts):
@@ -54,9 +59,12 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
         step_num = 0
         while not done:
             multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
-            obs = multi_obs['robot']
-            multi_obs = {'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([1])} for i in range(env.num_adversaries)}
-            multi_obs.update({'robot': obs})
+            obs = multi_obs['pendulum'] * env.obs_norm
+            if isinstance(env.adv_observation_space, dict):
+                multi_obs = {'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([1])} for i in range(env.num_adversaries)}
+            else:
+                multi_obs = {'adversary{}'.format(i): obs for i in range(env.num_adversaries)}
+            multi_obs.update({'pendulum': obs})
             action_dict = {}
             logits_dict = {}
             for agent_id, a_obs in multi_obs.items():
@@ -106,19 +114,28 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                     prev_actions[agent_id] = prev_action
 
                     # Now store the agent action in the corresponding grid
-                    if agent_id != 'robot':
-                        indices = [0, 0]
-                        bins = adversary_grid_dict[agent_id]['bins']
+                    if agent_id != 'pendulum':
+                        action_bins = adversary_grid_dict[agent_id]['action_bins']
+                        obs_bins = adversary_grid_dict[agent_id]['obs_bins']
+
                         heat_map = adversary_grid_dict[agent_id]['grid']
-                        for i, action in enumerate(a_action[0:2]):
-                            bin_index = np.digitize(action, bins[i, :]) - 1
-                            if bin_index == heat_map.shape[i]:
-                                bin_index -= 1
-                            indices[i] = bin_index
-                        heat_map[indices[0], indices[1]] += 1
+                        for action_loop_index, action in enumerate(a_action):
+                            adversary_grid_dict[agent_id]['action_list'].append(a_action[0])
+                            action_index = np.digitize(action, action_bins[action_loop_index, :]) - 1
+                            # digitize will set the right edge of the box to the wrong value
+                            if action_index == heat_map.shape[0]:
+                                action_index -= 1
+                            for obs_loop_index, obs_elem in enumerate(obs):
+                                obs_index = np.digitize(obs_elem, obs_bins[obs_loop_index, :]) - 1
+                                if obs_index == heat_map.shape[1]:
+                                    obs_index -= 1
+                                if obs_loop_index == 0:
+                                    print('index, value', obs_index, obs[0])
+
+                                heat_map[action_index, obs_index, obs_loop_index] += 1
 
             for agent_id in multi_obs.keys():
-                if agent_id != 'robot':
+                if agent_id != 'pendulum':
                     # Now iterate through the agents and compute the kl_diff
 
                     curr_id = int(agent_id.split('adversary')[1])
@@ -139,9 +156,9 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
 
-            # we turn the adversaries off so you only send in the robot keys
+            # we turn the adversaries off so you only send in the pendulum keys
             new_dict = {}
-            new_dict.update({'robot': action['robot']})
+            new_dict.update({'pendulum': action['pendulum']})
             next_obs, reward, done, info = env.step(new_dict)
             if isinstance(done, dict):
                 done = done['__all__']
@@ -153,7 +170,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                 prev_rewards[_DUMMY_AGENT_ID] = reward
 
             # we only want the robot reward, not the adversary reward
-            reward_total += info['robot']['robot_reward']
+            reward_total += info['pendulum']['pendulum_reward']
             obs = next_obs
         total_steps += step_num
 
@@ -169,13 +186,26 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
     # Plot the heatmap of the actions
     for adversary, adv_dict in adversary_grid_dict.items():
         heat_map = adv_dict['grid']
-        bins = adv_dict['bins']
-        x_label, y_label = env.transform_adversary_actions(bins)
-        # ax = sns.heatmap(heat_map, annot=True, fmt="d")
+        action_bins = adv_dict['action_bins']
+        obs_bins = adv_dict['obs_bins']
+        action_list = adv_dict['action_list']
+
         plt.figure()
-        sns.heatmap(heat_map, xticklabels=np.round(x_label, 2), yticklabels=np.round(y_label, 2))
-        output_str = '{}/{}'.format(outdir, adversary + 'action_heatmap.png')
+        sns.distplot(action_list)
+        output_str = '{}/{}'.format(outdir, adversary + 'action_histogram.png')
         plt.savefig(output_str)
+
+        # x_label, y_label = env.transform_adversary_actions(bins)
+        # ax = sns.heatmap(heat_map, annot=True, fmt="d")
+        titles = ['x', 'y', 'thetadot']
+        for i in range(heat_map.shape[-1]):
+            plt.figure()
+            # increasing the row index implies moving down on the y axis
+            sns.heatmap(heat_map[:, :, i], yticklabels=np.round(action_bins[0], 1), xticklabels=np.round(obs_bins[i], 1))
+            plt.ylabel('Adversary actions')
+            plt.xlabel(titles[i])
+            output_str = '{}/{}'.format(outdir, adversary + 'action_heatmap_{}.png'.format(i))
+            plt.savefig(output_str)
 
     # Plot the kl difference between agents
     plt.figure()
