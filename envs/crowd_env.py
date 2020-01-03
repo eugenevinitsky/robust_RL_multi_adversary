@@ -1032,7 +1032,7 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
               super().observation_space.low.tolist() * self.perturb_state)
         high = np.array(super().action_space.high.tolist() * self.perturb_actions + \
               super().observation_space.high.tolist() * self.perturb_state)
-        box = Box(low=-1 * np.ones(low.shape), high=1 * np.ones(high.shape), shape=None, dtype=np.float32)
+        box = Box(low=-4 * np.ones(low.shape), high=4 * np.ones(high.shape), shape=None, dtype=np.float32)
         return box
 
     def transform_adversary_actions(self, action):
@@ -1160,4 +1160,3 @@ class MultiAgentCrowdSimEnv(CrowdSimEnv, MultiAgentEnv):
             curr_obs = {'robot': ob}
 
         return curr_obs
-        
