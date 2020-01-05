@@ -1,4 +1,4 @@
-from gym.spaces import Box
+from gym.spaces import Box, Discrete
 
 from ray.rllib.env import MultiAgentEnv
 
@@ -127,11 +127,13 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
         super(MAPendulumEnv, self).__init__()
         self.num_adversaries = config["num_adversaries"]
         self.adversary_strength = config["adversary_strength"]
+        self.adversary_action_dim_size = config["adversary_action_dim"]
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
+        self.adv_actions = np.linspace(-3, 3, self.adversary_action_dim_size)
 
     @property
     def adv_action_space(self):
-        return Box(low=-3, high=3, shape=(1,))
+        return Discrete(self.adversary_action_dim_size)
 
     @property
     def adv_observation_space(self):
@@ -144,7 +146,8 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
         pendulum_action = actions['pendulum']
         if 'adversary{}'.format(self.curr_adversary) in actions.keys():
             adv_action = actions['adversary{}'.format(self.curr_adversary)]
-            pendulum_action += adv_action * self.adversary_strength
+            print(self.adv_actions[adv_action])
+            pendulum_action += self.adv_actions[adv_action] * self.adversary_strength
             pendulum_action = np.clip(pendulum_action, a_min=self.action_space.low, a_max=self.action_space.high)
         obs, reward, done, info = super().step(pendulum_action)
         info = {'pendulum': {'pendulum_reward': reward}}

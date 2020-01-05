@@ -63,7 +63,8 @@ def setup_exps(args):
     parser = ma_env_parser(parser)
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv', type=int, default=5, help='Number of active adversaries in the env')
-    parser.add_argument('--adv_strength', type=int, default=0.2, help='Strength of active adversaries in the env')
+    parser.add_argument('--adv_strength', type=float, default=0.2, help='Strength of active adversaries in the env')
+    parser.add_argument('--adversary_action_dim', type=int, default=2, help='Number of potential actions the adversaries can take')
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
@@ -89,6 +90,7 @@ def setup_exps(args):
 
     config['env_config']['num_adversaries'] = args.num_adv
     config['env_config']['adversary_strength'] = args.adv_strength
+    config['env_config']['adversary_action_dim'] = args.adversary_action_dim
 
     config['env_config']['run'] = alg_run
 
