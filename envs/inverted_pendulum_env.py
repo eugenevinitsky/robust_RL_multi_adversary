@@ -146,7 +146,6 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
         pendulum_action = actions['pendulum']
         if 'adversary{}'.format(self.curr_adversary) in actions.keys():
             adv_action = actions['adversary{}'.format(self.curr_adversary)]
-            print(self.adv_actions[adv_action])
             pendulum_action += self.adv_actions[adv_action] * self.adversary_strength
             pendulum_action = np.clip(pendulum_action, a_min=self.action_space.low, a_max=self.action_space.high)
         obs, reward, done, info = super().step(pendulum_action)
