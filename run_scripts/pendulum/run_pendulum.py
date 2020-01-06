@@ -63,7 +63,7 @@ def setup_exps(args):
     parser = ma_env_parser(parser)
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv', type=int, default=5, help='Number of active adversaries in the env')
-    parser.add_argument('--adv_strength', type=int, default=0.2, help='Strength of active adversaries in the env')
+    parser.add_argument('--adv_strength', type=int, default=0.1, help='Strength of active adversaries in the env')
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
@@ -72,8 +72,7 @@ def setup_exps(args):
     config = DEFAULT_CONFIG
     config['gamma'] = 0.95
     config["batch_mode"] = "complete_episodes"
-    # config['train_batch_size'] = args.train_batch_size
-    config['train_batch_size'] = 2048
+    config['train_batch_size'] = args.train_batch_size
     config['vf_clip_param'] = 10.0
     config['lambda'] = 0.1
     config['lr'] = 5e-3
@@ -199,9 +198,9 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
                 if args.num_adv > 0:
-                    run_transfer_tests(config, checkpoint_path, 2, args.exp_title, output_path)
+                    run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
 
-                    visualize_adversaries(config, checkpoint_path, 10, 20, output_path)
+                    visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
                                                                                                                       args.exp_title,
