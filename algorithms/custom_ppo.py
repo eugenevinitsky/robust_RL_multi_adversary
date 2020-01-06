@@ -41,6 +41,7 @@ def get_logits(model, train_batch, index):
     in that case.
     :param model: an RLlib model object
     :param train_batch: (dict)
+        The observations of every adversary is available in the observations via <Dict Key>_<Adversary Index>
     :param index: (int)
         The index of the agent whose batch we are iterating over
     :return: logits, state
@@ -128,19 +129,14 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
         other_std = train_batch["kj_std_{}".format(i)]
         other_mean = train_batch["kj_mean_{}".format(i)]
 
+        # TODO(@evinitsky) did I get the KL backwards? Should it be the other way around?
         # we clip here lest it blow up due to some really small probabilities
-        # kl_loss += tf.clip_by_value(tf.reduce_sum(
-        #     other_logstd - log_std +
-        #     (tf.square(std) + tf.square(mean - other_mean)) /
-        #     (2.0 * tf.square(other_std)) - 0.5,
-        #     axis=1
-        # ), 0.0, policy.kl_diff_clip)
-        kl_loss += tf.reduce_sum(
+        kl_loss += tf.clip_by_value(tf.reduce_sum(
             other_logstd - log_std +
             (tf.square(std) + tf.square(mean - other_mean)) /
             (2.0 * tf.square(other_std)) - 0.5,
             axis=1
-        )
+        ), 0.0, policy.kl_diff_clip)
     return kl_loss
 
 
@@ -372,6 +368,8 @@ def update_kl(trainer, fetches):
 
         # multi-agent
         trainer.workers.local_worker().foreach_trainable_policy(update)
+
+    # We disable the KL update since this fights against the adversary diff. Might be worth not doing.
 
     # if "kl" in fetches:
     #     # single-agent
