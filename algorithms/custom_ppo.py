@@ -131,12 +131,12 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
 
         # TODO(@evinitsky) did I get the KL backwards? Should it be the other way around?
         # we clip here lest it blow up due to some really small probabilities
-        kl_loss += tf.clip_by_value(tf.reduce_sum(
-            other_logstd - log_std +
-            (tf.square(std) + tf.square(mean - other_mean)) /
-            (2.0 * tf.square(other_std)) - 0.5,
+        kl_loss += tf.losses.huber_loss(tf.reduce_sum(
+            - other_logstd + log_std +
+            (tf.square(other_std) + tf.square(mean - other_mean)) /
+            (2.0 * tf.square(std)) - 0.5,
             axis=1
-        ), 0.0, policy.kl_diff_clip)
+        ), policy.kl_target)
     return kl_loss
 
 
