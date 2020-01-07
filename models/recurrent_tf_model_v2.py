@@ -12,8 +12,6 @@ tf = try_import_tf()
 
 class LSTM(RecurrentTFModelV2):
     """
-    fcnet_hiddens = [[layers before lstm], [layers after lstm]]
-
     Arguments:
         TFModelV2 {[type]} -- [description]
     """
@@ -24,11 +22,11 @@ class LSTM(RecurrentTFModelV2):
         self.obs_space = obs_space
         self.num_outputs = num_outputs
 
-        ## Batch x Time x H x W x C
+        ## Batch x Time x Features
         input_layer = tf.keras.layers.Input((None,) + obs_space.shape, name="inputs")
 
         # If true we append the actions into the layer after the conv
-        self.lstm_use_prev_action_reward = model_config.get("lstm_use_prev_action_reward")
+        self.lstm_use_prev_action_reward = model_config['custom_options'].get("lstm_use_prev_action")
         if self.lstm_use_prev_action_reward:
             actions_layer = tf.keras.layers.Input(shape=(None,) +  action_space.shape, name="agent_actions")
             input_layer = tf.keras.layers.Concatenate()([input_layer, actions_layer])

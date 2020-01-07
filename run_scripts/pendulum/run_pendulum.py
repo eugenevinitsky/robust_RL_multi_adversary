@@ -64,6 +64,8 @@ def setup_exps(args):
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv', type=int, default=5, help='Number of active adversaries in the env')
     parser.add_argument('--adv_strength', type=int, default=0.1, help='Strength of active adversaries in the env')
+    parser.add_argument('--model_based', action='store_true', default=False,
+                        help='If true, the adversaries are a set of fixed sinusoids instead of being learnt')
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
@@ -88,16 +90,18 @@ def setup_exps(args):
 
     config['env_config']['num_adversaries'] = args.num_adv
     config['env_config']['adversary_strength'] = args.adv_strength
+    config['env_config']['model_based'] = args.model_based
 
     config['env_config']['run'] = alg_run
 
     ModelCatalog.register_custom_model("rnn", LSTM)
     config['model']['fcnet_hiddens'] = [64, 64]
     # TODO(@evinitsky) turn this on
-    config['model']['use_lstm'] = False
-    # config['model']['custom_model'] = "rnn"
-    config['model']['lstm_use_prev_action_reward'] = False
+    # config['model']['use_lstm'] = True
+    config['model']['custom_model'] = "rnn"
+    config['model']['custom_options'] = {'lstm_use_prev_action': False}
     config['model']['lstm_cell_size'] = 128
+    config['model']['max_seq_len'] = 20
     if args.grid_search:
         config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
@@ -111,8 +115,8 @@ def setup_exps(args):
                            "on_episode_end": on_episode_end}
 
     # config["eager_tracing"] = True
-    config["eager"] = True
-    config["eager_tracing"] = True
+    # config["eager"] = True
+    # config["eager_tracing"] = True
 
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
@@ -200,7 +204,10 @@ if __name__ == "__main__":
                 if args.num_adv > 0:
                     run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
 
-                    visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
+                    if not args.model_based:
+                        visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
+
+
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
                                                                                                                       args.exp_title,

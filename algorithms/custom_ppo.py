@@ -164,7 +164,7 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     # with respect to the valid mask, which tracks padding for RNNs
     if policy.num_adversaries > 1 and policy.config['kl_diff_weight'] > 0:
         policy.unscaled_kl_loss = kl_diff_loss
-        clipped_mean_loss = reduce_mean_valid(tf.clip_by_value(kl_diff_loss, 0, policy.kl_diff_clip))
+        clipped_mean_loss = reduce_mean_valid(kl_diff_loss)
         policy.kl_var = tf.math.reduce_std(kl_diff_loss)
         return -policy.config['kl_diff_weight'] * clipped_mean_loss + standard_loss
     else:

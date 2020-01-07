@@ -127,6 +127,7 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
         super(MAPendulumEnv, self).__init__()
         self.num_adversaries = config["num_adversaries"]
         self.adversary_strength = config["adversary_strength"]
+        self.model_based = config["model_based"]
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
 
     @property
@@ -156,3 +157,22 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
     def reset(self):
         obs = super().reset()
         return {'pendulum': obs, 'adversary{}'.format(self.curr_adversary): obs}
+
+
+class ModelBasedPendulumEnv(PendulumEnv):
+    def __init__(self, config):
+        """Env with adversaries that are just sinusoids. Used for testing out identification schemes."""
+        super(ModelBasedPendulumEnv, self).__init__()
+        self.num_adversaries = config["num_adversaries"]
+        self.adversary_strength = config["adversary_strength"]
+        self.model_based = config["model_based"]
+        self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
+
+    def step(self, action):
+        adv_action = np.sin(2 * np.pi * self.curr_adversary * self.step_num)
+        action += adv_action * self.adversary_strength
+        pendulum_action = np.clip(action, a_min=self.action_space.low, a_max=self.action_space.high)
+        return super().step(pendulum_action)
+
+    def select_new_adversary(self):
+        self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)

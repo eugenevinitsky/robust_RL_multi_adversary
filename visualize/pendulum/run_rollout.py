@@ -76,9 +76,41 @@ def instantiate_rollout(rllib_config, checkpoint):
     return env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init
 
 
-def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init, num_rollouts):
+def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init, num_rollouts,
+                dict_func=None, pre_step_func=None, step_func=None, options_dict=None):
+    """
+    :param env:
+    :param agent:
+    :param multiagent: (bool)
+        If true, a multi-agent environment
+    :param use_lstm: (dict)
+        Dict mapping policy ids to whether are are LSTMs
+    :param policy_agent_mapping: (dict)
+        Dict mapping agent id to the corresponding policy
+    :param state_init: (dict)
+        Dict mapping an agent id to its hidden state initializer (needed if using an LSTM)
+    :param action_init: (dict)
+        Dict mapping an agent id to its previous action (needed if using an LSTM)
+    :param num_rollouts: (int)
+        How many times to run the rollouts
+    :param dict_func: (func: env -> dict)
+        Function that initializes and returns a dict containing all the initialized values we will need in step_func
+    :param pre_step_func: (func: obs_dict, env -> obs_dict)
+        Function that performs all needed manipulations on obs)duct to make the rollout work appropriately
+    :param step_func: (func: (obs_dict, action_dict, results_dict, env) -> None )
+        Function that takes a given rollout step and stores the important information
+    :param options_dict: (dict)
+        Any additional info needed to configure the runs
+    :return:
+    """
+
+    if dict_func:
+        results_dict = dict_func(env, options_dict)
+    else:
+        results_dict = {}
 
     rewards = []
+    total_steps = 0
 
     # actually do the rollout
     for r_itr in range(num_rollouts):
@@ -92,8 +124,13 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
         done = False
         reward_total = 0.0
         while not done:
+            total_steps += 1
             multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
+            if pre_step_func:
+                multi_obs = pre_step_func(multi_obs, env)
             action_dict = {}
+            # TODO Put this in once LSTM issue is resolved
+            logits_dict = {}
             for agent_id, a_obs in multi_obs.items():
                 if a_obs is not None:
                     policy_id = mapping_cache.setdefault(
@@ -108,7 +145,20 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id)
                         agent_states[agent_id] = p_state
+
+                        # if isinstance(a_obs, dict):
+                        #     flat_obs = np.concatenate([val for val in a_obs.values()])[np.newaxis, :]
+                        # else:
+                        #     flat_obs = _flatten_action(a_obs)[np.newaxis, :]
+
+                        # logits, _ = policy.model.from_batch({"obs": flat_obs,
+                        #                                      "prev_action": prev_action})
                     else:
+                        # if isinstance(a_obs, dict):
+                        #     flat_obs = np.concatenate([val for val in a_obs.values()])[np.newaxis, :]
+                        # else:
+                        #     flat_obs = _flatten_action(a_obs)[np.newaxis, :]
+                        # logits, _ = policy.model.from_batch({"obs": flat_obs})
                         prev_action = _flatten_action(prev_actions[agent_id])
                         a_action = agent.compute_action(
                             a_obs,
@@ -125,6 +175,8 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
             action = action_dict
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
+
+            step_func(multi_obs, action_dict, logits_dict, results_dict, env)
 
             # we turn the adversaries off so you only send in the pendulum keys
             new_dict = {}
@@ -146,4 +198,7 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
         rewards.append(reward_total)
 
     print('the average reward is ', np.mean(rewards))
-    return rewards
+
+    results_dict['total_steps'] = total_steps
+    results_dict['rewards'] = rewards
+    return results_dict
