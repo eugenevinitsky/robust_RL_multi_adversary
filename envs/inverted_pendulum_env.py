@@ -148,11 +148,30 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
             pendulum_action = np.clip(pendulum_action, a_min=self.action_space.low, a_max=self.action_space.high)
         obs, reward, done, info = super().step(pendulum_action)
         info = {'pendulum': {'pendulum_reward': reward}}
-        obs_dict = {'pendulum': obs, 'adversary{}'.format(self.curr_adversary): obs}
-        reward_dict = {'pendulum': reward, 'adversary{}'.format(self.curr_adversary): -reward}
+
+
+        obs_dict = {'pendulum': obs}
+        reward_dict = {'pendulum': reward}
+
+        for i in range(self.num_adversaries):
+            is_active = 1 if self.curr_adversary == i else 0
+            obs_dict.update({
+                'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([is_active])}
+            })
+
+            reward_dict.update({'adversary{}'.format(i): -reward})
+
         done_dict = {'__all__': done}
         return obs_dict, reward_dict, done_dict, info
 
     def reset(self):
         obs = super().reset()
-        return {'pendulum': obs, 'adversary{}'.format(self.curr_adversary): obs}
+        curr_obs = {'pendulum': obs}
+        for i in range(self.num_adversaries):
+            is_active = 1 if self.curr_adversary == i else 0
+            curr_obs.update({'adversary{}'.format(i):
+                                 {'obs': obs,
+                                  'is_active': np.array([is_active])
+                                 }})
+
+        return curr_obs
