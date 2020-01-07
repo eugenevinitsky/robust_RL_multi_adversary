@@ -1,5 +1,6 @@
 import errno
 from datetime import datetime
+from functools import reduce
 import random
 import os
 import subprocess
@@ -32,7 +33,7 @@ def setup_ma_config(config):
     policies_to_train = ['pendulum']
 
     num_adversaries = config['env_config']['num_adversaries']
-    if num_adversaries == 0:
+    if num_adversaries == 0 or config['env_config']['model_based']:
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
@@ -66,6 +67,12 @@ def setup_exps(args):
     parser.add_argument('--adv_strength', type=int, default=0.1, help='Strength of active adversaries in the env')
     parser.add_argument('--model_based', action='store_true', default=False,
                         help='If true, the adversaries are a set of fixed sinusoids instead of being learnt')
+    parser.add_argument('--guess_adv', action='store_true', default=False,
+                        help='If true, a prediction head is added that the agent uses to guess '
+                             'which adversary is currently active')
+    parser.add_argument('--guess_next_state', action='store_true', default=False,
+                        help='If true, a prediction head is added that the agent uses to guess '
+                             'what the next state is going to be')
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
@@ -79,7 +86,7 @@ def setup_exps(args):
     config['lambda'] = 0.1
     config['lr'] = 5e-3
     config['sgd_minibatch_size'] = 64
-    config['num_envs_per_worker'] = 10
+    # config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
 
     if args.custom_ppo:
@@ -88,9 +95,13 @@ def setup_exps(args):
         config['kl_diff_target'] = args.kl_diff_target
         config['kl_diff_clip'] = 5.0
 
+    # Options used in every env
     config['env_config']['num_adversaries'] = args.num_adv
     config['env_config']['adversary_strength'] = args.adv_strength
     config['env_config']['model_based'] = args.model_based
+    # These next options are only used in the model based env
+    config['env_config']['guess_adv'] = args.guess_adv
+    config['env_config']['guess_next_state'] = args.guess_next_state
 
     config['env_config']['run'] = alg_run
 
@@ -98,7 +109,7 @@ def setup_exps(args):
     config['model']['fcnet_hiddens'] = [64, 64]
     # TODO(@evinitsky) turn this on
     # config['model']['use_lstm'] = True
-    config['model']['custom_model'] = "rnn"
+    # config['model']['custom_model'] = "rnn"
     config['model']['custom_options'] = {'lstm_use_prev_action': False}
     config['model']['lstm_cell_size'] = 128
     config['model']['max_seq_len'] = 20
@@ -156,13 +167,31 @@ def on_episode_end(info):
     # store info about how many adversaries there are
     if hasattr(info["env"], 'envs'):
         env = info["env"].envs[0]
-        episode = info["episode"]
 
-        # if env.prediction_reward and env.adversary_range > 1:
-        #     episode.custom_metrics["predict_frac"] = env.num_correct_predict / episode.length
+        prediction = env.num_correct_guesses / env.horizon
 
-        # select a new adversary every episode. Currently disabled.
+        state_list = env.state_error / env.horizon
+        # Track the mean error in every element of the state
+        state_err_dict = {"state_err_{}".format(i): sum_state for i, sum_state in enumerate(state_list)}
+
+        info["episode"].custom_metrics = {"correct_pred_frac": prediction}
+        # info["episode"].custom_metrics.update(state_err_dict)
         env.select_new_adversary()
+    elif hasattr(info["env"], 'vector_env'):
+        envs = info["env"].vector_env.envs
+        prediction_list = [env.num_correct_guesses / env.horizon for env in envs]
+
+        state_list = [env.state_error / env.horizon for env in envs]
+        sum_states = reduce(lambda x, y: x+y, state_list) / len(envs)
+        # Track the mean error in every element of the state
+        state_err_dict = {"state_err_{}".format(i): sum_state for i, sum_state in enumerate(sum_states)}
+
+        info["episode"].custom_metrics = {"correct_pred_frac": np.mean(prediction_list)}
+        # info["episode"].custom_metrics.update(state_err_dict)
+        for env in envs:
+            env.select_new_adversary()
+    else:
+        sys.exit("You arent recording any custom metrics, something is wrong")
 
 
 if __name__ == "__main__":

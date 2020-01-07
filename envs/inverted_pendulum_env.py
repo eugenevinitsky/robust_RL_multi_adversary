@@ -1,12 +1,12 @@
-from gym.spaces import Box
-
-from ray.rllib.env import MultiAgentEnv
+from os import path
+import sys
 
 import gym
+from gym.spaces import Box, Tuple, Discrete
 from gym import spaces
 from gym.utils import seeding
 import numpy as np
-from os import path
+from ray.rllib.env import MultiAgentEnv
 
 class PendulumEnv(gym.Env):
     metadata = {
@@ -32,11 +32,16 @@ class PendulumEnv(gym.Env):
 
         self.viewer = None
 
-        high = np.array([1., 1., self.max_speed])
-        self.action_space = spaces.Box(low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32)
-        self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
-
+        self.high = np.array([1., 1., self.max_speed])
         self.seed()
+
+    @property
+    def action_space(self):
+        return spaces.Box(low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32)
+
+    @property
+    def observation_space(self):
+        return spaces.Box(low=-self.high, high=self.high, dtype=np.float32)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -166,13 +171,59 @@ class ModelBasedPendulumEnv(PendulumEnv):
         self.num_adversaries = config["num_adversaries"]
         self.adversary_strength = config["adversary_strength"]
         self.model_based = config["model_based"]
+        self.guess_adv = config['guess_adv']
+        # TODO(use an autoregressive model to condition this guess on your action)
+        self.guess_next_state = config['guess_next_state']
+        self.correct_adv_score = 1.0
+        self.correct_state_coeff = 1.0
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
+        self.num_correct_guesses = 0
+        self.state_error = np.zeros(self.observation_space.shape[0])
+
+    @property
+    def action_space(self):
+        if not self.guess_adv and not self.guess_next_state:
+            return super().action_space
+        elif self.guess_adv and not self.guess_next_state:
+            return Tuple((super().action_space, Discrete(self.num_adversaries)))
+        elif self.guess_next_state and not self.guess_adv:
+            return Tuple((super().action_space, super().observation_space))
+        else:
+            return Tuple((super().action_space, super().observation_space, Discrete(self.num_adversaries)))
 
     def step(self, action):
+        if not self.guess_adv and not self.guess_next_state:
+            torque = action
+        elif self.guess_adv and not self.guess_next_state:
+            torque = action[0]
+            adv_guess = action[1]
+        elif self.guess_next_state and not self.guess_adv:
+            torque = action[0]
+            state_guess = action[1]
+        else:
+            torque = action[0]
+            state_guess = action[1]
+            adv_guess = action[2]
         adv_action = np.sin(2 * np.pi * self.curr_adversary * self.step_num)
         action += adv_action * self.adversary_strength
-        pendulum_action = np.clip(action, a_min=self.action_space.low, a_max=self.action_space.high)
-        return super().step(pendulum_action)
+        if isinstance(self.action_space, Box):
+            pendulum_action = np.clip(torque, a_min=self.action_space.low, a_max=self.action_space.high)
+        elif isinstance(self.action_space, Tuple):
+            pendulum_action = np.clip(torque, a_min=self.action_space[0].low, a_max=self.action_space[0].high)
+        else:
+            sys.exit('How did you get here my friend. Only Box and Tuple action spaces are handled right now.')
+        obs, rew, done, info = super().step(pendulum_action)
+
+        if self.guess_adv:
+            if int(adv_guess) == self.curr_adversary:
+                rew += self.correct_adv_score
+                self.num_correct_guesses += 1
+
+        if self.guess_next_state:
+            self.state_error += np.abs(state_guess - obs)
+            rew -= np.linalg.norm(state_guess - obs) * self.correct_state_coeff
+
+        return obs, rew, done, info
 
     def select_new_adversary(self):
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
