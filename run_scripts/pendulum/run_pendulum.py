@@ -87,9 +87,9 @@ def setup_exps(args):
     config['train_batch_size'] = args.train_batch_size
     config['vf_clip_param'] = 10.0
     config['lambda'] = 0.1
-    config['lr'] = 5e-3
+    config['lr'] = tune.grid_search([5e-3, 5e-4])
     config['sgd_minibatch_size'] = 64
-    config['num_envs_per_worker'] = 10
+    config['num_envs_per_worker'] = 4
     config['num_sgd_iter'] = 10
 
     if args.custom_ppo:
@@ -111,8 +111,8 @@ def setup_exps(args):
     ModelCatalog.register_custom_model("rnn", LSTM)
     config['model']['fcnet_hiddens'] = [64, 64]
     # TODO(@evinitsky) turn this on
-    # config['model']['use_lstm'] = True
-    # config['model']['custom_model'] = "rnn"
+    config['model']['use_lstm'] = True
+    config['model']['custom_model'] = "rnn"
     config['model']['custom_options'] = {'lstm_use_prev_action': False}
     config['model']['lstm_cell_size'] = 128
     config['model']['max_seq_len'] = 20
@@ -220,7 +220,7 @@ if __name__ == "__main__":
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
-        ray.init(local_mode=True)
+        ray.init()
 
     run_tune(**exp_dict, queue_trials=False)
 
