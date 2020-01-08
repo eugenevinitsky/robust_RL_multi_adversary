@@ -220,7 +220,7 @@ if __name__ == "__main__":
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
-        ray.init()
+        ray.init(local_mode=True)
 
     run_tune(**exp_dict, queue_trials=False)
 
@@ -243,13 +243,13 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
                 if args.num_adv > 0:
-                    # run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
+                    run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path)
 
                     if not args.model_based:
                         visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
 
                     if args.model_based:
-                        visualize_model_perf(config, checkpoint_path, 2, 2, output_path)
+                        visualize_model_perf(config, checkpoint_path, 10, 20, output_path)
 
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,

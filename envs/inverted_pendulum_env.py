@@ -27,8 +27,8 @@ class PendulumEnv(gym.Env):
         self.friction_coef = 0.2
         self.add_gaussian_state_noise = False
         self.add_gaussian_action_noise = False
-        self.gaussian_state_noise_scale = 0.2
-        self.gaussian_action_noise_scale = 0.2
+        self.gaussian_state_noise_scale = 0.1
+        self.gaussian_action_noise_scale = 0.1
 
         self.viewer = None
 
@@ -77,7 +77,7 @@ class PendulumEnv(gym.Env):
         if self.should_render:
             self.render()
         obs = self._get_obs() / self.obs_norm
-        if self.add_gaussian_action_noise:
+        if self.add_gaussian_state_noise:
             obs += self.gaussian_state_noise_scale * np.random.normal(size=obs.shape)
         return obs, -costs, done, {}
 
@@ -174,11 +174,12 @@ class ModelBasedPendulumEnv(PendulumEnv):
         self.guess_adv = config['guess_adv']
         # TODO(use an autoregressive model to condition this guess on your action)
         self.guess_next_state = config['guess_next_state']
-        self.correct_adv_score = 1.0
+        self.correct_adv_score = 0.4
         self.correct_state_coeff = 1.0
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
         self.num_correct_guesses = 0
         self.state_error = np.zeros(self.observation_space.shape[0])
+        self.has_adversary = True
 
     @property
     def action_space(self):
@@ -205,8 +206,9 @@ class ModelBasedPendulumEnv(PendulumEnv):
             state_guess = action[1]
             adv_guess = action[2]
         # Sinusoidal perturbation
-        adv_action = np.sin(2 * np.pi * self.curr_adversary * self.step_num * self.dt)
-        torque += adv_action * self.adversary_strength
+        if self.has_adversary:
+            adv_action = np.sin(2 * np.pi * self.curr_adversary * self.step_num * self.dt)
+            torque += adv_action * self.adversary_strength
         if isinstance(self.action_space, Box):
             pendulum_action = np.clip(torque, a_min=self.action_space.low, a_max=self.action_space.high)
         elif isinstance(self.action_space, Tuple):
@@ -224,6 +226,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
             self.state_error += np.abs(state_guess.flatten() - obs)
             rew -= np.linalg.norm(state_guess - obs) * self.correct_state_coeff
 
+        # TODO add true reward, without auxiliary reward to info
         return obs, rew, done, info
 
     def reset(self):

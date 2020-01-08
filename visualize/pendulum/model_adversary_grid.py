@@ -42,21 +42,20 @@ def on_result(results_dict, outdir, num_rollouts):
                 raise
 
     # Plot the histogram of rewards
-    import ipdb; ipdb.set_trace()
     plt.figure()
-    sns.distplot(results_dict['adversary_rew'])
+    sns.barplot(list(range(results_dict['adversary_rew'].shape[0])), results_dict['adversary_rew'])
     output_str = '{}/{}'.format(outdir, 'adversary_rewards.png')
     plt.savefig(output_str)
 
     # Plot the histogram of rewards
     plt.figure()
-    sns.distplot(results_dict['prediction_error'] / num_rollouts)
+    sns.barplot(list(range(results_dict['prediction_error'].shape[0])), results_dict['prediction_error'] / num_rollouts)
     output_str = '{}/{}'.format(outdir, 'prediction_error.png')
     plt.savefig(output_str)
 
     # Plot the histogram of rewards
     plt.figure()
-    sns.distplot(results_dict['adversary_guess'] / num_rollouts)
+    sns.barplot(list(range(results_dict['adversary_guess'].shape[0])), results_dict['adversary_guess'] / num_rollouts)
     output_str = '{}/{}'.format(outdir, 'adversary_guess.png')
     plt.savefig(output_str)
 
