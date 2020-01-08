@@ -59,7 +59,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
         step_num = 0
         while not done:
             multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
-            obs = multi_obs['pendulum'] * env.obs_norm
+            obs = multi_obs['pendulum']
             if isinstance(env.adv_observation_space, dict):
                 multi_obs = {'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([1])} for i in range(env.num_adversaries)}
             else:
@@ -125,7 +125,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                             # digitize will set the right edge of the box to the wrong value
                             if action_index == heat_map.shape[0]:
                                 action_index -= 1
-                            for obs_loop_index, obs_elem in enumerate(obs):
+                            for obs_loop_index, obs_elem in enumerate(obs * env.obs_norm):
                                 obs_index = np.digitize(obs_elem, obs_bins[obs_loop_index, :]) - 1
                                 if obs_index == heat_map.shape[1]:
                                     obs_index -= 1
