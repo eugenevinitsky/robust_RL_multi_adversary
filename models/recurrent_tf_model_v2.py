@@ -1,3 +1,4 @@
+from gym.spaces import Tuple, Box, Discrete
 import numpy as np
 
 from ray.rllib.policy.rnn_sequencing import add_time_dimension
@@ -26,12 +27,22 @@ class LSTM(RecurrentTFModelV2):
         input_layer = tf.keras.layers.Input((None,) + obs_space.shape, name="inputs")
 
         # If true we append the actions into the layer after the conv
-        self.lstm_use_prev_action_reward = model_config['custom_options'].get("lstm_use_prev_action")
-        if self.lstm_use_prev_action_reward:
-            actions_layer = tf.keras.layers.Input(shape=(None,) +  action_space.shape, name="agent_actions")
-            input_layer = tf.keras.layers.Concatenate()([input_layer, actions_layer])
-
-        last_layer = input_layer
+        self.lstm_use_prev_action = model_config['custom_options'].get("lstm_use_prev_action")
+        if self.lstm_use_prev_action:
+            # TODO(@evinitsky) support dict
+            if isinstance(action_space, Tuple):
+                action_shape = 0
+                for space in action_space.spaces:
+                    if isinstance(space, Box):
+                        action_shape += space.shape[0]
+                    elif isinstance(space, Discrete):
+                        action_shape += 1
+            else:
+                action_shape = action_space.shape
+            actions_layer = tf.keras.layers.Input(shape=(None,) + (action_shape,), name="agent_actions")
+            last_layer = tf.keras.layers.Concatenate()([input_layer, actions_layer])
+        else:
+            last_layer = input_layer
 
         hiddens = model_config.get("fcnet_hiddens")
         i = 1
@@ -69,7 +80,7 @@ class LSTM(RecurrentTFModelV2):
             1, activation=None, name="values")(last_layer)
 
         inputs = [input_layer, seq_in, state_in_h, state_in_c]
-        if self.lstm_use_prev_action_reward:
+        if self.lstm_use_prev_action:
             inputs.insert(1, actions_layer)
         outputs = [action, values, state_h, state_c]
 
@@ -83,10 +94,10 @@ class LSTM(RecurrentTFModelV2):
     def forward(self, input_dict, state, seq_lens):
         """Adds time dimension to batch before sending inputs to forward_rnn().
         You should implement forward_rnn() in your subclass."""
-        if self.lstm_use_prev_action_reward:
+        if self.lstm_use_prev_action:
             output, new_state = self.forward_rnn(
                 add_time_dimension(input_dict["obs"], seq_lens), state,
-                seq_lens, add_time_dimension(input_dict["prev_action"], seq_lens))
+                seq_lens, add_time_dimension(input_dict["prev_actions"], seq_lens))
         else:
             output, new_state = self.forward_rnn(
                 add_time_dimension(input_dict["obs"], seq_lens), state,
@@ -97,7 +108,7 @@ class LSTM(RecurrentTFModelV2):
     def forward_rnn(self, input_dict, state, seq_lens, prev_action=None):
         # by subclassing recurrent_tf_modelv2, forward_rnn receives
         # inputs that are B x T x features
-        if prev_action:
+        if self.lstm_use_prev_action:
             model_out, self._value_out, h, c = self.rnn_model([input_dict, prev_action, seq_lens] + state)
         else:
             model_out, self._value_out, h, c = self.rnn_model([input_dict, seq_lens] + state)

@@ -95,6 +95,7 @@ def setup_exps(args):
     config['sgd_minibatch_size'] = 64
     # config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
+    config['num_workers'] = args.num_cpus
 
     if args.custom_ppo:
         config['num_adversaries'] = args.num_adv
@@ -117,9 +118,10 @@ def setup_exps(args):
     if args.use_lstm:
         ModelCatalog.register_custom_model("rnn", LSTM)
         config['model']['custom_model'] = "rnn"
-        config['model']['custom_options'] = {'lstm_use_prev_action': False}
+        config['model']['custom_options'] = {'lstm_use_prev_action': True}
         config['model']['lstm_cell_size'] = 128
-        config['model']['max_seq_len'] = 20
+        if args.grid_search:
+            config['model']['max_seq_len'] = tune.grid_search([20, 40])
     if args.grid_search:
         config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
