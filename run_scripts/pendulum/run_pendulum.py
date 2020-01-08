@@ -66,6 +66,7 @@ def setup_exps(args):
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
+    parser.add_argument('--use_lstm', action='store_true', default=False, help='If true, the custom LSTM is turned on')
     parser.add_argument('--num_adv', type=int, default=5, help='Number of active adversaries in the env')
     parser.add_argument('--adv_strength', type=float, default=0.1, help='Strength of active adversaries in the env')
     parser.add_argument('--model_based', action='store_true', default=False,
@@ -89,7 +90,7 @@ def setup_exps(args):
     config['lambda'] = 0.1
     config['lr'] = tune.grid_search([5e-3, 5e-4])
     config['sgd_minibatch_size'] = 64
-    config['num_envs_per_worker'] = 4
+    config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
 
     if args.custom_ppo:
@@ -108,14 +109,14 @@ def setup_exps(args):
 
     config['env_config']['run'] = alg_run
 
-    ModelCatalog.register_custom_model("rnn", LSTM)
     config['model']['fcnet_hiddens'] = [64, 64]
     # TODO(@evinitsky) turn this on
-    config['model']['use_lstm'] = True
-    config['model']['custom_model'] = "rnn"
-    config['model']['custom_options'] = {'lstm_use_prev_action': False}
-    config['model']['lstm_cell_size'] = 128
-    config['model']['max_seq_len'] = 20
+    if args.use_lstm:
+        ModelCatalog.register_custom_model("rnn", LSTM)
+        config['model']['custom_model'] = "rnn"
+        config['model']['custom_options'] = {'lstm_use_prev_action': False}
+        config['model']['lstm_cell_size'] = 128
+        config['model']['max_seq_len'] = 20
     if args.grid_search:
         config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
@@ -152,10 +153,11 @@ def setup_exps(args):
 
 
 def on_train_result(info):
-    """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
+    """Store the mean score of the episode without the auxiliary rewards"""
     result = info["result"]
     # pendulum_reward = result['policy_reward_mean']['pendulum']
     trainer = info["trainer"]
+    import ipdb; ipdb.set_trace()
 
     # TODO(should we do this every episode or every training iteration)?
     pass
@@ -168,6 +170,7 @@ def on_episode_end(info):
     """Select the currently active adversary"""
 
     # store info about how many adversaries there are
+    import ipdb; ipdb.set_trace()
     if hasattr(info["env"], 'envs'):
 
         env = info["env"].envs[0]
@@ -219,6 +222,8 @@ if __name__ == "__main__":
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
+    elif args.local_mode:
+        ray.init(local_mode=True)
     else:
         ray.init()
 
@@ -243,13 +248,13 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
                 if args.num_adv > 0:
-                    run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path)
+                    run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
 
                     if not args.model_based:
                         visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
 
                     if args.model_based:
-                        visualize_model_perf(config, checkpoint_path, 10, 20, output_path)
+                        visualize_model_perf(config, checkpoint_path, 10, 100, output_path)
 
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,

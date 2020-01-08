@@ -217,6 +217,8 @@ class ModelBasedPendulumEnv(PendulumEnv):
             sys.exit('How did you get here my friend. Only Box and Tuple action spaces are handled right now.')
         obs, rew, done, info = super().step(pendulum_action)
 
+        info["base_rew"] = rew
+
         if self.guess_adv:
             if int(adv_guess) == self.curr_adversary:
                 rew += self.correct_adv_score
