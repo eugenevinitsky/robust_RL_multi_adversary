@@ -37,7 +37,7 @@ def dict_func(env, options_dict):
                                               'action_list': [],
                                               }
         adversary_grid_dict['kl_grid'] = kl_grid
-    return dict_func
+    return adversary_grid_dict
 
 def pre_step_func(env, obs_dict):
     if isinstance(env.adv_observation_space, dict):
@@ -139,7 +139,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
 
     results_dict = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                state_init, action_init, num_rollouts,
-                               dict_func, pre_step_func, step_func, options_dict)
+                               dict_func, pre_step_func, step_func, None, options_dict)
     on_result(results_dict, outdir)
 
 

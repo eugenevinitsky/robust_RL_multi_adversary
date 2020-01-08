@@ -20,6 +20,7 @@ from ray.tune.registry import register_env
 # from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy, DEFAULT_CONFIG
 
 from visualize.pendulum.transfer_tests import run_transfer_tests
+from visualize.pendulum.model_adversary_grid import visualize_model_perf
 from visualize.pendulum.visualize_adversaries import visualize_adversaries
 from utils.parsers import init_parser, ray_parser, ma_env_parser
 from utils.pendulum_env_creator import pendulum_env_creator
@@ -242,11 +243,13 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
                 if args.num_adv > 0:
-                    run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
+                    # run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
 
                     if not args.model_based:
                         visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
 
+                    if args.model_based:
+                        visualize_model_perf(config, checkpoint_path, 2, 2, output_path)
 
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,

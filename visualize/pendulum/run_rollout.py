@@ -78,7 +78,7 @@ def instantiate_rollout(rllib_config, checkpoint):
 
 
 def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init, num_rollouts,
-                dict_func=None, pre_step_func=None, step_func=None, options_dict=None):
+                pre_step_func=None, step_func=None, done_func=None, options_dict=None, results_dict=None):
     """
     :param env:
     :param agent:
@@ -100,15 +100,13 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
         Function that performs all needed manipulations on obs)duct to make the rollout work appropriately
     :param step_func: (func: (obs_dict, action_dict, results_dict, env) -> None )
         Function that takes a given rollout step and stores the important information
+    :param done_func: (func: (env, results_dict) -> None )
+        Function that stores info from when the environment ends
     :param options_dict: (dict)
         Any additional info needed to configure the runs
+    :param results_dict: (dict)
     :return:
     """
-
-    if dict_func:
-        results_dict = dict_func(env, options_dict)
-    else:
-        results_dict = {}
 
     rewards = []
     total_steps = 0
@@ -176,13 +174,17 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
             action = action_dict
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
-
-            step_func(multi_obs, action_dict, logits_dict, results_dict, env)
+            if step_func:
+                step_func(multi_obs, action_dict, logits_dict, results_dict, env)
 
             # we turn the adversaries off so you only send in the pendulum keys
-            new_dict = {}
-            new_dict.update({'pendulum': action['pendulum']})
-            next_obs, reward, done, info = env.step(new_dict)
+            if multiagent:
+                new_dict = {}
+                new_dict.update({'pendulum': action['pendulum']})
+                next_obs, reward, done, info = env.step(new_dict)
+            else:
+                next_obs, reward, done, info = env.step(action)
+
             if isinstance(done, dict):
                 done = done['__all__']
             if multiagent:
@@ -192,9 +194,14 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
                 prev_rewards[_DUMMY_AGENT_ID] = reward
 
             # we only want the robot reward, not the adversary reward
-            reward_total += info['pendulum']['pendulum_reward']
+            if 'pendulum' in info.keys():
+                reward_total += info['pendulum']['pendulum_reward']
+            else:
+                reward_total += reward
             obs = next_obs
         print("Episode reward", reward_total)
+        if done_func:
+            done_func(env, results_dict)
 
         rewards.append(reward_total)
 

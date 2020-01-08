@@ -206,7 +206,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
             adv_guess = action[2]
         # Sinusoidal perturbation
         adv_action = np.sin(2 * np.pi * self.curr_adversary * self.step_num * self.dt)
-        action += adv_action * self.adversary_strength
+        torque += adv_action * self.adversary_strength
         if isinstance(self.action_space, Box):
             pendulum_action = np.clip(torque, a_min=self.action_space.low, a_max=self.action_space.high)
         elif isinstance(self.action_space, Tuple):
@@ -221,7 +221,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
                 self.num_correct_guesses += 1
 
         if self.guess_next_state:
-            self.state_error += np.abs(state_guess - obs)
+            self.state_error += np.abs(state_guess.flatten() - obs)
             rew -= np.linalg.norm(state_guess - obs) * self.correct_state_coeff
 
         return obs, rew, done, info
