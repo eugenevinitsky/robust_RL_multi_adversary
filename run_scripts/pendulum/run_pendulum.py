@@ -90,7 +90,7 @@ def setup_exps(args):
     config['lambda'] = 0.1
     config['lr'] = tune.grid_search([5e-3, 5e-4])
     config['sgd_minibatch_size'] = 64
-    config['num_envs_per_worker'] = 10
+    # config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
 
     if args.custom_ppo:
@@ -127,7 +127,9 @@ def setup_exps(args):
 
     # add the callbacks
     config["callbacks"] = {"on_train_result": on_train_result,
-                           "on_episode_end": on_episode_end}
+                           "on_episode_end": on_episode_end,
+                           "on_episode_step": on_episode_step,
+                           "on_episode_start": on_episode_start}
 
     # config["eager_tracing"] = True
     # config["eager"] = True
@@ -152,12 +154,32 @@ def setup_exps(args):
     return exp_dict, args
 
 
+def on_episode_start(info):
+    episode = info["episode"]
+    episode.user_data["true_rew"] = []
+
+
+def on_episode_step(info):
+    episode = info["episode"]
+    if hasattr(info["env"], 'envs'):
+        env = info["env"].envs[0]
+        print('env.true_rew is ', env.true_rew)
+        episode.user_data["true_rew"].append(env.true_rew)
+
+    elif hasattr(info["env"], 'vector_env'):
+        envs = info["env"].vector_env.envs
+        true_rews = [env.true_rew for env in envs]
+        # some of the envs won't actually be used if we are vectorizing so lets just ignore them
+        rew_list = [true_rew for env, true_rew in zip(envs, true_rews) if env.step_num != 0]
+        if len(rew_list) > 0:
+            episode.user_data["true_rew"].append(np.mean(rew_list))
+
+
 def on_train_result(info):
     """Store the mean score of the episode without the auxiliary rewards"""
     result = info["result"]
     # pendulum_reward = result['policy_reward_mean']['pendulum']
     trainer = info["trainer"]
-    import ipdb; ipdb.set_trace()
 
     # TODO(should we do this every episode or every training iteration)?
     pass
@@ -170,7 +192,6 @@ def on_episode_end(info):
     """Select the currently active adversary"""
 
     # store info about how many adversaries there are
-    import ipdb; ipdb.set_trace()
     if hasattr(info["env"], 'envs'):
 
         env = info["env"].envs[0]
@@ -207,6 +228,10 @@ def on_episode_end(info):
             env.select_new_adversary()
     else:
         sys.exit("You aren't recording any custom metrics, something is wrong")
+
+    episode = info['episode']
+    true_rew = np.sum(episode.user_data["true_rew"])
+    episode.custom_metrics["true_rew"] = true_rew
 
 
 if __name__ == "__main__":

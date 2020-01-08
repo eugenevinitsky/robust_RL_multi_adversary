@@ -179,7 +179,10 @@ class ModelBasedPendulumEnv(PendulumEnv):
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
         self.num_correct_guesses = 0
         self.state_error = np.zeros(self.observation_space.shape[0])
+        # attribute that can be used to turn the adversary off for testing
         self.has_adversary = True
+        # the reward without any auxiliary rewards
+        self.true_rew = 0.0
 
     @property
     def action_space(self):
@@ -217,7 +220,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
             sys.exit('How did you get here my friend. Only Box and Tuple action spaces are handled right now.')
         obs, rew, done, info = super().step(pendulum_action)
 
-        info["base_rew"] = rew
+        self.true_rew = rew
 
         if self.guess_adv:
             if int(adv_guess) == self.curr_adversary:
@@ -233,6 +236,8 @@ class ModelBasedPendulumEnv(PendulumEnv):
 
     def reset(self):
         self.num_correct_guesses = 0
+        self.true_rew = 0.0
+
         self.state_error = np.zeros(self.observation_space.shape[0])
         return super().reset()
 
