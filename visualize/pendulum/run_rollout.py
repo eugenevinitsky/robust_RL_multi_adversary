@@ -111,6 +111,9 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
     rewards = []
     total_steps = 0
 
+    if not results_dict:
+        results_dict = {}
+
     # actually do the rollout
     for r_itr in range(num_rollouts):
         mapping_cache = {}  # in case policy_agent_mapping is stochastic

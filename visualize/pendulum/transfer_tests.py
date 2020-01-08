@@ -59,14 +59,15 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = instantiate_rollout(rllib_config, checkpoint)
     if len(change_list) > 0:
         setattr(env, change_list[0], change_list[1])
-    rewards = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
+    results_dict = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                  state_init, action_init, num_rollouts)
 
     with open(os.path.join(file_path, '{}/{}_{}_rew.txt'.format(outdir, output_file_name, test_name)),
               'wb') as file:
-        np.savetxt(file, rewards, delimiter=', ')
+        import ipdb; ipdb.set_trace()
+        np.savetxt(file, results_dict['rewards'], delimiter=', ')
 
-    print('The average reward for task {} is {}'.format(test_name, np.mean(rewards)))
+    print('The average reward for task {} is {}'.format(test_name, np.mean(results_dict['rewards'])))
 
 
 def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir):
