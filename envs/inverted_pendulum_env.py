@@ -179,6 +179,8 @@ class ModelBasedPendulumEnv(PendulumEnv):
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
         self.num_correct_guesses = 0
         self.state_error = np.zeros(self.observation_space.shape[0])
+        # purely used for readout and visualization
+        self.curr_state_error = np.zeros(self.observation_space.shape[0])
         # attribute that can be used to turn the adversary off for testing
         self.has_adversary = True
         # the reward without any auxiliary rewards
@@ -228,6 +230,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
                 self.num_correct_guesses += 1
 
         if self.guess_next_state:
+            self.curr_state_error = np.abs(state_guess.flatten() - obs)
             self.state_error += np.abs(state_guess.flatten() - obs)
             rew -= np.linalg.norm(state_guess - obs) * self.correct_state_coeff
 
@@ -238,6 +241,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
         self.num_correct_guesses = 0
         self.true_rew = 0.0
 
+        self.curr_state_error = np.zeros(self.observation_space.shape[0])
         self.state_error = np.zeros(self.observation_space.shape[0])
         return super().reset()
 

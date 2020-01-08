@@ -28,8 +28,15 @@ def dict_func(env, options_dict):
     results_dict['adversary_rew'] = np.zeros(num_test_adversaries + 1)
     results_dict['prediction_error'] = np.zeros(num_test_adversaries + 1)
     results_dict['adversary_guess'] = np.zeros(num_test_adversaries + 1)
+
+    # here we track the magnitude of torques across time as well as the magnitude of the state error across time
+    results_dict['action_time'] = np.zeros((num_test_adversaries + 1, env.horizon + 1))
+    if env.guess_next_state:
+        results_dict['state_pred_time'] = np.zeros((num_test_adversaries + 1, env.horizon + 1))
+
     # we also plot which adversary we guess for any given adversary
     if env.guess_adv:
+        results_dict['guess_adv_time'] = np.zeros((num_test_adversaries + 1, env.horizon + 1))
         # the column index is one less because we would never guess an adversary larger than the number we trained with
         results_dict['guess_grid'] = np.zeros((num_test_adversaries + 1, train_adversary_num))
     return results_dict
@@ -42,6 +49,13 @@ def done_func(env, results_dict):
 
 def step_func(multi_obs, action_dict, logits_dict, results_dict, env):
     results_dict['guess_grid'][env.curr_adversary, int(action_dict['agent0'][-1])] += 1
+    results_dict['action_time'][env.curr_adversary, env.step_num] += np.abs(action_dict['agent0'][0])
+    if env.guess_next_state:
+        results_dict['state_pred_time'][env.curr_adversary, env.step_num] += np.linalg.norm(env.curr_state_error)
+
+    if env.guess_adv:
+        results_dict['guess_adv_time'][env.curr_adversary, env.step_num] +=  int(action_dict['agent0'][-1])
+
 
 
 def on_result(results_dict, outdir, num_rollouts):
@@ -56,23 +70,31 @@ def on_result(results_dict, outdir, num_rollouts):
 
     # Plot the histogram of rewards
     plt.figure()
-    sns.barplot(list(range(results_dict['adversary_rew'].shape[0])), results_dict['adversary_rew'])
+    xvals = ['adv{}'.format(i) for i in range(results_dict['adversary_rew'].shape[0] - 1)]
+    xvals.append('No adv')
+    sns.barplot(xvals, results_dict['adversary_rew'])
     output_str = '{}/{}'.format(outdir, 'adversary_rewards.png')
-    plt.title('The extra row is for adversaries turned off')
+    plt.title('Adversary vs. Reward')
+    plt.xlabel('Adversary number')
+    plt.ylabel('Reward')
     plt.savefig(output_str)
 
-    # Plot the histogram of rewards
+    # Plot the histogram of prediction error
     plt.figure()
-    sns.barplot(list(range(results_dict['prediction_error'].shape[0])), results_dict['prediction_error'] / num_rollouts)
+    sns.barplot(xvals, results_dict['prediction_error'] / num_rollouts)
     output_str = '{}/{}'.format(outdir, 'prediction_error.png')
-    plt.title('The extra row is for adversaries turned off')
+    plt.title('Adversary vs. Prediction Error')
+    plt.xlabel('Adversary number')
+    plt.ylabel('Prediction error')
     plt.savefig(output_str)
 
-    # Plot the histogram of rewards
+    # Plot the histogram of number of correct guesses
     plt.figure()
-    sns.barplot(list(range(results_dict['adversary_guess'].shape[0])), results_dict['adversary_guess'] / num_rollouts)
+    sns.barplot(xvals[:-1], results_dict['adversary_guess'][:-1] / num_rollouts)
     output_str = '{}/{}'.format(outdir, 'adversary_guess.png')
-    plt.title('The extra row is for adversaries turned off')
+    plt.title('Adversary number vs. percent correct guesses')
+    plt.xlabel('Adversary number')
+    plt.ylabel('Percentage of correct guesses')
     plt.savefig(output_str)
 
     if 'guess_grid' in results_dict.keys():
@@ -86,6 +108,47 @@ def on_result(results_dict, outdir, num_rollouts):
         plt.xlabel('Adversary guess')
         plt.title('The extra row is for adversaries turned off')
         output_str = '{}/{}'.format(outdir, 'guess_grid.png')
+        plt.savefig(output_str)
+
+    if 'state_pred_time' in results_dict.keys():
+        for i in range(results_dict['state_pred_time'].shape[0]):
+            if i < results_dict['state_pred_time'].shape[0] - 1:
+                adv_str = str(i)
+            else:
+                adv_str = 'no_adversary'
+            plt.figure()
+            plt.plot(results_dict['state_pred_time'][i, :] / num_rollouts)
+            plt.xlabel('step number')
+            plt.ylabel('average state error')
+            plt.title('Time vs. norm of adversary error, adversary {}'.format(adv_str))
+            output_str = '{}/{}'.format(outdir, 'state_err_v_time_adv_{}.png'.format(adv_str))
+            plt.savefig(output_str)
+
+    if 'guess_adv_time' in results_dict.keys():
+        for i in range(results_dict['guess_adv_time'].shape[0]):
+            if i < results_dict['state_pred_time'].shape[0] - 1:
+                adv_str = str(i)
+            else:
+                adv_str = 'no_adversary'
+            plt.figure()
+            plt.plot(results_dict['guess_adv_time'][i, :] / num_rollouts)
+            plt.xlabel('step number')
+            plt.ylabel('average adversary guess')
+            plt.title('Time vs. norm of adversary {} error'.format(adv_str))
+            output_str = '{}/{}'.format(outdir, 'guess_v_time_adv_{}.png'.format(adv_str))
+            plt.savefig(output_str)
+
+    for i in range(results_dict['action_time'].shape[0]):
+        if i < results_dict['state_pred_time'].shape[0] - 1:
+            adv_str = str(i)
+        else:
+            adv_str = 'no_adversary'
+        plt.figure()
+        plt.plot(results_dict['action_time'][i, :] / num_rollouts)
+        plt.xlabel('step number')
+        plt.ylabel('action magnitude')
+        plt.title('Time vs. norm of action, adversary {}'.format(adv_str))
+        output_str = '{}/{}'.format(outdir, 'action_v_time_{}.png'.format(adv_str))
         plt.savefig(output_str)
 
 

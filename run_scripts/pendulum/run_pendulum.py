@@ -284,7 +284,8 @@ if __name__ == "__main__":
                         visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
 
                     if args.model_based:
-                        visualize_model_perf(config, checkpoint_path, 10, 100, output_path)
+                        # TODO(Put back 10 where args.num_adv is)
+                        visualize_model_perf(config, checkpoint_path, args.num_adv, 1, output_path)
 
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
