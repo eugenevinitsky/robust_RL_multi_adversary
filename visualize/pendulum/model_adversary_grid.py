@@ -18,17 +18,30 @@ from utils.rllib_utils import get_config
 def dict_func(env, options_dict):
     # figure out how many adversaries you have and initialize their grids
     results_dict = {}
+    # how many adversaries we will test with
     num_test_adversaries = options_dict['num_test_adversaries']
+    # how many adversaries we actually train with
+    train_adversary_num = options_dict['train_adversary_num']
     # we track our score for each adversary, the prediction error, and whether we guess that adversary correct
-    results_dict['adversary_rew'] = np.zeros(num_test_adversaries)
-    results_dict['prediction_error'] = np.zeros(num_test_adversaries)
-    results_dict['adversary_guess'] = np.zeros(num_test_adversaries)
+    # The plus 1 is because the last index is with the adversaries off. This lets us see what we are guessing
+    # when there actually isn't any adversary
+    results_dict['adversary_rew'] = np.zeros(num_test_adversaries + 1)
+    results_dict['prediction_error'] = np.zeros(num_test_adversaries + 1)
+    results_dict['adversary_guess'] = np.zeros(num_test_adversaries + 1)
+    # we also plot which adversary we guess for any given adversary
+    if env.guess_adv:
+        # the column index is one less because we would never guess an adversary larger than the number we trained with
+        results_dict['guess_grid'] = np.zeros((num_test_adversaries + 1, train_adversary_num))
     return results_dict
 
 
 def done_func(env, results_dict):
     results_dict['prediction_error'][env.curr_adversary] = np.linalg.norm(env.state_error / env.horizon)
     results_dict['adversary_guess'][env.curr_adversary] += env.num_correct_guesses / env.horizon
+
+
+def step_func(multi_obs, action_dict, logits_dict, results_dict, env):
+    results_dict['guess_grid'][env.curr_adversary, int(action_dict['agent0'][-1])] += 1
 
 
 def on_result(results_dict, outdir, num_rollouts):
@@ -45,36 +58,61 @@ def on_result(results_dict, outdir, num_rollouts):
     plt.figure()
     sns.barplot(list(range(results_dict['adversary_rew'].shape[0])), results_dict['adversary_rew'])
     output_str = '{}/{}'.format(outdir, 'adversary_rewards.png')
+    plt.title('The extra row is for adversaries turned off')
     plt.savefig(output_str)
 
     # Plot the histogram of rewards
     plt.figure()
     sns.barplot(list(range(results_dict['prediction_error'].shape[0])), results_dict['prediction_error'] / num_rollouts)
     output_str = '{}/{}'.format(outdir, 'prediction_error.png')
+    plt.title('The extra row is for adversaries turned off')
     plt.savefig(output_str)
 
     # Plot the histogram of rewards
     plt.figure()
     sns.barplot(list(range(results_dict['adversary_guess'].shape[0])), results_dict['adversary_guess'] / num_rollouts)
     output_str = '{}/{}'.format(outdir, 'adversary_guess.png')
+    plt.title('The extra row is for adversaries turned off')
     plt.savefig(output_str)
+
+    if 'guess_grid' in results_dict.keys():
+        guess_grid = results_dict['guess_grid']
+        # Plot which adversary we guessed for any given adversaries
+        plt.figure()
+        # increasing the row index implies moving down on the y axis
+        sns.heatmap(guess_grid, yticklabels=list(range(guess_grid.shape[0])),
+                    xticklabels=list(range(guess_grid.shape[1])))
+        plt.ylabel('Current adversary')
+        plt.xlabel('Adversary guess')
+        plt.title('The extra row is for adversaries turned off')
+        output_str = '{}/{}'.format(outdir, 'guess_grid.png')
+        plt.savefig(output_str)
 
 
 def visualize_model_perf(rllib_config, checkpoint, num_test_adversaries, num_rollouts, outdir):
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
         instantiate_rollout(rllib_config, checkpoint)
 
-    env.num_adversaries = num_test_adversaries
+    options_dict = {'num_test_adversaries': num_test_adversaries, 'train_adversary_num': env.num_adversaries}
 
-    options_dict = {'num_test_adversaries': num_test_adversaries}
+    env.num_adversaries = num_test_adversaries
 
     results_dict = dict_func(env, options_dict)
     for curr_adversary in range(num_test_adversaries):
         env.curr_adversary = curr_adversary
         new_results = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                    state_init, action_init, num_rollouts,
-                                   None, None, done_func, options_dict, results_dict)
+                                   None, step_func, done_func, options_dict, results_dict)
         results_dict['adversary_rew'][env.curr_adversary] = np.mean(new_results['rewards'])
+
+    # now do one run with the adversary off
+    env.curr_adversary += 1
+    env.has_adversary = False
+    new_results = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
+                              state_init, action_init, num_rollouts,
+                              None, step_func, done_func, options_dict, results_dict)
+    results_dict['adversary_rew'][env.curr_adversary] = np.mean(new_results['rewards'])
+
     on_result(results_dict, outdir, num_rollouts)
 
 

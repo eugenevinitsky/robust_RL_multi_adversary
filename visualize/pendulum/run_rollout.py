@@ -200,7 +200,8 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
             if 'pendulum' in info.keys():
                 reward_total += info['pendulum']['pendulum_reward']
             else:
-                reward_total += reward
+                # we don't want to know how we are doing with regards to the auxiliary rewards
+                reward_total += env.true_rew
             obs = next_obs
         print("Episode reward", reward_total)
         if done_func:
