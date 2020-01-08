@@ -39,6 +39,9 @@ def dict_func(env, options_dict):
         results_dict['guess_adv_time'] = np.zeros((num_test_adversaries + 1, env.horizon + 1))
         # the column index is one less because we would never guess an adversary larger than the number we trained with
         results_dict['guess_grid'] = np.zeros((num_test_adversaries + 1, train_adversary_num))
+
+    # Visualize the evolution of state per adversary. We only plot the last trajectory
+    results_dict['state_time'] = np.zeros((num_test_adversaries + 1, env.horizon + 1, env.observation_space.shape[0]))
     return results_dict
 
 
@@ -54,8 +57,9 @@ def step_func(multi_obs, action_dict, logits_dict, results_dict, env):
         results_dict['state_pred_time'][env.curr_adversary, env.step_num] += np.linalg.norm(env.curr_state_error)
 
     if env.guess_adv:
-        results_dict['guess_adv_time'][env.curr_adversary, env.step_num] +=  int(action_dict['agent0'][-1])
+        results_dict['guess_adv_time'][env.curr_adversary, env.step_num] += int(action_dict['agent0'][-1])
 
+    results_dict['state_time'][env.curr_adversary, env.step_num] = env._get_obs()
 
 
 def on_result(results_dict, outdir, num_rollouts):
@@ -78,6 +82,7 @@ def on_result(results_dict, outdir, num_rollouts):
     plt.xlabel('Adversary number')
     plt.ylabel('Reward')
     plt.savefig(output_str)
+    plt.close()
 
     # Plot the histogram of prediction error
     plt.figure()
@@ -87,6 +92,7 @@ def on_result(results_dict, outdir, num_rollouts):
     plt.xlabel('Adversary number')
     plt.ylabel('Prediction error')
     plt.savefig(output_str)
+    plt.close()
 
     # Plot the histogram of number of correct guesses
     plt.figure()
@@ -96,6 +102,7 @@ def on_result(results_dict, outdir, num_rollouts):
     plt.xlabel('Adversary number')
     plt.ylabel('Percentage of correct guesses')
     plt.savefig(output_str)
+    plt.close()
 
     if 'guess_grid' in results_dict.keys():
         guess_grid = results_dict['guess_grid']
@@ -109,6 +116,7 @@ def on_result(results_dict, outdir, num_rollouts):
         plt.title('The extra row is for adversaries turned off')
         output_str = '{}/{}'.format(outdir, 'guess_grid.png')
         plt.savefig(output_str)
+        plt.close()
 
     if 'state_pred_time' in results_dict.keys():
         for i in range(results_dict['state_pred_time'].shape[0]):
@@ -123,6 +131,7 @@ def on_result(results_dict, outdir, num_rollouts):
             plt.title('Time vs. norm of adversary error, adversary {}'.format(adv_str))
             output_str = '{}/{}'.format(outdir, 'state_err_v_time_adv_{}.png'.format(adv_str))
             plt.savefig(output_str)
+            plt.close()
 
     if 'guess_adv_time' in results_dict.keys():
         for i in range(results_dict['guess_adv_time'].shape[0]):
@@ -137,6 +146,7 @@ def on_result(results_dict, outdir, num_rollouts):
             plt.title('Time vs. norm of adversary {} error'.format(adv_str))
             output_str = '{}/{}'.format(outdir, 'guess_v_time_adv_{}.png'.format(adv_str))
             plt.savefig(output_str)
+            plt.close()
 
     for i in range(results_dict['action_time'].shape[0]):
         if i < results_dict['state_pred_time'].shape[0] - 1:
@@ -149,6 +159,29 @@ def on_result(results_dict, outdir, num_rollouts):
         plt.ylabel('action magnitude')
         plt.title('Time vs. norm of action, adversary {}'.format(adv_str))
         output_str = '{}/{}'.format(outdir, 'action_v_time_{}.png'.format(adv_str))
+        plt.savefig(output_str)
+        plt.close()
+
+    ylabels = ['x', 'y', 'theta_dot']
+    for i in range(results_dict['state_time'].shape[0]):
+        if i < results_dict['state_time'].shape[0] - 1:
+            adv_str = str(i)
+        else:
+            adv_str = 'no_adversary'
+        for j in range(results_dict['state_time'].shape[-1]):
+            plt.figure()
+            plt.plot(results_dict['state_time'][i, :, j])
+            plt.xlabel('step number')
+            plt.ylabel(ylabels[j])
+            plt.title('Time vs. state {} evolution, adversary {}'.format(ylabels[j], adv_str))
+            output_str = '{}/{}'.format(outdir, 'state_{}_v_time_{}.png'.format(ylabels[j], adv_str))
+            plt.savefig(output_str)
+        plt.figure()
+        plt.plot(results_dict['state_time'][i, :, 0], results_dict['state_time'][i, :, 1])
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.title('Phase evolution, adversary {}'.format(adv_str))
+        output_str = '{}/{}'.format(outdir, 'phase_evolution_{}.png'.format(adv_str))
         plt.savefig(output_str)
 
 
