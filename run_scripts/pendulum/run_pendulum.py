@@ -30,21 +30,23 @@ from models.recurrent_tf_model_v2 import LSTM
 
 def setup_ma_config(config):
     env = pendulum_env_creator(config['env_config'])
-    policies_to_train = ['pendulum']
 
     num_adversaries = config['env_config']['num_adversaries']
-    if num_adversaries == 0 or config['env_config']['model_based']:
-        return
-    adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
-    policy_graphs = {'pendulum': (PPOTFPolicy, env.observation_space, env.action_space, {})}
-    policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
-                                            env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+
+    if num_adversaries > 0 and not config['env_config']['model_based']:
+        policies_to_train = ['pendulum']
+        policy_graphs = {'pendulum': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+        adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
+        adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
+        policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
+                                                env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     # TODO(@evinitsky) put this back
     # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
     #                                         env.adv_action_space, adversary_config) for i in range(num_adversaries)})
 
-    policies_to_train += adv_policies
+        policies_to_train += adv_policies
+    else:
+        return
 
     def policy_mapping_fn(agent_id):
         return agent_id
@@ -64,7 +66,7 @@ def setup_exps(args):
     parser = ma_env_parser(parser)
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv', type=int, default=5, help='Number of active adversaries in the env')
-    parser.add_argument('--adv_strength', type=int, default=0.1, help='Strength of active adversaries in the env')
+    parser.add_argument('--adv_strength', type=float, default=0.1, help='Strength of active adversaries in the env')
     parser.add_argument('--model_based', action='store_true', default=False,
                         help='If true, the adversaries are a set of fixed sinusoids instead of being learnt')
     parser.add_argument('--guess_adv', action='store_true', default=False,
@@ -86,7 +88,7 @@ def setup_exps(args):
     config['lambda'] = 0.1
     config['lr'] = 5e-3
     config['sgd_minibatch_size'] = 64
-    # config['num_envs_per_worker'] = 10
+    config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
 
     if args.custom_ppo:
@@ -155,7 +157,7 @@ def on_train_result(info):
     trainer = info["trainer"]
 
     # TODO(should we do this every episode or every training iteration)?
-    return
+    pass
     trainer.workers.foreach_worker(
         lambda ev: ev.foreach_env(
             lambda env: env.select_new_adversary()))
@@ -166,6 +168,7 @@ def on_episode_end(info):
 
     # store info about how many adversaries there are
     if hasattr(info["env"], 'envs'):
+
         env = info["env"].envs[0]
 
         prediction = env.num_correct_guesses / env.horizon
@@ -174,24 +177,32 @@ def on_episode_end(info):
         # Track the mean error in every element of the state
         state_err_dict = {"state_err_{}".format(i): sum_state for i, sum_state in enumerate(state_list)}
 
-        info["episode"].custom_metrics = {"correct_pred_frac": prediction}
+        episode = info["episode"]
+        episode.custom_metrics["correct_pred_frac"] = prediction
+        for key, val in state_err_dict.items():
+            episode.custom_metrics[key] = val
+
         # info["episode"].custom_metrics.update(state_err_dict)
+
         env.select_new_adversary()
     elif hasattr(info["env"], 'vector_env'):
         envs = info["env"].vector_env.envs
         prediction_list = [env.num_correct_guesses / env.horizon for env in envs]
+        # some of the envs won't actually be used if we are vectorizing so lets just ignore them
+        prediction_list = [prediction for env, prediction in zip(envs, prediction_list) if env.step_num != 0]
 
         state_list = [env.state_error / env.horizon for env in envs]
         sum_states = reduce(lambda x, y: x+y, state_list) / len(envs)
         # Track the mean error in every element of the state
         state_err_dict = {"state_err_{}".format(i): sum_state for i, sum_state in enumerate(sum_states)}
 
-        info["episode"].custom_metrics = {"correct_pred_frac": np.mean(prediction_list)}
-        # info["episode"].custom_metrics.update(state_err_dict)
+        info["episode"].custom_metrics["correct_pred_frac"] = np.mean(prediction_list)
+        for key, val in state_err_dict.items():
+            info["episode"].custom_metrics[key] = val
         for env in envs:
             env.select_new_adversary()
     else:
-        sys.exit("You arent recording any custom metrics, something is wrong")
+        sys.exit("You aren't recording any custom metrics, something is wrong")
 
 
 if __name__ == "__main__":
@@ -208,7 +219,7 @@ if __name__ == "__main__":
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
-        ray.init(local_mode=True)
+        ray.init()
 
     run_tune(**exp_dict, queue_trials=False)
 

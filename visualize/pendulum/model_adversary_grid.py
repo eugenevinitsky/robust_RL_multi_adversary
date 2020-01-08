@@ -12,32 +12,17 @@ from visualize.pendulum.run_rollout import instantiate_rollout, run_rollout
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 
-
-def compute_kl_diff(mean, log_std, other_mean, other_log_std):
-    """Compute the kl diff between agent and other agent"""
-    std = np.exp(log_std)
-    other_std = np.exp(other_log_std)
-    return np.mean(other_log_std - log_std + (np.square(std) + np.square(mean - other_mean)) / (2.0 * np.square(other_std)) - 0.5)
-
+"""Run through all of the model based adversaries and compute the score per adversary"""
 
 def dict_func(env, options_dict):
     # figure out how many adversaries you have and initialize their grids
-    num_adversaries = env.num_adversaries
-    adversary_grid_dict = {}
-    grid_size = options_dict['grid_size']
-    kl_grid = np.zeros((num_adversaries, num_adversaries))
-    for i in range(num_adversaries):
-        adversary_str = 'adversary' + str(i)
-        # each adversary grid is a map of agent action versus observation dimension
-        adversary_grid = np.zeros((grid_size - 1, grid_size - 1, env.observation_space.low.shape[0])).astype(int)
-        strength_grid = np.linspace(env.adv_action_space.low, env.adv_action_space.high, grid_size).T
-        obs_grid = np.linspace(env.observation_space.low, env.observation_space.high, grid_size).T
-        adversary_grid_dict[adversary_str] = {'grid': adversary_grid, 'action_bins': strength_grid,
-                                              'obs_bins': obs_grid,
-                                              'action_list': [],
-                                              }
-        adversary_grid_dict['kl_grid'] = kl_grid
-    return dict_func
+    results_dict = {}
+    num_test_adversaries = options_dict['num_test_adversaries']
+    env.num_adversaries = num_test_adversaries
+    # we track our score for each adversary, the prediction error, and whether we guess that adversary correct
+    results_dict['adversary_rew'] = np.zeros(num_test_adversaries)
+    results_dict['prediction_error'] = np.zeros(num_test_adversaries)
+    results_dict['adversary_guess'] = np.zeros(num_test_adversaries)
 
 def pre_step_func(env, obs_dict):
     if isinstance(env.adv_observation_space, dict):
@@ -46,7 +31,6 @@ def pre_step_func(env, obs_dict):
     else:
         multi_obs = {'adversary{}'.format(i): obs_dict['pendulum'] for i in range(env.num_adversaries)}
     multi_obs.update({'pendulum': obs_dict['pendulum']})
-    return multi_obs
 
 
 def step_func(obs_dict, action_dict, logits_dict, results_dict, env):
@@ -131,11 +115,11 @@ def on_result(results_dict, outdir):
     plt.savefig(output_str)
 
 
-def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, outdir):
+def visualize_adversaries(rllib_config, checkpoint, num_test_adversaries, num_rollouts, outdir):
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
         instantiate_rollout(rllib_config, checkpoint)
 
-    options_dict = {'grid_size': grid_size}
+    options_dict = {'num_test_adversaries': num_test_adversaries}
 
     results_dict = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                state_init, action_init, num_rollouts,
@@ -146,7 +130,8 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
     parser = replay_parser(parser)
-    parser.add_argument('--grid_size', type=int, default=50, help='How fine to make the adversary action grid')
+    parser.add_argument('--num_test_adversaries', type=int, default=20,
+                        help='How many adversaries to actually test with')
     parser.add_argument('--output_dir', type=str, default='transfer_results',
                         help='Directory to output the files into')
     args = parser.parse_args()
@@ -161,7 +146,7 @@ def main():
 
     ray.init(num_cpus=args.num_cpus)
 
-    visualize_adversaries(rllib_config, checkpoint, args.grid_size, args.num_rollouts, args.output_dir)
+    visualize_adversaries(rllib_config, checkpoint, args.num_test_adversaries, args.num_rollouts, args.output_dir)
 
 
 if __name__ == '__main__':

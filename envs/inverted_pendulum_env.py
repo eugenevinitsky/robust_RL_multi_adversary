@@ -204,7 +204,8 @@ class ModelBasedPendulumEnv(PendulumEnv):
             torque = action[0]
             state_guess = action[1]
             adv_guess = action[2]
-        adv_action = np.sin(2 * np.pi * self.curr_adversary * self.step_num)
+        # Sinusoidal perturbation
+        adv_action = np.sin(2 * np.pi * self.curr_adversary * self.step_num * self.dt)
         action += adv_action * self.adversary_strength
         if isinstance(self.action_space, Box):
             pendulum_action = np.clip(torque, a_min=self.action_space.low, a_max=self.action_space.high)
@@ -224,6 +225,11 @@ class ModelBasedPendulumEnv(PendulumEnv):
             rew -= np.linalg.norm(state_guess - obs) * self.correct_state_coeff
 
         return obs, rew, done, info
+
+    def reset(self):
+        self.num_correct_guesses = 0
+        self.state_error = np.zeros(self.observation_space.shape[0])
+        return super().reset()
 
     def select_new_adversary(self):
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
