@@ -168,7 +168,6 @@ def on_episode_step(info):
     episode = info["episode"]
     if hasattr(info["env"], 'envs'):
         env = info["env"].envs[0]
-        print('env.true_rew is ', env.true_rew)
         episode.user_data["true_rew"].append(env.true_rew)
 
     elif hasattr(info["env"], 'vector_env'):
