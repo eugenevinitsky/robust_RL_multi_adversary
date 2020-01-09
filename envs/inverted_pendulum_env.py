@@ -22,7 +22,7 @@ class PendulumEnv(gym.Env):
         self.horizon = horizon
         self.step_num = 0
         self.obs_norm = 50.0
-        self.should_render = True
+        self.should_render = False
         self.friction = False
         self.friction_coef = 0.2
         self.add_gaussian_state_noise = False
@@ -41,6 +41,9 @@ class PendulumEnv(gym.Env):
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
+
+    def get_observation_space(self):
+        return self.observation_space
 
     def step(self,u):
         self.step_num += 1
@@ -136,7 +139,7 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
     @property
     def adv_observation_space(self):
         obs_size = self.observation_space.shape
-        dict_space = spaces.Dict({'obs': Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32),
+        dict_space = spaces.Dict({'obs': super().get_observation_space(),
                        'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
         return dict_space
 
