@@ -107,7 +107,6 @@ if __name__ == '__main__':
     rllib_config, checkpoint = get_config(args)
 
     ray.init(num_cpus=args.num_cpus)
-
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
     run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name, args.output_dir)

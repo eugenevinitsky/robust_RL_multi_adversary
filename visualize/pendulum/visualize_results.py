@@ -29,7 +29,6 @@ for (dirpath, dirnames, filenames) in os.walk(args.results_path):
 
 output_path = args.results_path.split('/')[-1]
 if not os.path.exists('transfer_results/pendulum/{}'.format(output_path)):
-    import ipdb; ipdb.set_trace()
     os.makedirs('transfer_results/pendulum/{}'.format(output_path))
 
 # TODO(@evinitsky) go through the results and pull out the one with the highest mean for a given experiment
@@ -47,7 +46,6 @@ for result in rew_results:
 
 
 for i, result in enumerate(unique_rew_results):
-    import ipdb; ipdb.set_trace()
     result = sorted(result, key=lambda x: x[2])
     plt.figure(figsize=(25, 5))
     legends = []
