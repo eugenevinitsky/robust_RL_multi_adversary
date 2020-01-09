@@ -1,3 +1,4 @@
+from copy import copy
 import logging
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ from ray.rllib.policy.tf_policy import ACTION_LOGP
 # Frozen logits of the policy that computed the action
 BEHAVIOUR_LOGITS = "behaviour_logits"
 
-DEFAULT_CONFIG = DEFAULT_PPO_CONFIG
+DEFAULT_CONFIG = copy(DEFAULT_PPO_CONFIG)
 DEFAULT_CONFIG.update({
     "num_adversaries": 2,
     # Initial weight on the kl diff part of the loss
@@ -131,12 +132,10 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
 
         # TODO(@evinitsky) did I get the KL backwards? Should it be the other way around?
         # we clip here lest it blow up due to some really small probabilities
-        kl_loss += tf.losses.huber_loss(tf.reduce_sum(
-            - other_logstd + log_std +
-            (tf.square(other_std) + tf.square(mean - other_mean)) /
-            (2.0 * tf.square(std)) - 0.5,
-            axis=1
-        ), policy.kl_target)
+        huber_loss = tf.keras.losses.Huber(reduction=tf.keras.losses.Reduction.NONE)
+        kl_loss += huber_loss(tf.reduce_sum(- other_logstd + log_std +
+                                            (tf.square(other_std) + tf.square(mean - other_mean)) /
+                                            (2.0 * tf.square(std)) - 0.5, axis=1), policy.kl_target)
     return kl_loss
 
 
