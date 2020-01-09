@@ -127,9 +127,12 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
             action = action if multiagent else action[_DUMMY_AGENT_ID]
 
             # we turn the adversaries off so you only send in the pendulum keys
-            new_dict = {}
-            new_dict.update({'pendulum': action['pendulum']})
-            next_obs, reward, done, info = env.step(new_dict)
+            if multiagent:
+                new_dict = {}
+                new_dict.update({'pendulum': action['pendulum']})
+                next_obs, reward, done, info = env.step(new_dict)
+            else:
+                next_obs, reward, done, info = env.step(action)
             if isinstance(done, dict):
                 done = done['__all__']
             if multiagent:
@@ -139,7 +142,10 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
                 prev_rewards[_DUMMY_AGENT_ID] = reward
 
             # we only want the robot reward, not the adversary reward
-            reward_total += info['pendulum']['pendulum_reward']
+            if multiagent:
+                reward_total += info['pendulum']['pendulum_reward']
+            else:
+                reward_total += reward
             obs = next_obs
         print("Episode reward", reward_total)
 

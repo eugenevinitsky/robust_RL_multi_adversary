@@ -3,7 +3,7 @@ import collections
 import errno
 import logging
 import os
-
+from gym.spaces import Dict
 import matplotlib.pyplot as plt
 import numpy as np
 import ray
@@ -20,7 +20,8 @@ def compute_kl_diff(mean, log_std, other_mean, other_log_std):
     """Compute the kl diff between agent and other agent"""
     std = np.exp(log_std)
     other_std = np.exp(other_log_std)
-    return np.mean(other_log_std - log_std + (np.square(std) + np.square(mean - other_mean)) / (2.0 * np.square(other_std)) - 0.5)
+    #return np.mean(other_log_std - log_std + (np.square(std) + np.square(mean - other_mean)) / (2.0 * np.square(other_std)) - 0.5)
+    return np.mean(- other_log_std + log_std + (np.square(other_std) + np.square(mean - other_mean)) / (2.0 * np.square(std)) - 0.5)
 
 
 def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, outdir):
@@ -60,7 +61,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
         while not done:
             multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
             obs = multi_obs['pendulum']
-            if isinstance(env.adv_observation_space, dict):
+            if isinstance(env.adv_observation_space, Dict):
                 multi_obs = {'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([1])} for i in range(env.num_adversaries)}
             else:
                 multi_obs = {'adversary{}'.format(i): obs for i in range(env.num_adversaries)}
