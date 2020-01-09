@@ -44,8 +44,9 @@ def dict_func(env, options_dict):
     shape_scaling = 1
     if hasattr(env, 'num_concat_states'):
         shape_scaling = env.num_concat_states
+    # we subtract off 1 * shape_scaling to remove the previous actions from the observation space
     results_dict['state_time'] = np.zeros((num_test_adversaries + 1, env.horizon + 1,
-                                           int(env.observation_space.shape[0] / shape_scaling)))
+                                           int((env.observation_space.shape[0] - 1 * shape_scaling) / shape_scaling)))
     return results_dict
 
 

@@ -21,7 +21,6 @@ class PendulumEnv(gym.Env):
         self.g = g
         self.horizon = horizon
         self.step_num = 0
-        self.obs_norm = 50.0
         self.should_render = False
         self.friction = False
         self.friction_coef = 0.2
@@ -33,6 +32,8 @@ class PendulumEnv(gym.Env):
         self.viewer = None
 
         self.high = np.array([1., 1., self.max_speed])
+        self.low = np.array([-1., -1., -self.max_speed])
+        self.obs_norm = self.high
         self.seed()
 
     @property
@@ -79,6 +80,7 @@ class PendulumEnv(gym.Env):
         obs = self._get_obs() / self.obs_norm
         if self.add_gaussian_state_noise:
             obs += self.gaussian_state_noise_scale * np.random.normal(size=obs.shape)
+        obs = np.clip(obs, a_min=self.low, a_max=self.high)
         return obs, -costs, done, {}
 
     def reset(self):
@@ -192,8 +194,9 @@ class ModelBasedPendulumEnv(PendulumEnv):
     @property
     def observation_space(self):
         obs_space = super().observation_space
-        low = np.repeat(obs_space.low, self.num_concat_states)
-        high = np.repeat(obs_space.high, self.num_concat_states)
+        action_space = super().action_space
+        low = np.tile(np.concatenate((obs_space.low, action_space.low)), self.num_concat_states)
+        high = np.tile(np.concatenate((obs_space.high, action_space.high)), self.num_concat_states)
         return Box(low=low, high=high, dtype=np.float32)
 
     @property
@@ -244,11 +247,11 @@ class ModelBasedPendulumEnv(PendulumEnv):
             self.state_error += np.abs(state_guess.flatten() - self._get_obs())
             rew -= np.linalg.norm(state_guess - obs) * self.correct_state_coeff
 
-        return self.update_observed_obs(obs), rew, done, info
+        return self.update_observed_obs(np.concatenate((obs, pendulum_action))), rew, done, info
 
     def update_observed_obs(self, new_obs):
         """Add in the new observations and overwrite the stale ones"""
-        original_shape = super().observation_space.shape[0]
+        original_shape = int(self.observation_space.shape[0] / self.num_concat_states)
         self.observed_states = np.roll(self.observed_states, shift=original_shape, axis=-1)
         self.observed_states[0: original_shape] = new_obs
         return self.observed_states
@@ -259,7 +262,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
 
         self.curr_state_error = np.zeros(super().observation_space.shape[0])
         self.state_error = np.zeros(super().observation_space.shape[0])
-        return self.update_observed_obs(super().reset())
+        return self.update_observed_obs(np.concatenate((super().reset(), [0.0])))
 
     def select_new_adversary(self):
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
