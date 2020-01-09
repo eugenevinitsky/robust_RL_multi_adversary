@@ -278,7 +278,7 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
                 if args.num_adv > 0:
-                    # run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
+                    run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
 
                     if not args.model_based:
                         visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
