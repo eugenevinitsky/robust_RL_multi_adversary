@@ -85,6 +85,9 @@ def setup_exps(args):
         config['kl_diff_weight'] = args.kl_diff_weight
         config['kl_diff_target'] = args.kl_diff_target
         config['kl_diff_clip'] = 5.0
+        config['env_config']['kl_diff_training'] = True
+    else:
+        config['env_config']['kl_diff_training'] = False
 
     config['env_config']['num_adversaries'] = args.num_adv
     config['env_config']['adversary_strength'] = args.adv_strength
@@ -174,8 +177,10 @@ if __name__ == "__main__":
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
-    else:
+    elif args.local_mode:
         ray.init(local_mode=True)
+    else:
+        ray.init(local_mode=False)
 
     run_tune(**exp_dict, queue_trials=False)
 
