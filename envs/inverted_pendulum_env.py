@@ -22,7 +22,7 @@ class PendulumEnv(gym.Env):
         self.horizon = horizon
         self.step_num = 0
         self.obs_norm = 50.0
-        self.should_render = True
+        self.should_render = False
         self.friction = False
         self.friction_coef = 0.2
         self.add_gaussian_state_noise = False
@@ -127,6 +127,9 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
         super(MAPendulumEnv, self).__init__()
         self.num_adversaries = config["num_adversaries"]
         self.adversary_strength = config["adversary_strength"]
+        # If this is true we are doing a custom training run that requires all of the adversaries to get
+        # an observation at every timestep
+        self.kl_diff_training = config["kl_diff_training"]
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
 
     @property
@@ -135,10 +138,13 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
 
     @property
     def adv_observation_space(self):
-        obs_size = self.observation_space.shape
-        dict_space = spaces.Dict({'obs': Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32),
-                       'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
-        return dict_space
+        if self.kl_diff_training:
+            obs_size = self.observation_space.shape
+            dict_space = spaces.Dict({'obs': Box(low=-1.0, high=1.0, shape=obs_size, dtype=np.float32),
+                           'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
+            return dict_space
+        else:
+            return self.observation_space
 
     def select_new_adversary(self):
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
@@ -152,17 +158,20 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
         obs, reward, done, info = super().step(pendulum_action)
         info = {'pendulum': {'pendulum_reward': reward}}
 
-
         obs_dict = {'pendulum': obs}
         reward_dict = {'pendulum': reward}
 
-        for i in range(self.num_adversaries):
-            is_active = 1 if self.curr_adversary == i else 0
-            obs_dict.update({
-                'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([is_active])}
-            })
+        if self.kl_diff_training:
+            for i in range(self.num_adversaries):
+                is_active = 1 if self.curr_adversary == i else 0
+                obs_dict.update({
+                    'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([is_active])}
+                })
 
-            reward_dict.update({'adversary{}'.format(i): -reward})
+                reward_dict.update({'adversary{}'.format(i): -reward})
+        else:
+            obs_dict.update({'adversary{}'.format(self.curr_adversary): obs})
+            reward_dict.update({'adversary{}'.format(self.curr_adversary): -reward})
 
         done_dict = {'__all__': done}
         return obs_dict, reward_dict, done_dict, info
@@ -170,11 +179,14 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
     def reset(self):
         obs = super().reset()
         curr_obs = {'pendulum': obs}
-        for i in range(self.num_adversaries):
-            is_active = 1 if self.curr_adversary == i else 0
-            curr_obs.update({'adversary{}'.format(i):
-                                 {'obs': obs,
-                                  'is_active': np.array([is_active])
-                                 }})
+        if self.kl_diff_training:
+            for i in range(self.num_adversaries):
+                is_active = 1 if self.curr_adversary == i else 0
+                curr_obs.update({'adversary{}'.format(i):
+                                     {'obs': obs,
+                                      'is_active': np.array([is_active])
+                                     }})
+        else:
+            curr_obs.update({'adversary{}'.format(self.curr_adversary): obs})
 
         return curr_obs
