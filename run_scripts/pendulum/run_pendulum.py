@@ -92,7 +92,7 @@ def setup_exps(args):
         config['lr'] = tune.grid_search([5e-3, 5e-4])
     else:
         config['lr'] = 5e-3
-    config['sgd_minibatch_size'] = 64
+    config['sgd_minibatch_size'] = min(500, args.train_batch_size)
     # config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
     config['num_workers'] = args.num_cpus
@@ -132,9 +132,11 @@ def setup_exps(args):
 
     # add the callbacks
     config["callbacks"] = {"on_train_result": on_train_result,
-                           "on_episode_end": on_episode_end,
-                           "on_episode_step": on_episode_step,
-                           "on_episode_start": on_episode_start}
+                           "on_episode_end": on_episode_end}
+
+    if args.model_based:
+        config["callbacks"].update({"on_episode_step": on_episode_step,
+                                    "on_episode_start": on_episode_start})
 
     # config["eager_tracing"] = True
     # config["eager"] = True
@@ -186,10 +188,9 @@ def on_train_result(info):
     trainer = info["trainer"]
 
     # TODO(should we do this every episode or every training iteration)?
-    pass
-    trainer.workers.foreach_worker(
-        lambda ev: ev.foreach_env(
-            lambda env: env.select_new_adversary()))
+    # trainer.workers.foreach_worker(
+    #     lambda ev: ev.foreach_env(
+    #         lambda env: env.select_new_adversary()))
 
 
 def on_episode_end(info):
@@ -199,43 +200,51 @@ def on_episode_end(info):
     if hasattr(info["env"], 'envs'):
 
         env = info["env"].envs[0]
-
-        prediction = env.num_correct_guesses / env.horizon
-
-        state_list = env.state_error / env.horizon
-        # Track the mean error in every element of the state
-        state_err_dict = {"state_err_{}".format(i): sum_state for i, sum_state in enumerate(state_list)}
-
         episode = info["episode"]
-        episode.custom_metrics["correct_pred_frac"] = prediction
-        for key, val in state_err_dict.items():
-            episode.custom_metrics[key] = val
+        if hasattr(env, 'num_correct_guesses'):
+            prediction = env.num_correct_guesses / env.horizon
+            episode.custom_metrics["correct_pred_frac"] = prediction
+
+        if hasattr(env, 'state_error'):
+            state_list = env.state_error / env.horizon
+            # Track the mean error in every element of the state
+            state_err_dict = {"state_err_{}".format(i): sum_state for i, sum_state in enumerate(state_list)}
+
+            for key, val in state_err_dict.items():
+                episode.custom_metrics[key] = val
 
         # info["episode"].custom_metrics.update(state_err_dict)
 
-        env.select_new_adversary()
+        if hasattr(env, 'select_new_adversary'):
+            env.select_new_adversary()
     elif hasattr(info["env"], 'vector_env'):
         envs = info["env"].vector_env.envs
-        prediction_list = [env.num_correct_guesses / env.horizon for env in envs]
-        # some of the envs won't actually be used if we are vectorizing so lets just ignore them
-        prediction_list = [prediction for env, prediction in zip(envs, prediction_list) if env.step_num != 0]
+        if hasattr(envs[0], 'num_correct_guesses'):
 
-        state_list = [env.state_error / env.horizon for env in envs]
-        sum_states = reduce(lambda x, y: x+y, state_list) / len(envs)
-        # Track the mean error in every element of the state
-        state_err_dict = {"state_err_{}".format(i): sum_state for i, sum_state in enumerate(sum_states)}
+            prediction_list = [env.num_correct_guesses / env.horizon for env in envs]
+            # some of the envs won't actually be used if we are vectorizing so lets just ignore them
+            prediction_list = [prediction for env, prediction in zip(envs, prediction_list) if env.step_num != 0]
+            info["episode"].custom_metrics["correct_pred_frac"] = np.mean(prediction_list)
 
-        info["episode"].custom_metrics["correct_pred_frac"] = np.mean(prediction_list)
-        for key, val in state_err_dict.items():
-            info["episode"].custom_metrics[key] = val
+        if hasattr(envs[0], 'state_error'):
+            state_list = [env.state_error / env.horizon for env in envs]
+            sum_states = reduce(lambda x, y: x+y, state_list) / len(envs)
+            # Track the mean error in every element of the state
+            state_err_dict = {"state_err_{}".format(i): sum_state for i, sum_state in enumerate(sum_states)}
+
+            for key, val in state_err_dict.items():
+                info["episode"].custom_metrics[key] = val
+        # get the new adversary
         for env in envs:
-            env.select_new_adversary()
+            if hasattr(env, 'select_new_adversary'):
+                env.select_new_adversary()
     else:
         sys.exit("You aren't recording any custom metrics, something is wrong")
 
     episode = info['episode']
-    true_rew = np.sum(episode.user_data["true_rew"])
-    episode.custom_metrics["true_rew"] = true_rew
+    if "true_rew" in episode.user_data:
+        true_rew = np.sum(episode.user_data["true_rew"])
+        episode.custom_metrics["true_rew"] = true_rew
 
 
 if __name__ == "__main__":
