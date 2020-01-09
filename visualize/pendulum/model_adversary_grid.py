@@ -41,7 +41,11 @@ def dict_func(env, options_dict):
         results_dict['guess_grid'] = np.zeros((num_test_adversaries + 1, train_adversary_num))
 
     # Visualize the evolution of state per adversary. We only plot the last trajectory
-    results_dict['state_time'] = np.zeros((num_test_adversaries + 1, env.horizon + 1, env.observation_space.shape[0]))
+    shape_scaling = 1
+    if hasattr(env, 'num_concat_states'):
+        shape_scaling = env.num_concat_states
+    results_dict['state_time'] = np.zeros((num_test_adversaries + 1, env.horizon + 1,
+                                           int(env.observation_space.shape[0] / shape_scaling)))
     return results_dict
 
 
