@@ -181,9 +181,9 @@ class ModelBasedPendulumEnv(PendulumEnv):
         self.correct_state_coeff = 1.0
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
         self.num_correct_guesses = 0
-        self.state_error = np.zeros(self.observation_space.shape[0])
+        self.state_error = np.zeros(super().observation_space.shape[0])
         # purely used for readout and visualization
-        self.curr_state_error = np.zeros(self.observation_space.shape[0])
+        self.curr_state_error = np.zeros(super().observation_space.shape[0])
         # attribute that can be used to turn the adversary off for testing
         self.has_adversary = True
         # the reward without any auxiliary rewards
@@ -244,20 +244,21 @@ class ModelBasedPendulumEnv(PendulumEnv):
             self.state_error += np.abs(state_guess.flatten() - self._get_obs())
             rew -= np.linalg.norm(state_guess - obs) * self.correct_state_coeff
 
-        # TODO add true reward, without auxiliary reward to info
         return self.update_observed_obs(obs), rew, done, info
 
     def update_observed_obs(self, new_obs):
+        """Add in the new observations and overwrite the stale ones"""
         original_shape = super().observation_space.shape[0]
         self.observed_states = np.roll(self.observed_states, shift=original_shape, axis=-1)
         self.observed_states[0: original_shape] = new_obs
+        return self.observed_states
 
     def reset(self):
         self.num_correct_guesses = 0
         self.true_rew = 0.0
 
-        self.curr_state_error = np.zeros(self.observation_space.shape[0])
-        self.state_error = np.zeros(self.observation_space.shape[0])
+        self.curr_state_error = np.zeros(super().observation_space.shape[0])
+        self.state_error = np.zeros(super().observation_space.shape[0])
         return self.update_observed_obs(super().reset())
 
     def select_new_adversary(self):
