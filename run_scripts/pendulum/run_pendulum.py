@@ -1,12 +1,10 @@
 import errno
 from datetime import datetime
-import random
 import os
 import subprocess
 import sys
 
 import pytz
-import numpy as np
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 from ray.rllib.agents.ppo.ppo import PPOTrainer, DEFAULT_CONFIG
@@ -16,7 +14,7 @@ from ray import tune
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
-# from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy, DEFAULT_CONFIG
+from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy, DEFAULT_CONFIG as CUSTOM_DEFAULT_CONFIG
 
 from visualize.pendulum.transfer_tests import run_transfer_tests
 from visualize.pendulum.visualize_adversaries import visualize_adversaries
@@ -37,11 +35,13 @@ def setup_ma_config(config):
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
     policy_graphs = {'pendulum': (PPOTFPolicy, env.observation_space, env.action_space, {})}
-    policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
-                                            env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    if config['env_config']['kl_diff_training']:
+        policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
+                                                env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    else:
+        policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
+                                                env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     # TODO(@evinitsky) put this back
-    # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
-    #                                         env.adv_action_space, adversary_config) for i in range(num_adversaries)})
 
     policies_to_train += adv_policies
 
@@ -64,12 +64,16 @@ def setup_exps(args):
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv', type=int, default=5, help='Number of active adversaries in the env')
     parser.add_argument('--adv_strength', type=int, default=0.1, help='Strength of active adversaries in the env')
+    parser.add_argument('--num_')
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
 
     # Universal hyperparams
-    config = DEFAULT_CONFIG
+    if args.custom_ppo:
+        config = CUSTOM_DEFAULT_CONFIG
+    else:
+        config = DEFAULT_CONFIG
     config['gamma'] = 0.95
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
@@ -85,6 +89,9 @@ def setup_exps(args):
         config['kl_diff_weight'] = args.kl_diff_weight
         config['kl_diff_target'] = args.kl_diff_target
         config['kl_diff_clip'] = 5.0
+        config['env_config']['kl_diff_training'] = True
+    else:
+        config['env_config']['kl_diff_training'] = False
 
     config['env_config']['num_adversaries'] = args.num_adv
     config['env_config']['adversary_strength'] = args.adv_strength
@@ -111,17 +118,22 @@ def setup_exps(args):
                            "on_episode_end": on_episode_end}
 
     # config["eager_tracing"] = True
-    config["eager"] = True
-    config["eager_tracing"] = True
+    # The custom PPO code flips out here due to a bug in RLlib with eager tracing. Or, at least I think that's what is happening.
+    if not args.custom_ppo:
+        config["eager"] = True
+        config["eager_tracing"] = True
 
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
         return "{}_{}".format(trial.trainable_name, trial.experiment_tag)
 
+    if args.custom_ppo:
+        trainer = KLPPOTrainer
+    else:
+        trainer = PPOTrainer
     exp_dict = {
         'name': args.exp_title,
-        # 'run_or_experiment': KLPPOTrainer,
-        'run_or_experiment': 'PPO',
+        'run_or_experiment': trainer,
         'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
@@ -174,8 +186,10 @@ if __name__ == "__main__":
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
-    else:
+    elif args.local_mode:
         ray.init(local_mode=True)
+    else:
+        ray.init(local_mode=False)
 
     run_tune(**exp_dict, queue_trials=False)
 
