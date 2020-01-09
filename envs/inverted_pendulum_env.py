@@ -174,6 +174,9 @@ class ModelBasedPendulumEnv(PendulumEnv):
         self.guess_adv = config['guess_adv']
         # TODO(use an autoregressive model to condition this guess on your action)
         self.guess_next_state = config['guess_next_state']
+        self.num_concat_states = config['num_concat_states']
+        # used to track the previously observed states
+        self.observed_states = np.zeros(self.observation_space.shape[0])
         self.correct_adv_score = 0.4
         self.correct_state_coeff = 1.0
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
@@ -185,6 +188,13 @@ class ModelBasedPendulumEnv(PendulumEnv):
         self.has_adversary = True
         # the reward without any auxiliary rewards
         self.true_rew = 0.0
+
+    @property
+    def observation_space(self):
+        obs_space = super().observation_space
+        low = np.repeat(obs_space.low, self.num_concat_states)
+        high = np.repeat(obs_space.high, self.num_concat_states)
+        return Box(low=low, high=high, dtype=np.float32)
 
     @property
     def action_space(self):
@@ -230,12 +240,17 @@ class ModelBasedPendulumEnv(PendulumEnv):
                 self.num_correct_guesses += 1
 
         if self.guess_next_state:
-            self.curr_state_error = np.abs(state_guess.flatten() - obs)
-            self.state_error += np.abs(state_guess.flatten() - obs)
+            self.curr_state_error = np.abs(state_guess.flatten() - self._get_obs())
+            self.state_error += np.abs(state_guess.flatten() - self._get_obs())
             rew -= np.linalg.norm(state_guess - obs) * self.correct_state_coeff
 
         # TODO add true reward, without auxiliary reward to info
-        return obs, rew, done, info
+        return self.update_observed_obs(obs), rew, done, info
+
+    def update_observed_obs(self, new_obs):
+        original_shape = super().observation_space.shape[0]
+        self.observed_states = np.roll(self.observed_states, shift=original_shape, axis=-1)
+        self.observed_states[0: original_shape] = new_obs
 
     def reset(self):
         self.num_correct_guesses = 0
@@ -243,7 +258,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
 
         self.curr_state_error = np.zeros(self.observation_space.shape[0])
         self.state_error = np.zeros(self.observation_space.shape[0])
-        return super().reset()
+        return self.update_observed_obs(super().reset())
 
     def select_new_adversary(self):
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)

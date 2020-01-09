@@ -77,6 +77,8 @@ def setup_exps(args):
     parser.add_argument('--guess_next_state', action='store_true', default=False,
                         help='If true, a prediction head is added that the agent uses to guess '
                              'what the next state is going to be')
+    parser.add_argument('--num_concat_states', type=int, default=1,
+                        help='Set the number of states that we will concatenate together')
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
@@ -110,6 +112,7 @@ def setup_exps(args):
     # These next options are only used in the model based env
     config['env_config']['guess_adv'] = args.guess_adv
     config['env_config']['guess_next_state'] = args.guess_next_state
+    config['env_config']['num_concat_states'] = args.num_concat_states
 
     config['env_config']['run'] = alg_run
 
