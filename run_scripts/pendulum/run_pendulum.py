@@ -79,6 +79,12 @@ def setup_exps(args):
                              'what the next state is going to be')
     parser.add_argument('--num_concat_states', type=int, default=1,
                         help='Set the number of states that we will concatenate together')
+    parser.add_argument('--adversary_type', type=str, default='cos',
+                        help='Set which type of adversary is active. Options are --sin and --state_func'
+                             'and --rand_state_func'
+                             '--cos sets sine waves as the active adversaries'
+                             '--state_func initializes random vectors that are a function of state'
+                             '--rand_state_func samples a new random state vector at every rollout')
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
@@ -113,6 +119,7 @@ def setup_exps(args):
     config['env_config']['guess_adv'] = args.guess_adv
     config['env_config']['guess_next_state'] = args.guess_next_state
     config['env_config']['num_concat_states'] = args.num_concat_states
+    config['env_config']['adversary_type'] = args.adversary_type
 
     config['env_config']['run'] = alg_run
 
@@ -295,7 +302,7 @@ if __name__ == "__main__":
                         visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
 
                     if args.model_based:
-                        visualize_model_perf(config, checkpoint_path, 10,  100, output_path)
+                        visualize_model_perf(config, checkpoint_path, 10,  50, output_path)
 
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,

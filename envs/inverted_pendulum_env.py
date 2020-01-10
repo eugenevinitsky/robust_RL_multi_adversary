@@ -177,6 +177,14 @@ class ModelBasedPendulumEnv(PendulumEnv):
         # TODO(use an autoregressive model to condition this guess on your action)
         self.guess_next_state = config['guess_next_state']
         self.num_concat_states = config['num_concat_states']
+        self.adversary_type = config['adversary_type']
+        if self.adversary_type == 'state_func':
+            weight_size = super().observation_space.shape[0]
+            self.state_weights = [np.random.uniform(low=-1, high=1, size=weight_size)
+                             for _ in range(self.num_adversaries)]
+        elif self.adversary_type == 'rand_state_func':
+            weight_size = super().observation_space.shape[0]
+            self.state_weights = np.random.uniform(low=-1, high=1, size=weight_size)
         # used to track the previously observed states
         self.observed_states = np.zeros(self.observation_space.shape[0])
         self.correct_adv_score = 0.4
@@ -225,7 +233,14 @@ class ModelBasedPendulumEnv(PendulumEnv):
             adv_guess = action[2]
         # Sinusoidal perturbation
         if self.has_adversary:
-            adv_action = np.cos(2 * np.pi * self.curr_adversary * self.step_num * self.dt)
+            if self.adversary_type == 'cos':
+                adv_action = np.cos(2 * np.pi * self.curr_adversary * self.step_num * self.dt)
+            elif self.adversary_type == 'state_func':
+                adv_action = super()._get_obs() @ self.state_weights[self.curr_adversary]
+            elif self.adversary_type == 'rand_state_func':
+                adv_action = super()._get_obs() @ self.state_weights
+            else:
+                sys.exit('The only supported adversary types are `state_func` and `cos`')
             torque += adv_action * self.adversary_strength
         if isinstance(self.action_space, Box):
             pendulum_action = np.clip(torque, a_min=self.action_space.low, a_max=self.action_space.high)
@@ -262,6 +277,10 @@ class ModelBasedPendulumEnv(PendulumEnv):
 
         self.curr_state_error = np.zeros(super().observation_space.shape[0])
         self.state_error = np.zeros(super().observation_space.shape[0])
+
+        if self.adversary_type == 'rand_state_func':
+            weight_size = super().observation_space.shape[0]
+            self.state_weights = np.random.uniform(low=-1, high=1, size=weight_size)
         return self.update_observed_obs(np.concatenate((super().reset(), [0.0])))
 
     def select_new_adversary(self):
