@@ -101,6 +101,10 @@ def run_rollout(rllib_config, checkpoint, save_trajectory, video_file, show_imag
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
         instantiate_rollout(rllib_config, checkpoint, show_images)
 
+    # For the envs that are model based, we need to explicitly turn the adversaries off.
+    if hasattr(env, 'has_adversary'):
+        env.has_adversary = False
+
     rewards = []
     num_steps = []
 

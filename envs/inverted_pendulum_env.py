@@ -33,7 +33,7 @@ class PendulumEnv(gym.Env):
 
         self.high = np.array([1., 1., self.max_speed])
         self.low = np.array([-1., -1., -self.max_speed])
-        self.obs_norm = self.high
+        self.obs_norm = self.high * 2
         self.seed()
 
     @property
@@ -48,7 +48,7 @@ class PendulumEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def step(self,u):
+    def step(self, u, state_perturbation=None):
         self.step_num += 1
         th, thdot = self.state # th := theta
 
@@ -64,6 +64,8 @@ class PendulumEnv(gym.Env):
         costs = angle_normalize(th)**2 + .1*thdot**2 + .001*(u**2)
 
         newthdot = thdot + (-3*g/(2*l) * np.sin(th + np.pi) + 3./(m*l**2)*u) * dt
+        if state_perturbation:
+            newthdot += state_perturbation
         if self.friction:
             newthdot -= self.friction_coef * thdot
         newth = th + newthdot*dt
@@ -232,6 +234,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
             state_guess = action[1]
             adv_guess = action[2]
         # Sinusoidal perturbation
+        adv_action = 0.0
         if self.has_adversary:
             if self.adversary_type == 'cos':
                 adv_action = np.cos(2 * np.pi * self.curr_adversary * self.step_num * self.dt)
@@ -241,14 +244,14 @@ class ModelBasedPendulumEnv(PendulumEnv):
                 adv_action = super()._get_obs() @ self.state_weights
             else:
                 sys.exit('The only supported adversary types are `state_func` and `cos`')
-            torque += adv_action * self.adversary_strength
-        if isinstance(self.action_space, Box):
-            pendulum_action = np.clip(torque, a_min=self.action_space.low, a_max=self.action_space.high)
-        elif isinstance(self.action_space, Tuple):
-            pendulum_action = np.clip(torque, a_min=self.action_space[0].low, a_max=self.action_space[0].high)
-        else:
-            sys.exit('How did you get here my friend. Only Box and Tuple action spaces are handled right now.')
-        obs, rew, done, info = super().step(pendulum_action)
+        #     torque += adv_action * self.adversary_strength
+        # if isinstance(self.action_space, Box):
+        #     pendulum_action = np.clip(torque, a_min=self.action_space.low, a_max=self.action_space.high)
+        # elif isinstance(self.action_space, Tuple):
+        #     pendulum_action = np.clip(torque, a_min=self.action_space[0].low, a_max=self.action_space[0].high)
+        # else:
+        #     sys.exit('How did you get here my friend. Only Box and Tuple action spaces are handled right now.')
+        obs, rew, done, info = super().step(torque, adv_action)
 
         self.true_rew = rew
 
@@ -262,7 +265,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
             self.state_error += np.abs(state_guess.flatten() - self._get_obs())
             rew -= np.linalg.norm(state_guess - obs) * self.correct_state_coeff
 
-        return self.update_observed_obs(np.concatenate((obs, pendulum_action))), rew, done, info
+        return self.update_observed_obs(np.concatenate((obs, torque))), rew, done, info
 
     def update_observed_obs(self, new_obs):
         """Add in the new observations and overwrite the stale ones"""

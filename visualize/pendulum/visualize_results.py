@@ -58,9 +58,23 @@ for i, result in enumerate(unique_rew_results):
     y_pos = np.arange(len(legends))
 
     # plt.bar(y_pos, means, align='center', alpha=0.5, yerr=np.sqrt(vars))
-    plt.bar(y_pos, means, align='center', alpha=0.5)
-    plt.xticks(y_pos, legends)
-    plt.ylabel('Avg. score')
-    plt.title('Score under {} test'.format(prefix_list[i]))
+    # Sometimes they don't fit
+    if len(means) > 6:
+        split_len = int(len(means) / 2)
+        fig, axs = plt.subplots(2, 1)
+        fig.set_figheight(10)
+        fig.set_figwidth(30)
+        axs[0].bar(y_pos[0:split_len], means[0:split_len], align='center', alpha=0.5)
+        axs[0].set_xticks(y_pos[0:split_len])
+        axs[0].set_xticklabels(legends[0:split_len])
+        axs[1].bar(y_pos[split_len:], means[split_len:], align='center', alpha=0.5)
+        axs[1].set_xticks(y_pos[split_len:])
+        axs[1].set_xticklabels(legends[split_len:])
+
+    else:
+        plt.bar(y_pos, means, align='center', alpha=0.5)
+        plt.xticks(y_pos, legends)
+        plt.ylabel('Avg. score')
+        plt.title('Score under {} test'.format(prefix_list[i]))
 
     plt.savefig('transfer_results/pendulum/{}/{}{}'.format(output_path, prefix_list[i], 'rew'))
