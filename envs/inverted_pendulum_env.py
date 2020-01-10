@@ -225,7 +225,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
             adv_guess = action[2]
         # Sinusoidal perturbation
         if self.has_adversary:
-            adv_action = np.sin(2 * np.pi * self.curr_adversary * self.step_num * self.dt)
+            adv_action = np.cos(2 * np.pi * self.curr_adversary * self.step_num * self.dt)
             torque += adv_action * self.adversary_strength
         if isinstance(self.action_space, Box):
             pendulum_action = np.clip(torque, a_min=self.action_space.low, a_max=self.action_space.high)

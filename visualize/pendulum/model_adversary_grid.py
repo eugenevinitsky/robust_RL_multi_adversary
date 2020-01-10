@@ -114,7 +114,7 @@ def on_result(results_dict, outdir, num_rollouts):
         # Plot which adversary we guessed for any given adversaries
         plt.figure()
         # increasing the row index implies moving down on the y axis
-        sns.heatmap(guess_grid, yticklabels=list(range(guess_grid.shape[0])),
+        sns.heatmap(guess_grid / num_rollouts, yticklabels=list(range(guess_grid.shape[0])),
                     xticklabels=list(range(guess_grid.shape[1])))
         plt.ylabel('Current adversary')
         plt.xlabel('Adversary guess')
