@@ -36,6 +36,7 @@ def default_policy_agent_mapping(unused_agent_id):
 
 def instantiate_rollout(rllib_config, checkpoint):
     rllib_config['num_workers'] = 0
+    rllib_config['callbacks'] = {}
 
     # Determine agent and checkpoint
     assert rllib_config['env_config']['run'], "No RL algorithm specified in env config!"
