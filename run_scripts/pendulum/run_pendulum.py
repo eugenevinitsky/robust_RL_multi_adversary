@@ -181,6 +181,9 @@ def on_episode_end(info):
         env = info["env"].envs[0]
         env.select_new_adversary()
 
+        episode = info['episode']
+        episode.custom_metrics["num_active_advs"] = env.adversary_range
+
     elif hasattr(info["env"], 'vector_env'):
         envs = info["env"].vector_env.envs
         for env in envs:
@@ -225,13 +228,14 @@ if __name__ == "__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
+                run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
                 if args.num_adv > 0:
 
                     visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
-                    p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                     "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
-                                                                                                                      args.exp_title,
-                                                                                                                      tune_name)).split(
-                        ' '))
-                    p1.wait()
+                    if args.use_s3:
+                        p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+                                                                         "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
+                                                                                                                          args.exp_title,
+                                                                                                                          tune_name)).split(
+                            ' '))
+                        p1.wait()
