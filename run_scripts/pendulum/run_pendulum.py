@@ -63,8 +63,21 @@ def setup_exps(args):
     parser = ma_env_parser(parser)
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv', type=int, default=5, help='Number of active adversaries in the env')
-    parser.add_argument('--adv_strength', type=int, default=0.1, help='Strength of active adversaries in the env')
-    parser.add_argument('--num_')
+    parser.add_argument('--adv_strength', type=float, default=0.1, help='Strength of active adversaries in the env')
+    parser.add_argument('--num_adv_per_strength', type=int, default=1,
+                        help='This value sets how many adversaries exist per strength level. The adversary strengths'
+                             'are set by evenly gridding from 0 to --adv_strength. At each of these levels,'
+                             'we will have `num_adv_per_strength` adversaries')
+    parser.add_argument('--adv_incr_freq', type=int, default=10,
+                        help='How many iterations we should stably maintain a score of `turn_on_score` before '
+                             'increasing the number of adversaries')
+    parser.add_argument('--curriculum', action='store_true', default=False,
+                        help='If true, we gradually increase the number of adversaries by `num_adv_per_strength`'
+                             'for every `adv_incr_freq` that we maintain a score above `goal_score`')
+    parser.add_argument('--goal_score', type=float, default=-200,
+                        help='If curriculum is on, we increase the number of adversaries by `num_adv_per_strength`'
+                             'for every `adv_incr_freq` that we maintain a score above this value')
+
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
@@ -81,11 +94,10 @@ def setup_exps(args):
     config['lambda'] = 0.1
     config['lr'] = 5e-3
     config['sgd_minibatch_size'] = 64
-    config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
 
     if args.custom_ppo:
-        config['num_adversaries'] = args.num_adv
+        config['num_adversaries'] = args.num_adv * args.num_adv_per_strength
         config['kl_diff_weight'] = args.kl_diff_weight
         config['kl_diff_target'] = args.kl_diff_target
         config['kl_diff_clip'] = 5.0
@@ -93,8 +105,12 @@ def setup_exps(args):
     else:
         config['env_config']['kl_diff_training'] = False
 
-    config['env_config']['num_adversaries'] = args.num_adv
+    config['env_config']['num_adversaries'] = args.num_adv * args.num_adv_per_strength
     config['env_config']['adversary_strength'] = args.adv_strength
+    config['env_config']['num_adv_per_strength'] = args.num_adv_per_strength
+    config['env_config']['adv_incr_freq'] = args.adv_incr_freq
+    config['env_config']['curriculum'] = args.curriculum
+    config['env_config']['goal_score'] = args.goal_score
 
     config['env_config']['run'] = alg_run
 
@@ -118,7 +134,8 @@ def setup_exps(args):
                            "on_episode_end": on_episode_end}
 
     # config["eager_tracing"] = True
-    # The custom PPO code flips out here due to a bug in RLlib with eager tracing. Or, at least I think that's what is happening.
+    # The custom PPO code flips out here due to a bug in RLlib with eager tracing.
+    # Or, at least I think that's what is happening.
     if not args.custom_ppo:
         config["eager"] = True
         config["eager_tracing"] = True
@@ -148,14 +165,12 @@ def setup_exps(args):
 def on_train_result(info):
     """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
     result = info["result"]
-    # pendulum_reward = result['policy_reward_mean']['pendulum']
+    pendulum_reward = result['policy_reward_mean']['pendulum']
     trainer = info["trainer"]
 
-    # TODO(should we do this every episode or every training iteration)?
-    return
     trainer.workers.foreach_worker(
         lambda ev: ev.foreach_env(
-            lambda env: env.select_new_adversary()))
+            lambda env: env.update_curriculum(pendulum_reward)))
 
 
 def on_episode_end(info):
@@ -164,13 +179,12 @@ def on_episode_end(info):
     # store info about how many adversaries there are
     if hasattr(info["env"], 'envs'):
         env = info["env"].envs[0]
-        episode = info["episode"]
-
-        # if env.prediction_reward and env.adversary_range > 1:
-        #     episode.custom_metrics["predict_frac"] = env.num_correct_predict / episode.length
-
-        # select a new adversary every episode. Currently disabled.
         env.select_new_adversary()
+
+    elif hasattr(info["env"], 'vector_env'):
+        envs = info["env"].vector_env.envs
+        for env in envs:
+            env.select_new_adversary()
 
 
 if __name__ == "__main__":
@@ -211,10 +225,10 @@ if __name__ == "__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
+                run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
                 if args.num_adv > 0:
-                    run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
 
-                    visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
+                    visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
                                                                                                                       args.exp_title,
