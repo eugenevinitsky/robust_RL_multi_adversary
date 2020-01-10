@@ -122,9 +122,10 @@ def angle_normalize(x):
     return (((x+np.pi) % (2*np.pi)) - np.pi)
 
 
-class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
+class MAPendulumEnv(MultiAgentEnv, PendulumEnv):
     def __init__(self, config):
         super(MAPendulumEnv, self).__init__()
+        import ipdb; ipdb.set_trace()
         self.num_adversaries = config["num_adversaries"]
         self.adversary_strength = config["adversary_strength"]
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)

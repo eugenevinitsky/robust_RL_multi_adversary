@@ -25,13 +25,13 @@ from ray.rllib.policy.tf_policy import ACTION_LOGP
 BEHAVIOUR_LOGITS = "behaviour_logits"
 
 DEFAULT_CONFIG = DEFAULT_PPO_CONFIG
-DEFAULT_CONFIG.update({
-    "num_adversaries": 2,
-    # Initial weight on the kl diff part of the loss
-    "kl_diff_weight": 1.0,
-    # Target KL between agents
-    "kl_diff_target": 1.0
-})
+# DEFAULT_CONFIG.update({
+#     "num_adversaries": 2,
+#     # Initial weight on the kl diff part of the loss
+#     "kl_diff_weight": 1.0,
+#     # Target KL between agents
+#     "kl_diff_target": 1.0
+# })
 
 
 def get_logits(model, train_batch, index):
