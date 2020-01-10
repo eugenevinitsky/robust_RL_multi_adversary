@@ -49,6 +49,7 @@ class PendulumEnv(gym.Env):
         return [seed]
 
     def step(self, u, state_perturbation=None):
+        """state_perturbation is a direct perturbation of the theta_dot update"""
         self.step_num += 1
         th, thdot = self.state # th := theta
 
@@ -58,12 +59,13 @@ class PendulumEnv(gym.Env):
         dt = self.dt
 
         u = np.clip(u, -self.max_torque, self.max_torque)[0]
-        if self.add_gaussian_action_noise:
-            u = np.clip(u + self.gaussian_action_noise_scale * np.random.normal(), -self.max_torque, self.max_torque)
         self.last_u = u # for rendering
         costs = angle_normalize(th)**2 + .1*thdot**2 + .001*(u**2)
 
         newthdot = thdot + (-3*g/(2*l) * np.sin(th + np.pi) + 3./(m*l**2)*u) * dt
+        if self.add_gaussian_action_noise:
+            newthdot += self.gaussian_action_noise_scale * np.random.normal()
+
         if state_perturbation:
             newthdot += state_perturbation
         if self.friction:
@@ -152,11 +154,12 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
 
     def step(self, actions):
         pendulum_action = actions['pendulum']
+        adv_action = 0.0
         if 'adversary{}'.format(self.curr_adversary) in actions.keys():
             adv_action = actions['adversary{}'.format(self.curr_adversary)]
-            pendulum_action += adv_action * self.adversary_strength
-            pendulum_action = np.clip(pendulum_action, a_min=self.action_space.low, a_max=self.action_space.high)
-        obs, reward, done, info = super().step(pendulum_action)
+            # pendulum_action += adv_action * self.adversary_strength
+            # pendulum_action = np.clip(pendulum_action, a_min=self.action_space.low, a_max=self.action_space.high)
+        obs, reward, done, info = super().step(pendulum_action, adv_action)
         info = {'pendulum': {'pendulum_reward': reward}}
         obs_dict = {'pendulum': obs, 'adversary{}'.format(self.curr_adversary): obs}
         reward_dict = {'pendulum': reward, 'adversary{}'.format(self.curr_adversary): -reward}
