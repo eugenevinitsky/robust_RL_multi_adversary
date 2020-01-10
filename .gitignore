@@ -107,3 +107,6 @@ venv.bak/
 # custom objects
 *.mp4
 transfer_results/*
+
+.DS_STORE
+.vscode
