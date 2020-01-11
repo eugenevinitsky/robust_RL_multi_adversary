@@ -159,7 +159,7 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
             adv_action = actions['adversary{}'.format(self.curr_adversary)]
             # pendulum_action += adv_action * self.adversary_strength
             # pendulum_action = np.clip(pendulum_action, a_min=self.action_space.low, a_max=self.action_space.high)
-        obs, reward, done, info = super().step(pendulum_action, adv_action)
+        obs, reward, done, info = super().step(pendulum_action, adv_action * self.adversary_strength)
         info = {'pendulum': {'pendulum_reward': reward}}
         obs_dict = {'pendulum': obs, 'adversary{}'.format(self.curr_adversary): obs}
         reward_dict = {'pendulum': reward, 'adversary{}'.format(self.curr_adversary): -reward}
@@ -246,7 +246,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
             elif self.adversary_type == 'rand_state_func':
                 adv_action = super()._get_obs() @ self.state_weights
             else:
-                sys.exit('The only supported adversary types are `state_func` and `cos`')
+                sys.exit('The only supported adversary types are `state_func` and `cos`, `rand_state_func`')
         #     torque += adv_action * self.adversary_strength
         # if isinstance(self.action_space, Box):
         #     pendulum_action = np.clip(torque, a_min=self.action_space.low, a_max=self.action_space.high)
@@ -254,7 +254,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
         #     pendulum_action = np.clip(torque, a_min=self.action_space[0].low, a_max=self.action_space[0].high)
         # else:
         #     sys.exit('How did you get here my friend. Only Box and Tuple action spaces are handled right now.')
-        obs, rew, done, info = super().step(torque, adv_action)
+        obs, rew, done, info = super().step(torque, adv_action * self.adversary_strength)
 
         self.true_rew = rew
 
