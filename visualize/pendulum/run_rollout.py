@@ -14,7 +14,7 @@ try:
 except ImportError:
     from ray.rllib.agents.registry import get_agent_class
 
-from utils.pendulum_env_creator import pendulum_env_creator
+from utils.pendulum_env_creator import pendulum_env_creator, lerrel_pendulum_env_creator
 
 from models.conv_lstm import ConvLSTM
 from models.recurrent_tf_model_v2 import LSTM
@@ -41,8 +41,8 @@ def instantiate_rollout(rllib_config, checkpoint):
     assert rllib_config['env_config']['run'], "No RL algorithm specified in env config!"
     agent_cls = get_agent_class(rllib_config['env_config']['run'])
     # configure the env
-    env_name ='MAPendulumEnv'
-    register_env(env_name, pendulum_env_creator)
+    env_name ='AdvMAPendulumEnv'
+    register_env(env_name, lerrel_pendulum_env_creator)
 
     # Instantiate the agent
     # create the agent that will be used to compute the actions
@@ -71,7 +71,7 @@ def instantiate_rollout(rllib_config, checkpoint):
         action_init = {}
 
     # We always have to remake the env since we may want to overwrite the config
-    env = pendulum_env_creator(rllib_config['env_config'])
+    env = lerrel_pendulum_env_creator(rllib_config['env_config'])
 
     return env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init
 
@@ -130,6 +130,7 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
             new_dict = {}
             new_dict.update({'pendulum': action['pendulum']})
             next_obs, reward, done, info = env.step(new_dict)
+            # env.render()
             if isinstance(done, dict):
                 done = done['__all__']
             if multiagent:

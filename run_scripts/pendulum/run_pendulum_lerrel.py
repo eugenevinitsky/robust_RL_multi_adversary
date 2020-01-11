@@ -31,7 +31,6 @@ def setup_ma_config(config):
     env = lerrel_pendulum_env_creator(config['env_config'])
     policies_to_train = ['pendulum']
 
-    import ipdb; ipdb.set_trace()
     num_adversaries = config['env_config']['num_adversaries']
     if num_adversaries == 0:
         return
@@ -98,7 +97,6 @@ def setup_exps(args):
     config['env_config']['adversary_strength'] = args.adv_strength
 
     config['env_config']['run'] = alg_run
-    config['env_config']['horizon'] = 1000
 
     ModelCatalog.register_custom_model("rnn", LSTM)
     config['model']['fcnet_hiddens'] = [64, 64]
@@ -209,7 +207,7 @@ if __name__ == "__main__":
                 if args.num_adv > 0:
                     run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
 
-                    visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
+                    # visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
                                                                                                                       args.exp_title,

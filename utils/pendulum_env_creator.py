@@ -11,9 +11,5 @@ def pendulum_env_creator(env_config):
     return env
 
 def lerrel_pendulum_env_creator(env_config):
-    if env_config['num_adversaries'] > 0:
-        env = AdvMAPendulumEnv(env_config)
-        # env = InvertedPendulumEnv()
-    else:
-        env = PendulumEnv()
+    env = AdvMAPendulumEnv(env_config)
     return env

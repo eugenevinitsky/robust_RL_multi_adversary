@@ -11,11 +11,16 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
     def __init__(self, config):
         self.num_adversaries = config["num_adversaries"]
         self.adversary_strength = config["adversary_strength"]
-        self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
+        self.horizon = 1000
+        self.step_num = 0
+        self.select_new_adversary()
         super(AdvMAPendulumEnv, self).__init__()
         self._adv_f_bname = 'pole'
         bnames = self.model.body_names
         self._adv_bindex = bnames.index(self._adv_f_bname) #Index of the body on which the adversary force will be applied
+
+        # TODO(kp): find a better obs norm
+        self.obs_norm = 50.0
 
     @property
     def adv_action_space(self):
@@ -32,13 +37,15 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
         self.sim.data.xfrc_applied[self._adv_bindex][2] = adv_act[1]
 
     def select_new_adversary(self):
-        self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
+        if self.num_adversaries:
+            self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
 
     def step(self, actions):
+        self.step_num += 1
         if isinstance(actions, dict):
             pendulum_action = actions['pendulum']
 
-            if 'adversary{}'.format(self.curr_adversary) in actions.keys():
+            if self.num_adversaries and 'adversary{}'.format(self.curr_adversary) in actions.keys():
                 adv_action = actions['adversary{}'.format(self.curr_adversary)]
                 self._adv_to_xfrc(adv_action)
         else:
@@ -48,8 +55,7 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
         reward = 1.0
         self.do_simulation(pendulum_action, self.frame_skip)
         ob = self._get_obs()
-        notdone = np.isfinite(ob).all() and (np.abs(ob[1]) <= .2)
-        done = not notdone
+        done = not np.isfinite(ob).all() or np.abs(ob[1]) > .2 or self.step_num > self.horizon
         
         if isinstance(actions, dict):
             info = {'pendulum': {'pendulum_reward': reward}}
@@ -69,7 +75,9 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
         else:
             return ob, reward, done, {}     
 
+
     def reset(self):
+        self.step_num = 0
         obs = super().reset()
         curr_obs = {'pendulum': obs}
         for i in range(self.num_adversaries):
