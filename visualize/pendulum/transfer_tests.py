@@ -11,9 +11,40 @@ from utils.rllib_utils import get_config
 from visualize.pendulum.run_rollout import run_rollout, instantiate_rollout
 import errno
 
+
+def make_set_friction(friction_coef):
+    def set_friction(env):
+        # nonlocal friction_coef
+        env.model.geom_friction[:] = (env.model.geom_friction * friction_coef)[:]
+    return set_friction
+
+def make_set_mass(mass_coef, mass_body='pole'):
+    def set_mass(env):
+        # nonlocal friction_coef
+        env.model.body_mass[2] = (env.model.body_mass[2] * mass_coef)
+    return set_mass
+    
+
+# test name, is_env_config, config_value, params_name, params_value
+run_list = [
+    ['base', []],
+    ['friction', ['friction', True]],
+    ['gaussian_action_noise', ['add_gaussian_action_noise', True]],
+    ['gaussian_state_noise', ['add_gaussian_state_noise', True]]
+]
+
+# test name, is_env_config, config_value, params_name, params_value
+lerrel_run_list = [
+    # ['base', []],
+    # ['friction', make_set_friction(0.2)],
+    ['mass', make_set_mass(0.5)],
+    # ['gaussian_state_noise', ['add_gaussian_state_noise', True]]
+]
+
+
 @ray.remote
 def run_test(test_name, outdir, output_file_name, num_rollouts,
-             rllib_config, checkpoint, change_list):
+             rllib_config, checkpoint, env_modifier):
     """Run an individual transfer test
 
     Parameters
@@ -57,8 +88,10 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     )
 
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = instantiate_rollout(rllib_config, checkpoint)
-    if len(change_list) > 0:
-        setattr(env, change_list[0], change_list[1])
+    if callable(env_modifier):
+            env_modifier(env)
+    elif len(env_modifier) > 0:
+        setattr(env, env_modifier[0], env_modifier[1])
     rewards = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                  state_init, action_init, num_rollouts)
 
@@ -80,18 +113,10 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             if exc.errno != errno.EEXIST:
                 raise
 
-    # test name, is_env_config, config_value, params_name, params_value
-    run_list = [
-        ['base', []],
-        ['friction', ['friction', True]],
-        ['gaussian_action_noise', ['add_gaussian_action_noise', True]],
-        ['gaussian_state_noise', ['add_gaussian_state_noise', True]]
-    ]
-
     temp_output = [run_test.remote(test_name=list[0],
                  outdir=outdir, output_file_name=output_file_name,
                  num_rollouts=num_rollouts,
-                 rllib_config=rllib_config, checkpoint=checkpoint, change_list=list[1]) for list in run_list]
+                 rllib_config=rllib_config, checkpoint=checkpoint, env_modifier=list[1]) for list in lerrel_run_list]
     ray.get(temp_output)
 
 
