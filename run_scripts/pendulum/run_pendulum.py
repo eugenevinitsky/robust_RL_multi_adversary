@@ -179,7 +179,10 @@ def on_episode_end(info):
     # store info about how many adversaries there are
     if hasattr(info["env"], 'envs'):
         env = info["env"].envs[0]
-        env.select_new_adversary()
+        # I've never seen more than one env in here but there's no reason
+        # not to be careful
+        for env in info["env"].envs:
+            env.select_new_adversary()
 
         episode = info['episode']
         episode.custom_metrics["num_active_advs"] = env.adversary_range
