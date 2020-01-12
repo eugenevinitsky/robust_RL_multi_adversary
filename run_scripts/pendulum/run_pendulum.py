@@ -120,6 +120,10 @@ def setup_exps(args):
     config['env_config']['guess_next_state'] = args.guess_next_state
     config['env_config']['num_concat_states'] = args.num_concat_states
     config['env_config']['adversary_type'] = args.adversary_type
+    # These are some very specific flags
+    if args.adversary_type == 'state_func':
+        config['env_config']['weights'] = [np.random.uniform(low=-1, high=1, size=3)
+                             for _ in range(args.num_adv)]
 
     config['env_config']['run'] = alg_run
 

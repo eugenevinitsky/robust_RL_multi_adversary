@@ -184,9 +184,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
         self.num_concat_states = config['num_concat_states']
         self.adversary_type = config['adversary_type']
         if self.adversary_type == 'state_func':
-            weight_size = super().observation_space.shape[0]
-            self.state_weights = [np.random.uniform(low=-1, high=1, size=weight_size)
-                             for _ in range(self.num_adversaries)]
+            self.state_weights = config['weights']
         elif self.adversary_type == 'rand_state_func':
             weight_size = super().observation_space.shape[0]
             self.state_weights = np.random.uniform(low=-1, high=1, size=weight_size)
