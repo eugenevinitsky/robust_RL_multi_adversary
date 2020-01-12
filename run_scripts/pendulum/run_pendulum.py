@@ -77,6 +77,10 @@ def setup_exps(args):
     parser.add_argument('--goal_score', type=float, default=-200,
                         help='If curriculum is on, we increase the number of adversaries by `num_adv_per_strength`'
                              'for every `adv_incr_freq` that we maintain a score above this value')
+    parser.add_argument('--num_concat_states', type=int, default=1,
+                        help='This number sets how many previous states we concatenate into the observations')
+    parser.add_argument('--concat_actions', action='store_true', default=False,
+                        help='If true we concatenate prior actions into the state. This helps a lot for prediction.')
 
     args = parser.parse_args(args)
 
@@ -111,6 +115,9 @@ def setup_exps(args):
     config['env_config']['adv_incr_freq'] = args.adv_incr_freq
     config['env_config']['curriculum'] = args.curriculum
     config['env_config']['goal_score'] = args.goal_score
+    config['env_config']['num_concat_states'] = args.num_concat_states
+    config['env_config']['concat_actions'] = args.concat_actions
+
 
     config['env_config']['run'] = alg_run
 
