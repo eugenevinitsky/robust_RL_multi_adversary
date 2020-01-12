@@ -264,7 +264,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
             self.state_error += np.abs(state_guess.flatten() - self._get_obs())
             rew -= np.linalg.norm(state_guess - obs) * self.correct_state_coeff
 
-        return self.update_observed_obs(np.concatenate((obs, torque))), rew, done, info
+        return self.update_observed_obs(np.concatenate((obs, pendulum_action))), rew, done, info
 
     def update_observed_obs(self, new_obs):
         """Add in the new observations and overwrite the stale ones"""
