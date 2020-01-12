@@ -91,15 +91,16 @@ def new_postprocess_ppo_gae(policy,
     # agent had it seen these observations. We can then compute the KL between the two policies.
     if other_agent_batches:
         i = 0
-        for other_agent_batch in enumerate(other_agent_batches.values()):
-            batch = other_agent_batch[1][1]
-            if "kj_log_std" in batch:
-                postprocess["kj_log_std_{}".format(i)] = batch["kj_log_std"]
-                postprocess["kj_std_{}".format(i)] = batch["kj_std"]
-                postprocess["kj_mean_{}".format(i)] = batch["kj_mean"]  # np.zeros((batch_size, 1))
-                postprocess[SampleBatch.CUR_OBS + '_' + str(i)] = sample_batch[SampleBatch.CUR_OBS]
-                postprocess[SampleBatch.PREV_ACTIONS + '_' + str(i)] = sample_batch[SampleBatch.PREV_ACTIONS]
-                postprocess[SampleBatch.PREV_REWARDS + '_' + str(i)] = sample_batch[SampleBatch.PREV_REWARDS]
+        for key, other_agent_batch in other_agent_batches.items():
+            if 'adversary' in key:
+                batch = other_agent_batch[1]
+                if "kj_log_std" in batch:
+                    postprocess["kj_log_std_{}".format(i)] = batch["kj_log_std"]
+                    postprocess["kj_std_{}".format(i)] = batch["kj_std"]
+                    postprocess["kj_mean_{}".format(i)] = batch["kj_mean"]  # np.zeros((batch_size, 1))
+                    postprocess[SampleBatch.CUR_OBS + '_' + str(i)] = sample_batch[SampleBatch.CUR_OBS]
+                    postprocess[SampleBatch.PREV_ACTIONS + '_' + str(i)] = sample_batch[SampleBatch.PREV_ACTIONS]
+                    postprocess[SampleBatch.PREV_REWARDS + '_' + str(i)] = sample_batch[SampleBatch.PREV_REWARDS]
                 i += 1
 
     # handle the fake pass. There aren't any other_agent_batches in the rllib fake pass
@@ -315,7 +316,7 @@ class KLDiffMixin(object):
         # KL Coefficient
         self.kl_diff_coeff_val = config["kl_diff_weight"]
         self.kl_target = config["kl_diff_target"]
-        self.kl_diff_clip = config["kl_diff_clip"]
+        # self.adaptive_kl = config["adaptive_kl"]
         # self.kl_diff_coeff = tf.compat.v1.get_variable(
         #     initializer=tf.constant_initializer(self.kl_diff_coeff_val),
         #     name="kl_coeff_diff",
