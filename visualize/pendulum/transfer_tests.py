@@ -36,8 +36,16 @@ run_list = [
 # test name, is_env_config, config_value, params_name, params_value
 lerrel_run_list = [
     # ['base', []],
-    # ['friction', make_set_friction(0.2)],
-    ['mass', make_set_mass(0.5)],
+    ['friction04', make_set_friction(0.4)],
+    ['friction06', make_set_friction(0.6)],
+    ['friction08', make_set_friction(0.8)],
+    ['friction12', make_set_friction(1.2)],
+    ['friction14', make_set_friction(1.4)],
+    ['mass05', make_set_mass(0.5)],
+    ['mass075', make_set_mass(0.75)],
+    ['mass10', make_set_mass(1.0)],
+    ['mass125', make_set_mass(1.25)],
+    ['mass15', make_set_mass(1.5)],
     # ['gaussian_state_noise', ['add_gaussian_state_noise', True]]
 ]
 
