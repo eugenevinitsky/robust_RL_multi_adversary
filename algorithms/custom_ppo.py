@@ -367,23 +367,20 @@ def update_kl(trainer, fetches):
         # multi-agent
         trainer.workers.local_worker().foreach_trainable_policy(update)
 
-    # We disable the KL update since this fights against the adversary diff. Might be worth not doing.
+    if "kl" in fetches:
+         # single-agent
+         trainer.workers.local_worker().for_policy(
+             lambda pi: pi.update_kl(fetches["kl"]))
+    else:
 
-    # if "kl" in fetches:
-    #     # single-agent
-    #     trainer.workers.local_worker().for_policy(
-    #         lambda pi: pi.update_kl(fetches["kl"]))
-    # else:
-    #
-    #     def update(pi, pi_id):
-    #         if pi_id in fetches:
-    #             pi.update_kl(fetches[pi_id]["kl"])
-    #         else:
-    #             logger.debug("No data for {}, not updating kl".format(pi_id))
-    #
-    #     # multi-agent
-    #     trainer.workers.local_worker().foreach_trainable_policy(update)
+         def update(pi, pi_id):
+             if pi_id in fetches:
+                 pi.update_kl(fetches[pi_id]["kl"])
+             else:
+                 logger.debug("No data for {}, not updating kl".format(pi_id))
 
+         # multi-agent
+         trainer.workers.local_worker().foreach_trainable_policy(update)
 
 CustomPPOPolicy = PPOTFPolicy.with_updates(
     name="POPO",
