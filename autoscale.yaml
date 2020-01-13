@@ -57,7 +57,6 @@ provider:
 # How Ray will authenticate with newly launched nodes.
 auth:
     ssh_user: ubuntu
-    ssh_private_key: /Users/eugenevinitsky/.ssh/MyKeyPair.pem
 
 # By default Ray creates a new private keypair, but you can also use your own.
 # If you do so, make sure to also set "KeyName" in the head and worker node
@@ -69,8 +68,7 @@ auth:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
     InstanceType: m4.10xlarge
-    ImageId: ami-00a4c70a366c65379 # Adversarial Sim2Real AMI
-    KeyName: MyKeyPair
+    ImageId: ami-0a80e903adf5cb898 # Adversarial w/ Mujoco Sim2Real AMI
 
     InstanceMarketOptions:
         MarketType: spot
@@ -88,8 +86,7 @@ head_node:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 worker_nodes:
     InstanceType: m4.10xlarge
-    ImageId: ami-00a4c70a366c65379 # Adversarial Sim2Real AMI
-    KeyName: MyKeyPair
+    ImageId: ami-0a80e903adf5cb898 # Adversarial w/ Mujoco Sim2Real AMI
 
     # Run workers on spot by default. Comment this out to use on-demand.
     InstanceMarketOptions:
@@ -117,7 +114,7 @@ setup_commands:
     # Note: if you're developing Ray, you probably want to create an AMI that
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
-    - cd ~/adversarial_sim2real && git fetch; git checkout kl_div2 && git pull
+    - cd ~/adversarial_sim2real && git fetch; git checkout lerrel_env && git pull
     - source activate sim2real && pip install psutil && pip install tensorflow==1.15.0 && pip install ray==0.7.7 && pip install seaborn
     - echo PATH="$HOME/anaconda3/envs/sim2real/bin:$PATH" >> /home/ubuntu/.bashrc && source /home/ubuntu/.bashrc
 
