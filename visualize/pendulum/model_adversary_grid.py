@@ -59,12 +59,12 @@ def done_func(env, results_dict):
 
 
 def step_func(multi_obs, action_dict, logits_dict, results_dict, env):
-    results_dict['guess_grid'][env.curr_adversary, int(action_dict['agent0'][-1])] += 1
     results_dict['action_time'][env.curr_adversary, env.step_num] += np.abs(action_dict['agent0'][0])
     if env.guess_next_state:
         results_dict['state_pred_time'][env.curr_adversary, env.step_num] += np.linalg.norm(env.curr_state_error)
 
     if env.guess_adv:
+        results_dict['guess_grid'][env.curr_adversary, int(action_dict['agent0'][-1])] += 1
         results_dict['guess_adv_time'][env.curr_adversary, env.step_num] += int(action_dict['agent0'][-1])
 
     results_dict['state_time'][env.curr_adversary, env.step_num] = env._get_obs()
@@ -143,7 +143,7 @@ def on_result(results_dict, outdir, num_rollouts):
 
     if 'guess_adv_time' in results_dict.keys():
         for i in range(results_dict['guess_adv_time'].shape[0]):
-            if i < results_dict['state_pred_time'].shape[0] - 1:
+            if i < results_dict['guess_adv_time'].shape[0] - 1:
                 adv_str = str(i)
             else:
                 adv_str = 'no_adversary'
@@ -157,7 +157,7 @@ def on_result(results_dict, outdir, num_rollouts):
             plt.close()
 
     for i in range(results_dict['action_time'].shape[0]):
-        if i < results_dict['state_pred_time'].shape[0] - 1:
+        if i < results_dict['action_time'].shape[0] - 1:
             adv_str = str(i)
         else:
             adv_str = 'no_adversary'
