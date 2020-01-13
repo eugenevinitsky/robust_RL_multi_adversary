@@ -108,6 +108,10 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
     :return:
     """
 
+    # For the envs that are model based, we need to explicitly turn the adversaries off.
+    if hasattr(env, 'has_adversary'):
+        env.has_adversary = False
+
     rewards = []
     total_steps = 0
 

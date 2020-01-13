@@ -34,6 +34,9 @@ def dict_func(env, options_dict):
     if env.guess_next_state:
         results_dict['state_pred_time'] = np.zeros((num_test_adversaries + 1, env.horizon + 1))
 
+    # track the adversary actions across time to get a sense of why they're so hard to deal with
+    results_dict['adv_action_time'] = np.zeros((num_test_adversaries + 1, env.horizon + 1))
+
     # we also plot which adversary we guess for any given adversary
     if env.guess_adv:
         results_dict['guess_adv_time'] = np.zeros((num_test_adversaries + 1, env.horizon + 1))

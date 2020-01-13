@@ -23,7 +23,7 @@ class PendulumEnv(gym.Env):
         self.step_num = 0
         self.should_render = False
         self.friction = False
-        self.friction_coef = 0.2
+        self.friction_coef = 0.1
         self.add_gaussian_state_noise = False
         self.add_gaussian_action_noise = False
         self.gaussian_state_noise_scale = 0.1
@@ -186,6 +186,10 @@ class ModelBasedPendulumEnv(PendulumEnv):
         elif self.adversary_type == 'rand_state_func':
             weight_size = super().observation_space.shape[0]
             self.state_weights = np.random.uniform(low=-1, high=1, size=weight_size)
+        elif self.adversary_type == 'rand_friction':
+            self.state_weights = np.array([0, 0, np.random.uniform(low=-1, high=0)])
+        elif self.adversary_type == 'friction':
+            self.state_weights = config['weights']
         # used to track the previously observed states
         self.observed_states = np.zeros(self.observation_space.shape[0])
         self.correct_adv_score = 0.4
@@ -232,8 +236,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
             torque = action[0]
             state_guess = action[1]
             adv_guess = action[2]
-        # Sinusoidal perturbation
-        adv_action = 0.0
+
         if self.has_adversary:
             if self.adversary_type == 'cos':
                 adv_action = np.cos(2 * np.pi * self.curr_adversary * self.step_num * self.dt)
@@ -241,8 +244,13 @@ class ModelBasedPendulumEnv(PendulumEnv):
                 adv_action = super()._get_obs() @ self.state_weights[self.curr_adversary]
             elif self.adversary_type == 'rand_state_func':
                 adv_action = super()._get_obs() @ self.state_weights
+            elif self.adversary_type == 'friction':
+                adv_action = super()._get_obs() @ self.state_weights[self.curr_adversary]
+            elif self.adversary_type == 'rand_friction':
+                adv_action = super()._get_obs() @ self.state_weights
             else:
-                sys.exit('The only supported adversary types are `state_func` and `cos`, `rand_state_func`')
+                sys.exit('The only supported adversary types are `state_func`, `cos`, `rand_state_func`,'
+                         '`friction` and `rand_friction`')
             torque += adv_action * self.adversary_strength
         if isinstance(self.action_space, Box):
             pendulum_action = np.clip(torque, a_min=self.action_space.low, a_max=self.action_space.high)
@@ -283,6 +291,8 @@ class ModelBasedPendulumEnv(PendulumEnv):
         if self.adversary_type == 'rand_state_func':
             weight_size = super().observation_space.shape[0]
             self.state_weights = np.random.uniform(low=-1, high=1, size=weight_size)
+        elif self.adversary_type == 'rand_friction':
+            self.state_weights = np.array([0, 0, np.random.uniform(low=-1, high=0)])
         return self.update_observed_obs(np.concatenate((super().reset(), [0.0])))
 
     def select_new_adversary(self):

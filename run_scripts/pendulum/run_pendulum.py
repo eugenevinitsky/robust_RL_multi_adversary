@@ -84,7 +84,9 @@ def setup_exps(args):
                              'and --rand_state_func'
                              '--cos sets sine waves as the active adversaries'
                              '--state_func initializes random vectors that are a function of state'
-                             '--rand_state_func samples a new random state vector at every rollout')
+                             '--rand_state_func samples a new random state vector at every rollout'
+                             '--friction yields perturbations of the form [0, 0, -1] * scale_factor'
+                             '--rand_friction yields similar perturbations are friction but resampled every rollout')
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
@@ -124,6 +126,13 @@ def setup_exps(args):
     if args.adversary_type == 'state_func':
         config['env_config']['weights'] = [np.random.uniform(low=-1, high=1, size=3)
                              for _ in range(args.num_adv)]
+    elif args.adversary_type == 'friction':
+        base_vector = np.array([0, 0, -1])
+        scale_factors = np.linspace(start=0, stop=1, num=args.num_adv)
+        state_weights = []
+        for scale_factor in scale_factors:
+            state_weights.append(base_vector * scale_factor)
+        config['env_config']['weights'] = state_weights
 
     config['env_config']['run'] = alg_run
 
@@ -306,7 +315,7 @@ if __name__ == "__main__":
                         visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
 
                     if args.model_based:
-                        visualize_model_perf(config, checkpoint_path, 10,  100, output_path)
+                        visualize_model_perf(config, checkpoint_path, 10,  25, output_path)
 
                     if args.use_s3:
                         p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
