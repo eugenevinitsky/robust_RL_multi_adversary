@@ -136,7 +136,8 @@ def setup_exps(args):
     setup_ma_config(config)
 
     # add the callbacks
-    config["callbacks"] = {"on_train_result": on_train_result,
+    if config['env_config']['num_adversaries'] > 0:
+        config["callbacks"] = {"on_train_result": on_train_result,
                            "on_episode_end": on_episode_end}
 
     # config["eager_tracing"] = True
@@ -181,7 +182,6 @@ def on_train_result(info):
 
 def on_episode_end(info):
     """Select the currently active adversary"""
-
     # store info about how many adversaries there are
     if hasattr(info["env"], 'envs'):
         env = info["env"].envs[0]
