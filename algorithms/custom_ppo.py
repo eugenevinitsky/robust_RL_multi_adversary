@@ -91,15 +91,16 @@ def new_postprocess_ppo_gae(policy,
     # agent had it seen these observations. We can then compute the KL between the two policies.
     if other_agent_batches:
         i = 0
-        for other_agent_batch in enumerate(other_agent_batches.values()):
-            batch = other_agent_batch[1][1]
-            if "kj_log_std" in batch:
-                postprocess["kj_log_std_{}".format(i)] = batch["kj_log_std"]
-                postprocess["kj_std_{}".format(i)] = batch["kj_std"]
-                postprocess["kj_mean_{}".format(i)] = batch["kj_mean"]  # np.zeros((batch_size, 1))
-                postprocess[SampleBatch.CUR_OBS + '_' + str(i)] = sample_batch[SampleBatch.CUR_OBS]
-                postprocess[SampleBatch.PREV_ACTIONS + '_' + str(i)] = sample_batch[SampleBatch.PREV_ACTIONS]
-                postprocess[SampleBatch.PREV_REWARDS + '_' + str(i)] = sample_batch[SampleBatch.PREV_REWARDS]
+        for key, other_agent_batch in other_agent_batches.items():
+            if 'adversary' in key:
+                batch = other_agent_batch[1]
+                if "kj_log_std" in batch:
+                    postprocess["kj_log_std_{}".format(i)] = batch["kj_log_std"]
+                    postprocess["kj_std_{}".format(i)] = batch["kj_std"]
+                    postprocess["kj_mean_{}".format(i)] = batch["kj_mean"]  # np.zeros((batch_size, 1))
+                    postprocess[SampleBatch.CUR_OBS + '_' + str(i)] = sample_batch[SampleBatch.CUR_OBS]
+                    postprocess[SampleBatch.PREV_ACTIONS + '_' + str(i)] = sample_batch[SampleBatch.PREV_ACTIONS]
+                    postprocess[SampleBatch.PREV_REWARDS + '_' + str(i)] = sample_batch[SampleBatch.PREV_REWARDS]
                 i += 1
 
     # handle the fake pass. There aren't any other_agent_batches in the rllib fake pass
@@ -130,8 +131,6 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
         other_std = train_batch["kj_std_{}".format(i)]
         other_mean = train_batch["kj_mean_{}".format(i)]
 
-        # TODO(@evinitsky) did I get the KL backwards? Should it be the other way around?
-        # we clip here lest it blow up due to some really small probabilities
         huber_loss = tf.keras.losses.Huber(reduction=tf.keras.losses.Reduction.NONE)
         kl_loss += huber_loss(tf.reduce_sum(- other_logstd + log_std +
                                             (tf.square(other_std) + tf.square(mean - other_mean)) /
@@ -163,9 +162,9 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     # with respect to the valid mask, which tracks padding for RNNs
     if policy.num_adversaries > 1 and policy.config['kl_diff_weight'] > 0:
         policy.unscaled_kl_loss = kl_diff_loss
-        clipped_mean_loss = reduce_mean_valid(tf.clip_by_value(kl_diff_loss, 0, policy.kl_diff_clip))
+        mean_kl_loss = reduce_mean_valid(kl_diff_loss)
         policy.kl_var = tf.math.reduce_std(kl_diff_loss)
-        return -policy.config['kl_diff_weight'] * clipped_mean_loss + standard_loss
+        return -policy.config['kl_diff_weight'] * mean_kl_loss + standard_loss
     else:
         return standard_loss
     # return reduce_mean_valid(pre_mean_loss * tf.squeeze(is_active))
@@ -317,7 +316,7 @@ class KLDiffMixin(object):
         # KL Coefficient
         self.kl_diff_coeff_val = config["kl_diff_weight"]
         self.kl_target = config["kl_diff_target"]
-        self.kl_diff_clip = config["kl_diff_clip"]
+        # self.adaptive_kl = config["adaptive_kl"]
         # self.kl_diff_coeff = tf.compat.v1.get_variable(
         #     initializer=tf.constant_initializer(self.kl_diff_coeff_val),
         #     name="kl_coeff_diff",
