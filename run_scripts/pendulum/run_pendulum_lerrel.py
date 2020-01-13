@@ -209,7 +209,7 @@ if __name__ == "__main__":
 
                     # visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                     "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
+                                                                     "s3://sim2real/pendulum/{}/{}/transfer_results/{}".format(date,
                                                                                                                       args.exp_title,
                                                                                                                       tune_name)).split(
                         ' '))
