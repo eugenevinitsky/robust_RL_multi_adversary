@@ -239,7 +239,8 @@ def on_episode_end(info):
         # info["episode"].custom_metrics.update(state_err_dict)
 
         if hasattr(env, 'select_new_adversary'):
-            env.select_new_adversary()
+            for env in info["env"]:
+                env.select_new_adversary()
     elif hasattr(info["env"], 'vector_env'):
         envs = info["env"].vector_env.envs
         if hasattr(envs[0], 'num_correct_guesses'):

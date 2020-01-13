@@ -201,6 +201,10 @@ class ModelBasedPendulumEnv(PendulumEnv):
         self.curr_state_error = np.zeros(super().observation_space.shape[0])
         # attribute that can be used to turn the adversary off for testing
         self.has_adversary = True
+        # Attribute that can be used to overwrite memory for testing. If it's false the
+        # state is just the currently observed state concatenated with zeros. If it's true
+        # then we correctly append in prior past state
+        self.use_memory = True
         # the reward without any auxiliary rewards
         self.true_rew = 0.0
 
@@ -277,7 +281,9 @@ class ModelBasedPendulumEnv(PendulumEnv):
     def update_observed_obs(self, new_obs):
         """Add in the new observations and overwrite the stale ones"""
         original_shape = int(self.observation_space.shape[0] / self.num_concat_states)
-        self.observed_states = np.roll(self.observed_states, shift=original_shape, axis=-1)
+        # If this is false we don't roll the states forward so the old states just get overwritten
+        if self.use_memory:
+            self.observed_states = np.roll(self.observed_states, shift=original_shape, axis=-1)
         self.observed_states[0: original_shape] = new_obs
         return self.observed_states
 

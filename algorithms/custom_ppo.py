@@ -357,7 +357,7 @@ def update_kl(trainer, fetches):
     if "kl_diff" in fetches:
         # single-agent
         trainer.workers.local_worker().for_policy(
-            lambda pi: pi.update_kl_difft(fetches["kl_diff"]))
+            lambda pi: pi.update_kl_diff(fetches["kl_diff"]))
     else:
         def update(pi, pi_id):
             # The robot won't have kl_diff in fetches
