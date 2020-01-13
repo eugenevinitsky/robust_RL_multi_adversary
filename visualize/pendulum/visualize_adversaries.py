@@ -10,7 +10,7 @@ import ray
 from ray.rllib.env.base_env import _DUMMY_AGENT_ID
 from ray.rllib.evaluation.episode import _flatten_action
 import seaborn as sns; sns.set()
-
+from scipy.stats import chisquare
 from visualize.pendulum.run_rollout import instantiate_rollout, DefaultMapping
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
@@ -135,6 +135,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
 
             for agent_id in multi_obs.keys():
                 if agent_id != 'pendulum':
+                    break
                     # Now iterate through the agents and compute the kl_diff
 
                     curr_id = int(agent_id.split('adversary')[1])
@@ -212,6 +213,106 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
     output_str = '{}/{}'.format(outdir, 'kl_heatmap.png')
     plt.savefig(output_str)
 
+
+    #generate heatmap of adversary actions for all possible states
+    adversary_grid_dict = {}
+    for i in range(num_adversaries):
+        adversary_str = 'adversary' + str(i)
+        # each adversary grid is a map of agent action versus observation dimension
+        adversary_grid = np.zeros((grid_size, grid_size, env.observation_space.low.shape[0])).astype(int)
+        strength_grid = np.linspace(env.adv_action_space.low, env.adv_action_space.high, grid_size).T
+        obs_grid = np.linspace(env.observation_space.low, env.observation_space.high, grid_size).T
+        adversary_grid_dict[adversary_str] = {'grid': adversary_grid, 'action_bins': strength_grid, 'obs_bins': obs_grid,
+                                              'action_list': []}
+
+    for r_iter in range(num_rollouts):
+        obs = env.reset()
+        for agent_id, a_obs in obs.items():
+            if agent_id == 'pendulum':
+                continue
+            if a_obs is not None:
+                policy_id = mapping_cache.setdefault(
+                    agent_id, policy_agent_mapping(agent_id))
+
+            all_obs_comb = np.asarray(np.meshgrid(*np.split(obs_grid, obs_grid.shape[0]))).T.reshape(-1,obs_grid.shape[0])
+
+            for obs in all_obs_comb:
+                multi_obs = {'obs': obs, 'is_active': np.array([1])}
+                flat_action = _flatten_action(multi_obs)
+                try:
+                    a_action = agent.compute_action(flat_action, prev_action=[0], prev_reward=0, policy_id=policy_id)
+                except Exception as e:
+                    print(e)
+                    import ipdb; ipdb.set_trace()
+                    a_action = agent.compute_action(flat_action, prev_action=[0], prev_reward=0, policy_id=policy_id)
+
+                # handle the tuple case
+                if len(a_action) > 1:
+                    if isinstance(a_action[0], np.ndarray):
+                        a_action[0] = a_action[0].flatten()
+
+                # Now store the agent action in the corresponding grid
+                if agent_id != 'pendulum':
+                    action_bins = adversary_grid_dict[agent_id]['action_bins']
+                    obs_bins = adversary_grid_dict[agent_id]['obs_bins']
+
+                    heat_map = adversary_grid_dict[agent_id]['grid']
+                    for action_loop_index, action in enumerate(a_action):
+                        adversary_grid_dict[agent_id]['action_list'].append(a_action[0])
+                        action_index = np.digitize(action, action_bins[action_loop_index, :]) - 1
+                        # digitize will set the right edge of the box to the wrong value
+                        if action_index == heat_map.shape[0]:
+                            action_index -= 1
+                        for obs_loop_index, obs_elem in enumerate(obs):
+                            obs_index = np.digitize(obs_elem, obs_bins[obs_loop_index, :]) - 1
+                            if obs_index == heat_map.shape[1]:
+                                obs_index -= 1
+
+                            heat_map[action_index, obs_index, obs_loop_index] += 1
+    print(heat_map[:,:,0])
+    for adversary, adv_dict in adversary_grid_dict.items():
+        heat_map = adv_dict['grid']
+        action_bins = adv_dict['action_bins']
+        obs_bins = adv_dict['obs_bins']
+        action_list = adv_dict['action_list']
+
+        plt.figure()
+        sns.distplot(action_list)
+        output_str = '{}/{}'.format(outdir, adversary + 'action_histogram_all.png')
+        plt.savefig(output_str)
+
+        # x_label, y_label = env.transform_adversary_actions(bins)
+        # ax = sns.heatmap(heat_map, annot=True, fmt="d")
+        titles = ['x', 'y', 'thetadot']
+        for i in range(heat_map.shape[-1]):
+            plt.figure()
+            # increasing the row index implies moving down on the y axis
+            sns.heatmap(heat_map[:, :, i], yticklabels=np.round(action_bins[0], 1), xticklabels=np.round(obs_bins[i], 1))
+            plt.ylabel('Adversary actions')
+            plt.xlabel(titles[i])
+            output_str = '{}/{}'.format(outdir, adversary + 'action_heatmap_{}_all.png'.format(i))
+            plt.savefig(output_str)
+
+    #Compute state dependence, i.e. whether p(action|state) != p(action)
+    for adversary, adv_dict in adversary_grid_dict.items():
+        heat_map = adv_dict['grid']
+
+        p_vals = np.zeros((heat_map.shape[1], heat_map.shape[-1])) #shape state value x state type
+        for i in range(heat_map.shape[-1]):
+            prob_action = np.sum(heat_map[:,:,i], axis=1) #sum across all states
+            prob_action = prob_action/heat_map.shape[1] #normalize probability
+
+            for j in range(heat_map.shape[1]):
+                chisq, p_val = chisquare(prob_action+1, f_exp=heat_map[:,j, i]+1)
+                p_vals[j, i] = p_val
+
+            plt.figure()
+            plt.plot(obs_bins[i], p_vals[:,i])
+            plt.ylabel('P-val')
+            plt.xlabel(titles[i])
+            output_str = '{}/{}'.format(outdir, adversary + 'p_vals_heatmap_{}.png'.format(i))
+            plt.savefig(output_str)
+        print(p_vals)
 
 
 def main():
