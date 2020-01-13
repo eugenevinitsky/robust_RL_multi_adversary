@@ -255,13 +255,11 @@ class ModelBasedPendulumEnv(PendulumEnv):
             else:
                 sys.exit('The only supported adversary types are `state_func`, `cos`, `rand_state_func`,'
                          '`friction` and `rand_friction`')
-            torque += adv_action * self.adversary_strength
-        if isinstance(self.action_space, Box):
-            pendulum_action = np.clip(torque, a_min=self.action_space.low, a_max=self.action_space.high)
-        elif isinstance(self.action_space, Tuple):
-            pendulum_action = np.clip(torque, a_min=self.action_space[0].low, a_max=self.action_space[0].high)
+            pendulum_action = adv_action * self.adversary_strength + torque
         else:
-            sys.exit('How did you get here my friend. Only Box and Tuple action spaces are handled right now.')
+            pendulum_action = 0.0
+
+        pendulum_action = np.clip(-self.max_torque, self.max_torque, pendulum_action)
         obs, rew, done, info = super().step(pendulum_action)
 
         self.true_rew = rew
@@ -276,7 +274,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
             self.state_error += np.abs(state_guess.flatten() - self._get_obs())
             rew -= np.linalg.norm(state_guess - obs) * self.correct_state_coeff
 
-        return self.update_observed_obs(np.concatenate((obs, pendulum_action))), rew, done, info
+        return self.update_observed_obs(np.concatenate((obs, torque))), rew, done, info
 
     def update_observed_obs(self, new_obs):
         """Add in the new observations and overwrite the stale ones"""
