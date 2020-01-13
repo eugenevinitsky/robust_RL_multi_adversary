@@ -234,12 +234,11 @@ if __name__ == "__main__":
                 folder = os.path.dirname(dirpath)
                 tune_name = folder.split("/")[-1]
                 outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
+                script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/pendulum/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
                 run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
                 if args.num_adv > 0:
-
                     visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
                     if args.use_s3:
                         p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
