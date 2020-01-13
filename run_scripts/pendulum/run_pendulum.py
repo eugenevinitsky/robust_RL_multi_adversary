@@ -77,6 +77,10 @@ def setup_exps(args):
     parser.add_argument('--goal_score', type=float, default=-200,
                         help='If curriculum is on, we increase the number of adversaries by `num_adv_per_strength`'
                              'for every `adv_incr_freq` that we maintain a score above this value')
+    parser.add_argument('--num_concat_states', type=int, default=1,
+                        help='This number sets how many previous states we concatenate into the observations')
+    parser.add_argument('--concat_actions', action='store_true', default=False,
+                        help='If true we concatenate prior actions into the state. This helps a lot for prediction.')
 
     args = parser.parse_args(args)
 
@@ -100,7 +104,6 @@ def setup_exps(args):
         config['num_adversaries'] = args.num_adv * args.num_adv_per_strength
         config['kl_diff_weight'] = args.kl_diff_weight
         config['kl_diff_target'] = args.kl_diff_target
-        config['kl_diff_clip'] = 5.0
         config['env_config']['kl_diff_training'] = True
     else:
         config['env_config']['kl_diff_training'] = False
@@ -111,6 +114,9 @@ def setup_exps(args):
     config['env_config']['adv_incr_freq'] = args.adv_incr_freq
     config['env_config']['curriculum'] = args.curriculum
     config['env_config']['goal_score'] = args.goal_score
+    config['env_config']['num_concat_states'] = args.num_concat_states
+    config['env_config']['concat_actions'] = args.concat_actions
+
 
     config['env_config']['run'] = alg_run
 
@@ -179,7 +185,13 @@ def on_episode_end(info):
     # store info about how many adversaries there are
     if hasattr(info["env"], 'envs'):
         env = info["env"].envs[0]
-        env.select_new_adversary()
+        # I've never seen more than one env in here but there's no reason
+        # not to be careful
+        for env in info["env"].envs:
+            env.select_new_adversary()
+
+        episode = info['episode']
+        episode.custom_metrics["num_active_advs"] = env.adversary_range
 
     elif hasattr(info["env"], 'vector_env'):
         envs = info["env"].vector_env.envs
@@ -225,13 +237,14 @@ if __name__ == "__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
+                run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
                 if args.num_adv > 0:
 
                     visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
-                    p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                     "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
-                                                                                                                      args.exp_title,
-                                                                                                                      tune_name)).split(
-                        ' '))
-                    p1.wait()
+                    if args.use_s3:
+                        p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+                                                                         "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
+                                                                                                                          args.exp_title,
+                                                                                                                          tune_name)).split(
+                            ' '))
+                        p1.wait()

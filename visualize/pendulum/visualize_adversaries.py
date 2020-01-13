@@ -27,6 +27,8 @@ def compute_kl_diff(mean, log_std, other_mean, other_log_std):
 def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, outdir):
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
         instantiate_rollout(rllib_config, checkpoint)
+    # instantiate the things that need instantiation
+    env.reset()
 
     # figure out how many adversaries you have and initialize their grids
     num_adversaries = env.num_adversaries
@@ -35,7 +37,8 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
     for i in range(num_adversaries):
         adversary_str = 'adversary' + str(i)
         # each adversary grid is a map of agent action versus observation dimension
-        adversary_grid = np.zeros((grid_size - 1, grid_size - 1, env.observation_space.low.shape[0])).astype(int)
+        # but if we concat actions we need to ignore the last dimension
+        adversary_grid = np.zeros((grid_size - 1, grid_size - 1, env._get_obs().shape[0])).astype(int)
         strength_grid = np.linspace(env.adv_action_space.low, env.adv_action_space.high, grid_size).T
         obs_grid = np.linspace(env.observation_space.low, env.observation_space.high, grid_size).T
         adversary_grid_dict[adversary_str] = {'grid': adversary_grid, 'action_bins': strength_grid, 'obs_bins': obs_grid,
@@ -126,7 +129,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                             # digitize will set the right edge of the box to the wrong value
                             if action_index == heat_map.shape[0]:
                                 action_index -= 1
-                            for obs_loop_index, obs_elem in enumerate(obs * env.obs_norm):
+                            for obs_loop_index, obs_elem in enumerate(env._get_obs()):
                                 obs_index = np.digitize(obs_elem, obs_bins[obs_loop_index, :]) - 1
                                 if obs_index == heat_map.shape[1]:
                                     obs_index -= 1
