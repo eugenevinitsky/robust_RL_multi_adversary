@@ -201,167 +201,222 @@
 # Re-run past experiments having realized that the adversaries weren't actually on
 #############################################################################################################################################################
 ## COS Experiments
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc10_cos_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type cos \
---guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test1
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc10_cos_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type cos \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test1
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_1p0str_conc10_cos_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type cos \
+#--guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test2
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc10_cos_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type cos \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test3
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_1p0str_conc10_cos_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type cos \
+#--guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test4
+#
+## STATE FUNC Experiments
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc10_statefunc_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type state_func \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test5
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_1p0str_conc10_statefunc_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type state_func \
+#--guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test6
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc10_statefunc_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type state_func \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test7
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_1p0str_conc10_statefunc_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type state_func \
+#--guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test8
+#
+## RAND STATE FUNC Experiments
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc10_randstatefunc_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_state_func \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test9
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_1p0str_conc10_randstatefunc_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_state_func \
+#--guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test10
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc10_randstatefunc_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_state_func \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test11
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_1p0str_conc10_randstatefunc_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_state_func \
+#--guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test12
+#
+## Friction FUNC Experiments
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc10_fric_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type friction \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test13
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_1p0str_conc10_fric_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type friction \
+#--guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test14
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc10_fric_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type friction \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test15
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_1p0str_conc10_fric_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type friction \
+#--guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test16
+#
+## RAND Friction FUNC Experiments
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc10_randfric_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_friction \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test17
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_1p0str_conc10_randfric_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_friction \
+#--guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test18
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc10_randfric_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_friction \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test19
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_1p0str_conc10_randfric_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_friction \
+#--guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test20
+#
+## 1-step memory experiments
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc1_cos_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type cos \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test21
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc1_statefunc_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type state_func \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test22
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc1_randstatefunc_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_state_func \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test23
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc1_friction_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type friction \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test24
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc1_randfriction_5adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_friction \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test25
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc1_cos_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type cos \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test26
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc1_statefunc_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type state_func \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test27
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc1_randstatefunc_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_state_func \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test28
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc1_friction_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type friction \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test29
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc1_randfriction_15adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_friction \
+#--guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test30
+#
+## The base case. We better hope everything outperforms this
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_0p5str_conc1_0adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 0 --model_based --adversary_type rand_friction \
+#--adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test31
+#
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--exp_title pend_1p0str_conc1_0adv --train_batch_size 10000 \
+#--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 0 --model_based --adversary_type rand_friction \
+#--adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test32
+
+# The LSTM experiments
 
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_1p0str_conc10_cos_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type cos \
---guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test2
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc10_cos_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type cos \
---guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test3
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_1p0str_conc10_cos_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type cos \
---guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test4
-
-# STATE FUNC Experiments
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc10_statefunc_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type state_func \
---guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test5
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_1p0str_conc10_statefunc_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type state_func \
---guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test6
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc10_statefunc_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type state_func \
---guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test7
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_1p0str_conc10_statefunc_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type state_func \
---guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test8
-
-# RAND STATE FUNC Experiments
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc10_randstatefunc_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_state_func \
---guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test9
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_1p0str_conc10_randstatefunc_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_state_func \
---guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test10
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc10_randstatefunc_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_state_func \
---guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test11
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_1p0str_conc10_randstatefunc_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_state_func \
---guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test12
-
-# Friction FUNC Experiments
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc10_fric_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type friction \
---guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test13
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_1p0str_conc10_fric_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type friction \
---guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test14
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc10_fric_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type friction \
---guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test15
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_1p0str_conc10_fric_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type friction \
---guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test16
-
-# RAND Friction FUNC Experiments
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc10_randfric_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_friction \
---guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test17
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_1p0str_conc10_randfric_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_friction \
---guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test18
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc10_randfric_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_friction \
---guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test19
-
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_1p0str_conc10_randfric_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_friction \
---guess_next_state --adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 10" --start --stop --tmux --cluster-name=ev_pend_test20
-
-# 1-step memory experiments
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc1_cos_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type cos \
+--exp_title pend_0p5str_conc1_cos_5adv_lstm --train_batch_size 10000 \
+--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type cos --use_lstm \
 --guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test21
 
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc1_statefunc_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type state_func \
+--exp_title pend_0p5str_conc1_statefunc_5adv_lstm --train_batch_size 10000 \
+--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type state_func --use_lstm \
 --guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test22
 
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc1_randstatefunc_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_state_func \
+--exp_title pend_0p5str_conc1_randstatefunc_5adv_lstm --train_batch_size 10000 \
+--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_state_func --use_lstm \
 --guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test23
 
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc1_friction_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type friction \
+--exp_title pend_0p5str_conc1_friction_5adv_lstm --train_batch_size 10000 \
+--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type friction --use_lstm \
 --guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test24
 
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc1_randfriction_5adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_friction \
+--exp_title pend_0p5str_conc1_randfriction_5adv_lstm --train_batch_size 10000 \
+--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 5 --model_based --guess_adv --adversary_type rand_friction --use_lstm \
 --guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test25
 
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc1_cos_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type cos \
+--exp_title pend_0p5str_conc1_cos_15adv_lstm --train_batch_size 10000 \
+--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type cos --use_lstm \
 --guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test26
 
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc1_statefunc_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type state_func \
+--exp_title pend_0p5str_conc1_statefunc_15adv_lstm --train_batch_size 10000 \
+--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type state_func --use_lstm \
 --guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test27
 
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc1_randstatefunc_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_state_func \
+--exp_title pend_0p5str_conc1_randstatefunc_15adv_lstm --train_batch_size 10000 \
+--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_state_func --use_lstm \
 --guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test28
 
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc1_friction_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type friction \
+--exp_title pend_0p5str_conc1_friction_15adv_lstm --train_batch_size 10000 \
+--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type friction --use_lstm \
 --guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test29
 
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc1_randfriction_15adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_friction \
+--exp_title pend_0p5str_conc1_randfriction_15adv_lstm --train_batch_size 10000 \
+--checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 15 --model_based --guess_adv --adversary_type rand_friction --use_lstm \
 --guess_next_state --adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test30
 
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_0p5str_conc1_0adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 0 --model_based --adversary_type rand_friction \
---adv_strength 0.5 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test31
 
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---exp_title pend_1p0str_conc1_0adv --train_batch_size 10000 \
---checkpoint_freq 50 --num_iters 600 --num_cpus 4 --num_adv 0 --model_based --adversary_type rand_friction \
---adv_strength 1.0 --run_transfer_tests --grid_search --use_s3 --num_concat_states 1" --start --stop --tmux --cluster-name=ev_pend_test32

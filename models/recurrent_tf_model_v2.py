@@ -38,7 +38,7 @@ class LSTM(RecurrentTFModelV2):
                     elif isinstance(space, Discrete):
                         action_shape += 1
             else:
-                action_shape = action_space.shape
+                action_shape = action_space.shape[0]
             actions_layer = tf.keras.layers.Input(shape=(None,) + (action_shape,), name="agent_actions")
             last_layer = tf.keras.layers.Concatenate()([input_layer, actions_layer])
         else:

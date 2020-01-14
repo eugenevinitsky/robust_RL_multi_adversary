@@ -12,7 +12,8 @@ parser.add_argument('results_path', type=str, help='Pass the path to the folder 
 
 
 args = parser.parse_args()
-prefix_list = ['base', 'friction', 'gaussian_action_noise', 'gaussian_state_noise']
+prefix_list = ['base', 'friction_0p025', 'friction_0p05', 'friction_0p1', 'friction_0p2', 'friction_0p5',
+               'friction_1p0', 'gaussian_action_noise', 'gaussian_state_noise']
 rew_results = [[] for _ in range(len(prefix_list))]
 
 # Now lets walk through the folder
@@ -57,19 +58,25 @@ for i, result in enumerate(unique_rew_results):
         legends.append(legend.split('.')[0].split('_' + prefix_list[i])[0])
     y_pos = np.arange(len(legends))
 
+    print('the winner for test {} with score {} is {}'.format(prefix_list[i], np.max(means), legends[np.argmax(means)]))
+
     # plt.bar(y_pos, means, align='center', alpha=0.5, yerr=np.sqrt(vars))
     # Sometimes they don't fit
-    if len(means) > 6:
-        split_len = int(len(means) / 2)
-        fig, axs = plt.subplots(2, 1)
-        fig.set_figheight(10)
+    bars_per_subplot = 6
+    if len(means) > bars_per_subplot:
+        # TODO(plot the leftovers)
+        num_splits = len(means) // bars_per_subplot
+        # handle the fact that there might be more than 6
+        remainder = len(means) % bars_per_subplot
+        split_len = int(len(means) / num_splits)
+        fig, axs = plt.subplots(num_splits + (remainder > 0), 1)
+        fig.set_figheight((5 + (remainder > 0)) * num_splits)
         fig.set_figwidth(30)
-        axs[0].bar(y_pos[0:split_len], means[0:split_len], align='center', alpha=0.5)
-        axs[0].set_xticks(y_pos[0:split_len])
-        axs[0].set_xticklabels(legends[0:split_len])
-        axs[1].bar(y_pos[split_len:], means[split_len:], align='center', alpha=0.5)
-        axs[1].set_xticks(y_pos[split_len:])
-        axs[1].set_xticklabels(legends[split_len:])
+        for j in range(num_splits + (remainder > 0)):
+            axs[j].bar(y_pos[j * split_len: split_len * (j + 1)], means[j * split_len: split_len * (j + 1)], align='center', alpha=0.5)
+            axs[j].set_xticks(y_pos[j * split_len: split_len * (j + 1)])
+            axs[j].set_xticklabels(legends[j * split_len: split_len * (j + 1)])
+            axs[j].set_ylim(np.min(means), 0)
 
     else:
         plt.bar(y_pos, means, align='center', alpha=0.5)
