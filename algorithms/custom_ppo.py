@@ -334,8 +334,11 @@ class KLDiffMixin(object):
         elif sampled_kl > 0.5 * self.kl_target:
             self.kl_diff_coeff_val *= 0.5
         # There is literally no reason to let this go off to infinity and subsequently overflow
-        self.kl_diff_coeff_val = max(self.kl_diff_coeff_val, 1e5)
+
+        self.kl_diff_coeff_val = min(self.kl_diff_coeff_val, 1e5)
         self.kl_diff_coeff.load(self.kl_diff_coeff_val, session=self.get_session())
+        print(self.kl_diff_coeff, "KL diff coeff")
+        print(self.kl_diff_coeff_val, "KL diff coeff val")
         return self.kl_diff_coeff_val
 
 
@@ -350,12 +353,12 @@ def special_setup_mixins(policy, obs_space, action_space, config):
     KLDiffMixin.__init__(policy, config)
 
 
-def update_kl(trainer, fetches):
+def update_kl_and_kl_diff(trainer, fetches):
     """Update both the KL coefficient and the kl diff coefficient"""
     if "kl_diff" in fetches:
         # single-agent
         trainer.workers.local_worker().for_policy(
-            lambda pi: pi.update_kl_difft(fetches["kl_diff"]))
+            lambda pi: pi.update_kl_diff(fetches["kl_diff"]))
     else:
         def update(pi, pi_id):
             # The robot won't have kl_diff in fetches
@@ -373,14 +376,14 @@ def update_kl(trainer, fetches):
              lambda pi: pi.update_kl(fetches["kl"]))
     else:
 
-         def update(pi, pi_id):
+         def _update(pi, pi_id):
              if pi_id in fetches:
                  pi.update_kl(fetches[pi_id]["kl"])
              else:
                  logger.debug("No data for {}, not updating kl".format(pi_id))
 
          # multi-agent
-         trainer.workers.local_worker().foreach_trainable_policy(update)
+         trainer.workers.local_worker().foreach_trainable_policy(_update)
 
 CustomPPOPolicy = PPOTFPolicy.with_updates(
     name="POPO",
@@ -396,5 +399,5 @@ CustomPPOPolicy = PPOTFPolicy.with_updates(
 KLPPOTrainer = PPOTrainer.with_updates(
     default_policy=CustomPPOPolicy,
     default_config=DEFAULT_CONFIG,
-    after_optimizer_step=update_kl
+    after_optimizer_step=update_kl_and_kl_diff
 )
