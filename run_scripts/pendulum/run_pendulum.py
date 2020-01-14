@@ -197,11 +197,12 @@ def on_episode_step(info):
 
     elif hasattr(info["env"], 'vector_env'):
         envs = info["env"].vector_env.envs
-        true_rews = [env.true_rew for env in envs]
-        # some of the envs won't actually be used if we are vectorizing so lets just ignore them
-        rew_list = [true_rew for env, true_rew in zip(envs, true_rews) if env.step_num != 0]
-        if len(rew_list) > 0:
-            episode.user_data["true_rew"].append(np.mean(rew_list))
+        if hasattr(envs[0], 'true_rew'):
+            true_rews = [env.true_rew for env in envs]
+            # some of the envs won't actually be used if we are vectorizing so lets just ignore them
+            rew_list = [true_rew for env, true_rew in zip(envs, true_rews) if env.step_num != 0]
+            if len(rew_list) > 0:
+                episode.user_data["true_rew"].append(np.mean(rew_list))
 
 
 def on_train_result(info):
@@ -309,8 +310,8 @@ if __name__ == "__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
+                run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
                 if args.num_adv > 0:
-                    run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
 
                     if not args.model_based:
                         visualize_adversaries(config, checkpoint_path, 10, 200, output_path)

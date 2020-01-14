@@ -257,7 +257,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
                          '`friction` and `rand_friction`')
             pendulum_action = adv_action * self.adversary_strength + torque
         else:
-            pendulum_action = [0.0]
+            pendulum_action = torque
 
         pendulum_action = np.clip(-self.max_torque, self.max_torque, pendulum_action)
         obs, rew, done, info = super().step(pendulum_action)
