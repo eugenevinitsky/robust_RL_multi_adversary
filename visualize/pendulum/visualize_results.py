@@ -13,7 +13,7 @@ parser.add_argument('results_path', type=str, help='Pass the path to the folder 
 
 args = parser.parse_args()
 prefix_list = ['base', 'friction_0p025', 'friction_0p05', 'friction_0p1', 'friction_0p2', 'friction_0p5',
-               'friction_1p0', 'gaussian_action_noise', 'gaussian_state_noise']
+               'friction_1p0', 'friction_2p0', 'gaussian_action_noise', 'gaussian_state_noise']
 rew_results = [[] for _ in range(len(prefix_list))]
 
 # Now lets walk through the folder

@@ -87,17 +87,17 @@ def setup_exps(args):
                              '--rand_state_func samples a new random state vector at every rollout'
                              '--friction yields perturbations of the form [0, 0, -1] * scale_factor'
                              '--rand_friction yields similar perturbations are friction but resampled every rollout')
+    parser.add_argument('--horizon', type=int, default=200)
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
 
     # Universal hyperparams
     config = DEFAULT_CONFIG
-    config['gamma'] = 0.95
+    config['gamma'] = 0.999
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
-    config['vf_clip_param'] = 10.0
-    config['lambda'] = 0.1
+    config['vf_clip_param'] = 100.0
     if args.grid_search:
         config['lr'] = tune.grid_search([5e-3, 5e-4])
     else:
@@ -114,6 +114,7 @@ def setup_exps(args):
         config['kl_diff_clip'] = 5.0
 
     # Options used in every env
+    config['env_config']['horizon'] = args.horizon
     config['env_config']['num_adversaries'] = args.num_adv
     config['env_config']['adversary_strength'] = args.adv_strength
     config['env_config']['model_based'] = args.model_based
@@ -136,8 +137,7 @@ def setup_exps(args):
 
     config['env_config']['run'] = alg_run
 
-    if args.grid_search:
-        config['model']['fcnet_hiddens'] = tune.grid_search([[256, 512, 256], [100, 50, 25]])
+    config['model']['fcnet_hiddens'] = [256, 256, 256]
     if args.use_lstm:
         ModelCatalog.register_custom_model("rnn", LSTM)
         config['model']['custom_model'] = "rnn"
@@ -146,7 +146,10 @@ def setup_exps(args):
         if args.grid_search:
             config['model']['max_seq_len'] = tune.grid_search([20, 40])
     if args.grid_search:
-        config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
+        if args.horizon > 200:
+            config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6])
+        else:
+            config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
     config['env'] = 'MAPendulumEnv'
     register_env('MAPendulumEnv', pendulum_env_creator)
@@ -310,14 +313,14 @@ if __name__ == "__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
+                run_transfer_tests(config, checkpoint_path, 1, args.exp_title, output_path)
                 if args.num_adv > 0:
 
                     if not args.model_based:
                         visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
 
                     if args.model_based:
-                        visualize_model_perf(config, checkpoint_path, 10,  25, output_path)
+                        visualize_model_perf(config, checkpoint_path, 2,  1, output_path)
 
                     if args.use_s3:
                         p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,

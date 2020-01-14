@@ -14,12 +14,12 @@ class PendulumEnv(gym.Env):
         'video.frames_per_second' : 30
     }
 
-    def __init__(self, g=10.0, horizon=200):
+    def __init__(self, config, g=10.0):
         self.max_speed=8
         self.max_torque=2.
         self.dt=.05
         self.g = g
-        self.horizon = horizon
+        self.horizon = config["horizon"]
         self.step_num = 0
         self.should_render = False
         self.friction = False
@@ -134,7 +134,7 @@ def angle_normalize(x):
 
 class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
     def __init__(self, config):
-        super(MAPendulumEnv, self).__init__()
+        super(MAPendulumEnv, self).__init__(config)
         self.num_adversaries = config["num_adversaries"]
         self.adversary_strength = config["adversary_strength"]
         self.model_based = config["model_based"]
@@ -173,7 +173,7 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
 class ModelBasedPendulumEnv(PendulumEnv):
     def __init__(self, config):
         """Env with adversaries that are just sinusoids. Used for testing out identification schemes."""
-        super(ModelBasedPendulumEnv, self).__init__()
+        super(ModelBasedPendulumEnv, self).__init__(config)
         self.num_adversaries = config["num_adversaries"]
         self.adversary_strength = config["adversary_strength"]
         self.model_based = config["model_based"]

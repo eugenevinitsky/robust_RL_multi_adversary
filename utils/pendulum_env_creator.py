@@ -8,5 +8,5 @@ def pendulum_env_creator(env_config):
         else:
             env = MAPendulumEnv(env_config)
     else:
-        env = PendulumEnv()
+        env = PendulumEnv(env_config)
     return env
