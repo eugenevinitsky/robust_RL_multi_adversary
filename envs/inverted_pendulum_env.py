@@ -67,7 +67,7 @@ class PendulumEnv(gym.Env):
             newthdot += self.gaussian_action_noise_scale * np.random.normal()
 
         if self.friction:
-            newthdot -= self.friction_coef * thdot
+            newthdot -= self.friction_coef * thdot * dt
         newth = th + newthdot*dt
         newthdot = np.clip(newthdot, -self.max_speed, self.max_speed) #pylint: disable=E1111
 
@@ -126,6 +126,7 @@ class PendulumEnv(gym.Env):
         if self.viewer:
             self.viewer.close()
             self.viewer = None
+
 
 def angle_normalize(x):
     return (((x+np.pi) % (2*np.pi)) - np.pi)

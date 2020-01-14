@@ -136,8 +136,8 @@ def setup_exps(args):
 
     config['env_config']['run'] = alg_run
 
-    config['model']['fcnet_hiddens'] = [64, 64]
-    # TODO(@evinitsky) turn this on
+    if args.grid_search:
+        config['model']['fcnet_hiddens'] = tune.grid_search([[256, 512, 256], [100, 50, 25]])
     if args.use_lstm:
         ModelCatalog.register_custom_model("rnn", LSTM)
         config['model']['custom_model'] = "rnn"
