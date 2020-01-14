@@ -197,6 +197,9 @@ def visualize_model_perf(rllib_config, checkpoint, num_test_adversaries, num_rol
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
         instantiate_rollout(rllib_config, checkpoint)
 
+    # the adversaries arent well defined beyond this range
+    if env.adversary_type == 'state_func' or env.adversary_type =='friction':
+        num_test_adversaries = min(num_test_adversaries, env.num_adversaries)
     options_dict = {'num_test_adversaries': num_test_adversaries, 'train_adversary_num': env.num_adversaries}
 
     env.num_adversaries = num_test_adversaries
