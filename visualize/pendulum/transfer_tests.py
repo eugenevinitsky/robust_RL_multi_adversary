@@ -94,6 +94,9 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         ['friction_0p5', [['friction', True], ['friction_coef', 0.5]]],
         ['friction_1p0', [['friction', True], ['friction_coef', 1.0]]],
         ['friction_2p0', [['friction', True], ['friction_coef', 2.0]]],
+        ['friction_3p0', [['friction', True], ['friction_coef', 3.0]]],
+        ['friction_5p0', [['friction', True], ['friction_coef', 5.0]]],
+        ['friction_10p0', [['friction', True], ['friction_coef', 10.0]]],
         ['gaussian_action_noise', [['add_gaussian_action_noise', True]]],
         ['gaussian_state_noise', [['add_gaussian_state_noise', True]]]
     ]
