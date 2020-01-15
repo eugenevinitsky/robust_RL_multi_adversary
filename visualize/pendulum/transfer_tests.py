@@ -1,7 +1,9 @@
 import argparse
 import configparser
 from copy import deepcopy
+from datetime import datetime
 import os
+import pytz
 
 import numpy as np
 import ray
@@ -83,7 +85,6 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     checkpoint: (int)
         Number of the checkpoint we want to replay
     """
-    file_path = os.path.dirname(os.path.abspath(__file__))
     # First compute a baseline score to compare against
     print(
         "**********************************************************\n"
@@ -103,7 +104,7 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     rewards = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                  state_init, action_init, num_rollouts)
 
-    with open(os.path.join(file_path, '{}/{}_{}_rew.txt'.format(outdir, output_file_name, test_name)),
+    with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, test_name),
               'wb') as file:
         np.savetxt(file, rewards, delimiter=', ')
 
@@ -112,9 +113,8 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
 
 def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir):
 
-    file_path = os.path.dirname(os.path.abspath(__file__))
-    output_file_path = os.path.join(file_path, outdir)
-    if not os.path.exists(output_file_path):
+    output_file_path = os.path.join(outdir, output_file_name)
+    if not os.path.exists(os.path.dirname(output_file_path)):
         try:
             os.makedirs(os.path.dirname(output_file_path))
         except OSError as exc:
@@ -129,10 +129,14 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
 
 
 if __name__ == '__main__':
+    date = datetime.now(tz=pytz.utc)
+    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
+    output_path = os.path.expanduser('~/transfer_results/pendulum')
+
     parser = argparse.ArgumentParser('Parse configuration file')
     parser.add_argument('--output_file_name', type=str, default='transfer_out/pendulum',
                         help='The file name we use to save our results')
-    parser.add_argument('--output_dir', type=str, default='transfer_results',
+    parser.add_argument('--output_dir', type=str, default=output_path,
                         help='')
 
     parser = replay_parser(parser)
@@ -143,4 +147,4 @@ if __name__ == '__main__':
 
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
-    run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name, args.output_dir)
+    run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name, os.path.join(args.output_dir, date))
