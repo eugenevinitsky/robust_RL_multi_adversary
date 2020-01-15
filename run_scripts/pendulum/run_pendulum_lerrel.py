@@ -80,12 +80,16 @@ def setup_exps(args):
     config = DEFAULT_CONFIG
     config['gamma'] = 0.995
     config["batch_mode"] = "complete_episodes"
-    config['train_batch_size'] = 4000 # args.train_batch_size
+    config['train_batch_size'] = 10000 # args.train_batch_size
     config['vf_clip_param'] = 10.0
-    config['lambda'] = 0.1
-    config['lr'] = 5e-3
+    if args.grid_search:
+        config['lambda'] = tune.grid_search([0.1, 0.5, 0.9])
+        config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
+    else:
+        config['lambda'] = 0.1
+        config['lr'] = 5e-3
     config['sgd_minibatch_size'] = 64
-    config['num_envs_per_worker'] = 10
+    # config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
 
     # config['num_adversaries'] = args.num_adv
@@ -205,11 +209,11 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
                 if args.num_adv > 0:
-                    run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
+                    # run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
 
-                    # visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
+                    visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                     "s3://sim2real/pendulum/{}/{}/transfer_results/{}".format(date,
+                                                                     "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
                                                                                                                       args.exp_title,
                                                                                                                       tune_name)).split(
                         ' '))
