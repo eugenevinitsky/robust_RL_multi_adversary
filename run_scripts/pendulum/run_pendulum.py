@@ -94,12 +94,12 @@ def setup_exps(args):
 
     # Universal hyperparams
     config = DEFAULT_CONFIG
-    config['gamma'] = 0.999
+    config['gamma'] = 0.995
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
     config['vf_clip_param'] = 100.0
     if args.grid_search:
-        config['lr'] = tune.grid_search([5e-3, 5e-4])
+        config['lr'] = tune.grid_search([5e-4, 5e-5])
     else:
         config['lr'] = 5e-3
     config['sgd_minibatch_size'] = min(500, args.train_batch_size)
@@ -147,7 +147,7 @@ def setup_exps(args):
             config['model']['max_seq_len'] = tune.grid_search([20, 40])
     if args.grid_search:
         if args.horizon > 200:
-            config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-4])
+            config['vf_loss_coeff'] = tune.grid_search([1e-7, 1e-8])
         else:
             config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
