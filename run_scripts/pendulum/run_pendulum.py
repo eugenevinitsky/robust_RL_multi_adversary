@@ -98,10 +98,11 @@ def setup_exps(args):
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
     config['vf_clip_param'] = 100.0
+    config['lambda'] = 0.1
     if args.grid_search:
         config['lr'] = tune.grid_search([5e-4, 5e-5])
     else:
-        config['lr'] = 5e-3
+        config['lr'] = 5e-4
     config['sgd_minibatch_size'] = min(500, args.train_batch_size)
     # config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
@@ -147,9 +148,11 @@ def setup_exps(args):
             config['model']['max_seq_len'] = tune.grid_search([20, 40])
     if args.grid_search:
         if args.horizon > 200:
-            config['vf_loss_coeff'] = tune.grid_search([1e-7, 1e-8])
+            config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6])
         else:
             config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
+    else:
+        config['vf_loss_coeff'] = 1e-5
 
     config['env'] = 'MAPendulumEnv'
     register_env('MAPendulumEnv', pendulum_env_creator)
@@ -240,8 +243,6 @@ def on_episode_end(info):
             for key, val in state_err_dict.items():
                 episode.custom_metrics[key] = val
 
-        # info["episode"].custom_metrics.update(state_err_dict)
-
         if hasattr(env, 'select_new_adversary'):
             for env in info["env"]:
                 env.select_new_adversary()
@@ -313,14 +314,14 @@ if __name__ == "__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                run_transfer_tests(config, checkpoint_path, 1, args.exp_title, output_path)
+                run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
                 if args.num_adv > 0:
 
                     if not args.model_based:
                         visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
 
                     if args.model_based:
-                        visualize_model_perf(config, checkpoint_path, 2,  1, output_path)
+                        visualize_model_perf(config, checkpoint_path, 10,  25, output_path)
 
                     if args.use_s3:
                         p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,

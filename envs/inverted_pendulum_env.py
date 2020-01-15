@@ -85,6 +85,10 @@ class PendulumEnv(gym.Env):
         obs = np.clip(obs, a_min=self.low, a_max=self.high)
         return obs, -costs, done, {}
 
+    def get_reward(self, state, action):
+        th, thdot = state
+        return angle_normalize(th)**2 + .1*thdot**2 + .001*(action**2)
+
     def reset(self):
         high = np.array([np.pi, 1])
         self.step_num = 0
