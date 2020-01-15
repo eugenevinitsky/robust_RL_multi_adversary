@@ -147,7 +147,7 @@ def setup_exps(args):
             config['model']['max_seq_len'] = tune.grid_search([20, 40])
     if args.grid_search:
         if args.horizon > 200:
-            config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6])
+            config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-4])
         else:
             config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
