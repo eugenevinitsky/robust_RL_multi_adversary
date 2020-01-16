@@ -209,7 +209,7 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
                 if args.num_adv > 0:
-                    # run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
+                    run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
 
                     visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,

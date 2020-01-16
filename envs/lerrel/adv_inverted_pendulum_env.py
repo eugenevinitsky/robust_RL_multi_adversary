@@ -11,6 +11,8 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
     def __init__(self, config):
         self.num_adversaries = config["num_adversaries"]
         self.adversary_strength = config["adversary_strength"]
+        self.max_cart_vel = 100
+        self.max_pole_vel = 100
         self.horizon = 1000
         self.step_num = 0
         self.select_new_adversary()
@@ -19,8 +21,10 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
         bnames = self.model.body_names
         self._adv_bindex = bnames.index(self._adv_f_bname) #Index of the body on which the adversary force will be applied
 
+        high = np.array([1.0, 90.0, self.max_cart_vel, self.max_pole_vel])
+        self.observation_space = spaces.Box(low=-1 * high, high=high, dtype=self.observation_space.dtype)
         # TODO(kp): find a better obs norm
-        self.obs_norm = 50.0
+        self.obs_norm = 1.0
 
     @property
     def adv_action_space(self):
@@ -52,6 +56,9 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
             assert actions in self.action_space
             pendulum_action = actions
         
+        self.sim.data.qvel[0] = np.clip(self.sim.data.qvel[0], -self.max_cart_vel, self.max_cart_vel)
+        self.sim.data.qvel[1] = np.clip(self.sim.data.qvel[1], -self.max_pole_vel, self.max_pole_vel)
+
         reward = 1.0
         self.do_simulation(pendulum_action, self.frame_skip)
         ob = self._get_obs()
