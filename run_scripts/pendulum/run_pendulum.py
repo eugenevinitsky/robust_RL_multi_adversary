@@ -88,6 +88,8 @@ def setup_exps(args):
                              '--friction yields perturbations of the form [0, 0, -1] * scale_factor'
                              '--rand_friction yields similar perturbations are friction but resampled every rollout')
     parser.add_argument('--horizon', type=int, default=200)
+    parser.add_argument('--big_grid_search', action='store_true', default=False,
+                        help='If true, do a really big grid search')
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
@@ -101,6 +103,9 @@ def setup_exps(args):
     config['lambda'] = 0.1
     if args.grid_search:
         config['lr'] = tune.grid_search([5e-4, 5e-5])
+    elif args.big_grid_search:
+        config['lr'] = tune.grid_search([5e-4, 5e-5, 5e-6])
+        config['lambda'] = tune.grid_search([0.1, 0.5, 0.9])
     else:
         config['lr'] = 5e-4
     config['sgd_minibatch_size'] = min(500, args.train_batch_size)
@@ -138,7 +143,10 @@ def setup_exps(args):
 
     config['env_config']['run'] = alg_run
 
-    config['model']['fcnet_hiddens'] = [256, 256, 256]
+    if args.use_lstm:
+        config['model']['fcnet_hiddens'] = [256, 256, 256]
+    else:
+        config['model']['fcnet_hiddens'] = [64, 64]
     if args.use_lstm:
         ModelCatalog.register_custom_model("rnn", LSTM)
         config['model']['custom_model'] = "rnn"
@@ -146,11 +154,17 @@ def setup_exps(args):
         config['model']['lstm_cell_size'] = 128
         if args.grid_search:
             config['model']['max_seq_len'] = tune.grid_search([20, 40])
+        elif args.big_grid_search:
+            config['model']['max_seq_len'] = 10
+
     if args.grid_search:
         if args.horizon > 200:
             config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6])
         else:
             config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
+    elif args.big_grid_search:
+        config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6, 1e-7])
+
     else:
         config['vf_loss_coeff'] = 1e-5
 
