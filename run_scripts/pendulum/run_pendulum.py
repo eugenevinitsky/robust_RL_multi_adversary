@@ -104,6 +104,7 @@ def setup_exps(args):
         config['num_adversaries'] = args.num_adv * args.num_adv_per_strength
         config['kl_diff_weight'] = args.kl_diff_weight
         config['kl_diff_target'] = args.kl_diff_target
+        config['kl_diff_clip'] = 5.0
         config['env_config']['kl_diff_training'] = True
     else:
         config['env_config']['kl_diff_training'] = False
