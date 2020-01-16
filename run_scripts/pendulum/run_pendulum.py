@@ -107,7 +107,7 @@ def setup_exps(args):
         config['lr'] = tune.grid_search([1e-3, 5e-3, 5e-4])
         config['lambda'] = tune.grid_search([0.1, 0.5, 0.9])
     else:
-        config['lr'] = 5e-4
+        config['lr'] = 5e-3
     config['sgd_minibatch_size'] = min(500, args.train_batch_size)
     # config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
@@ -165,11 +165,12 @@ def setup_exps(args):
             config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6])
         else:
             config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
-    elif args.big_grid_search:
+    elif args.big_grid_search and args.use_lstm:
         config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6, 1e-7])
-
+    elif args.big_grid_search and not args.use_lstm:
+        config['vf_loss_coeff'] = tune.grid_search([1e0, 1e-1, 1e-2])
     else:
-        config['vf_loss_coeff'] = 1e-5
+        config['vf_loss_coeff'] = 1e0
 
     config['env'] = 'MAPendulumEnv'
     register_env('MAPendulumEnv', pendulum_env_creator)

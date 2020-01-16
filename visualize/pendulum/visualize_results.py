@@ -9,6 +9,7 @@ import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument('results_path', type=str, help='Pass the path to the folder containing all yuor results files')
+parser.add_argument('--top_percent', type=float, default=1.0, help='The fraction of the top plots to plot')
 
 
 args = parser.parse_args()
@@ -49,7 +50,7 @@ for result in rew_results:
 
 for i, result in enumerate(unique_rew_results):
     result = sorted(result, key=lambda x: x[2])
-    plt.figure(figsize=(25, 5))
+    plt.figure(figsize=(40, 5))
     legends = []
     means = []
     vars = []
@@ -57,9 +58,21 @@ for i, result in enumerate(unique_rew_results):
         means.append(mean)
         vars.append(var)
         legends.append(legend.split('.')[0].split('_' + prefix_list[i])[0])
-    y_pos = np.arange(len(legends))
 
     print('the winner for test {} with score {} is {}'.format(prefix_list[i], np.max(means), legends[np.argmax(means)]))
+
+    # Now we sort
+    means = np.array(means)
+    vars = np.array(vars)
+    legends = np.array(legends)
+    inds = np.argsort(means)
+    means = means[inds]
+    vars = vars[inds]
+    legends = legends[inds]
+    means = means[-int(len(means) * args.top_percent):]
+    vars = vars[-int(len(vars) * args.top_percent):]
+    legends = legends[-int(len(legends) * args.top_percent):]
+    y_pos = np.arange(len(legends))
 
     # plt.bar(y_pos, means, align='center', alpha=0.5, yerr=np.sqrt(vars))
     # Sometimes they don't fit
@@ -72,7 +85,7 @@ for i, result in enumerate(unique_rew_results):
         split_len = int(len(means) / num_splits)
         fig, axs = plt.subplots(num_splits + (remainder > 0), 1)
         fig.set_figheight((5 + (remainder > 0)) * num_splits)
-        fig.set_figwidth(30)
+        fig.set_figwidth(50)
         for j in range(num_splits + (remainder > 0)):
             axs[j].bar(y_pos[j * split_len: split_len * (j + 1)], means[j * split_len: split_len * (j + 1)], align='center', alpha=0.5)
             axs[j].set_xticks(y_pos[j * split_len: split_len * (j + 1)])
@@ -83,6 +96,6 @@ for i, result in enumerate(unique_rew_results):
         plt.bar(y_pos, means, align='center', alpha=0.5)
         plt.xticks(y_pos, legends)
         plt.ylabel('Avg. score')
-        plt.title('Score under {} test'.format(prefix_list[i]))
+        plt.title('Score under {} test, top score is {}'.format(prefix_list[i], legends[np.argmax(means)]))
 
     plt.savefig('transfer_results/pendulum/{}/{}{}'.format(output_path, prefix_list[i], 'rew'))
