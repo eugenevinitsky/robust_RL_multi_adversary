@@ -568,15 +568,20 @@
 #############################################################################################################################################################
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
 --exp_title big_grid_friction_5adv_conc1_len500 --train_batch_size 20000 \
---checkpoint_freq 50 --num_iters 1000 --num_cpus 3 --num_adv 5 --model_based --adversary_type friction --multi_node \
---adv_strength 0.5 --run_transfer_tests --big_grid_search --use_s3 --num_concat_states 1 --horizon 500" --start --stop --tmux --cluster-name=ev_pend_test25
+--checkpoint_freq 50 --num_iters 1000 --num_cpus 6 --num_adv 5 --model_based --adversary_type friction --multi_node \
+--adv_strength 0.5 --run_transfer_tests --big_grid_search --use_s3 --num_concat_states 1 --horizon 500" --start --stop --tmux --cluster-name=ev_pend_test1
 
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
 --exp_title big_grid_friction_5adv_conc10_len500 --train_batch_size 20000 \
---checkpoint_freq 50 --num_iters 1000 --num_cpus 3 --num_adv 5 --model_based --adversary_type friction --multi_node \
---adv_strength 0.5 --run_transfer_tests --big_grid_search --use_s3 --num_concat_states 10 --horizon 500" --start --stop --tmux --cluster-name=ev_pend_test26
+--checkpoint_freq 50 --num_iters 1000 --num_cpus 6 --num_adv 5 --model_based --adversary_type friction --multi_node \
+--adv_strength 0.5 --run_transfer_tests --big_grid_search --use_s3 --num_concat_states 10 --horizon 500" --start --stop --tmux --cluster-name=ev_pend_test2
 
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
 --exp_title big_grid_friction_5adv_conc20_len500 --train_batch_size 20000 \
---checkpoint_freq 50 --num_iters 1000 --num_cpus 3 --num_adv 5 --model_based --adversary_type friction --multi_node \
---adv_strength 0.5 --run_transfer_tests --big_grid_search --use_s3 --num_concat_states 10 --horizon 500" --start --stop --tmux --cluster-name=ev_pend_test27
+--checkpoint_freq 50 --num_iters 1000 --num_cpus 6 --num_adv 5 --model_based --adversary_type friction --multi_node \
+--adv_strength 0.5 --run_transfer_tests --big_grid_search --use_s3 --num_concat_states 10 --horizon 500" --start --stop --tmux --cluster-name=ev_pend_test3
+
+ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+--exp_title big_grid_friction_5adv_conc20_len500_lstm_3iters --train_batch_size 20000 \
+--checkpoint_freq 50 --num_iters 1000 --num_cpus 6 --num_adv 5 --model_based --adversary_type friction --multi_node \
+--adv_strength 0.5 --run_transfer_tests --big_grid_search --use_s3 --num_concat_states 10 --horizon 500 --num_sgd_iters 3" --start --stop --tmux --cluster-name=ev_pend_test4

@@ -90,6 +90,7 @@ def setup_exps(args):
     parser.add_argument('--horizon', type=int, default=200)
     parser.add_argument('--big_grid_search', action='store_true', default=False,
                         help='If true, do a really big grid search')
+    parser.add_argument('--num_sgd_iters', type=int, default=10, help='Number of sgd iterations per training step')
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
@@ -110,7 +111,7 @@ def setup_exps(args):
         config['lr'] = 5e-3
     config['sgd_minibatch_size'] = min(500, args.train_batch_size)
     # config['num_envs_per_worker'] = 10
-    config['num_sgd_iter'] = 10
+    config['num_sgd_iter'] = args.num_sgd_iters
     config['num_workers'] = args.num_cpus
 
     if args.custom_ppo:
