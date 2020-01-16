@@ -33,10 +33,9 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
     adversary_grid_dict = {}
     kl_grid = np.zeros((num_adversaries, num_adversaries))
     for i in range(num_adversaries):
-        import ipdb; ipdb.set_trace()
         adversary_str = 'adversary' + str(i)
         # each adversary grid is a map of agent action versus observation dimension
-        adversary_grid = np.zeros((grid_size - 1, grid_size - 1, env.observation_space.low.shape[0])).astype(int)
+        adversary_grid = np.zeros((grid_size - 1, grid_size - 1, env.observation_space.low.shape[0], env.adv_action_space.low.shape[0])).astype(int)
         strength_grid = np.linspace(env.adv_action_space.low, env.adv_action_space.high, grid_size).T
         obs_grid = np.linspace(env.observation_space.low, env.observation_space.high, grid_size).T
         adversary_grid_dict[adversary_str] = {'grid': adversary_grid, 'action_bins': strength_grid, 'obs_bins': obs_grid,
@@ -117,7 +116,6 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
 
                     # Now store the agent action in the corresponding grid
                     if agent_id != 'pendulum':
-                        import ipdb; ipdb.set_trace()
                         action_bins = adversary_grid_dict[agent_id]['action_bins']
                         obs_bins = adversary_grid_dict[agent_id]['obs_bins']
 
@@ -133,7 +131,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                                 if obs_index == heat_map.shape[1]:
                                     obs_index -= 1
 
-                                heat_map[action_index, obs_index, obs_loop_index] += 1
+                                heat_map[action_index, obs_index, obs_loop_index, action_loop_index] += 1
 
             for agent_id in multi_obs.keys():
                 if agent_id != 'pendulum':
@@ -198,16 +196,17 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
 
         # x_label, y_label = env.transform_adversary_actions(bins)
         # ax = sns.heatmap(heat_map, annot=True, fmt="d")
-        titles = ['x', 'y', 'thetadot']
-        for i in range(heat_map.shape[-1]):
-            import ipdb; ipdb.set_trace()
-            plt.figure()
-            # increasing the row index implies moving down on the y axis
-            sns.heatmap(heat_map[:, :, i], yticklabels=np.round(action_bins[0], 1), xticklabels=np.round(obs_bins[i], 1))
-            plt.ylabel('Adversary actions')
-            plt.xlabel(titles[i])
-            output_str = '{}/{}'.format(outdir, adversary + 'action_heatmap_{}.png'.format(i))
-            plt.savefig(output_str)
+        xtitles = ['x', 'xdot', 'theta', 'thetadot']
+        ytitles = ['ax', 'ay']
+        for obs_idx in range(heat_map.shape[-2]):
+            for a_idx in range(heat_map.shape[-1]):
+                plt.figure()
+                # increasing the row index implies moving down on the y axis
+                sns.heatmap(heat_map[:, :, obs_idx, a_idx], yticklabels=np.round(action_bins[0], 1), xticklabels=np.round(obs_bins[i], 1))
+                plt.ylabel(ytitles[a_idx])
+                plt.xlabel(xtitles[obs_idx])
+                output_str = '{}/{}'.format(outdir, adversary + 'action_heatmap_{}_{}.png'.format(xtitles[obs_idx], ytitles[a_idx]))
+                plt.savefig(output_str)
 
     # Plot the kl difference between agents
     plt.figure()
