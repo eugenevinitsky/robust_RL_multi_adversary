@@ -99,7 +99,7 @@ def setup_exps(args):
     config['gamma'] = 0.995
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
-    config['vf_clip_param'] = 20.0
+    config['vf_clip_param'] = 100.0
     config['lambda'] = 0.1
     if args.grid_search:
         config['lr'] = tune.grid_search([5e-4, 5e-5])
