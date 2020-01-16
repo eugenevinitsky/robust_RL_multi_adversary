@@ -9,8 +9,8 @@ import sys
 import pytz
 import numpy as np
 import ray
-from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
-from ray.rllib.agents.ppo.ppo import PPOTrainer, DEFAULT_CONFIG
+from ray.rllib.agents.sac.sac_policy import SACTFPolicy
+from ray.rllib.agents.sac.sac import SACTrainer, DEFAULT_CONFIG
 
 from ray.rllib.models import ModelCatalog
 from ray import tune
@@ -36,10 +36,10 @@ def setup_ma_config(config):
 
     if num_adversaries > 0 and not config['env_config']['model_based']:
         policies_to_train = ['pendulum']
-        policy_graphs = {'pendulum': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+        policy_graphs = {'pendulum': (SACTFPolicy, env.observation_space, env.action_space, {})}
         adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
         adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False, 'custom_model': {}}}
-        policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
+        policy_graphs.update({adv_policies[i]: (SACTFPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     # TODO(@evinitsky) put this back
     # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
@@ -98,19 +98,19 @@ def setup_exps(args):
     config = DEFAULT_CONFIG
     config['gamma'] = 0.995
     config["batch_mode"] = "complete_episodes"
-    config['train_batch_size'] = args.train_batch_size
-    config['vf_clip_param'] = 100.0
-    config['lambda'] = 0.1
-    if args.grid_search:
-        config['lr'] = tune.grid_search([5e-4, 5e-5])
-    elif args.big_grid_search:
-        config['lr'] = tune.grid_search([1e-3, 5e-3, 5e-4])
-        config['lambda'] = tune.grid_search([0.1, 0.5, 0.9])
-    else:
-        config['lr'] = 5e-4
-    config['sgd_minibatch_size'] = min(500, args.train_batch_size)
-    # config['num_envs_per_worker'] = 10
-    config['num_sgd_iter'] = 10
+    # config['train_batch_size'] = args.train_batch_size
+    # config['vf_clip_param'] = 100.0
+    # config['lambda'] = 0.1
+    # if args.grid_search:
+    #     config['lr'] = tune.grid_search([5e-4, 5e-5])
+    # elif args.big_grid_search:
+    #     config['lr'] = tune.grid_search([5e-3, 5e-4, 5e-5])
+    #     config['lambda'] = tune.grid_search([0.1, 0.5, 0.9])
+    # else:
+    #     config['lr'] = 5e-4
+    # config['sgd_minibatch_size'] = min(500, args.train_batch_size)
+    # # config['num_envs_per_worker'] = 10
+    # config['num_sgd_iter'] = 10
     config['num_workers'] = args.num_cpus
 
     if args.custom_ppo:
@@ -160,16 +160,16 @@ def setup_exps(args):
         elif args.big_grid_search:
             config['model']['max_seq_len'] = 20
 
-    if args.grid_search:
-        if args.horizon > 200:
-            config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6])
-        else:
-            config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
-    elif args.big_grid_search:
-        config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6, 1e-7])
-
-    else:
-        config['vf_loss_coeff'] = 1e-5
+    # if args.grid_search:
+    #     if args.horizon > 200:
+    #         config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6])
+    #     else:
+    #         config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
+    # elif args.big_grid_search:
+    #     config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6, 1e-7])
+    #
+    # else:
+    #     config['vf_loss_coeff'] = 1e-5
 
     config['env'] = 'MAPendulumEnv'
     register_env('MAPendulumEnv', pendulum_env_creator)
@@ -184,18 +184,13 @@ def setup_exps(args):
         config["callbacks"].update({"on_episode_step": on_episode_step,
                                     "on_episode_start": on_episode_start})
 
-    # config["eager_tracing"] = True
-    # config["eager"] = True
-    # config["eager_tracing"] = True
-
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
         return "{}_{}".format(trial.trainable_name, trial.experiment_tag)
 
     exp_dict = {
         'name': args.exp_title,
-        # 'run_or_experiment': KLPPOTrainer,
-        'run_or_experiment': 'PPO',
+        'run_or_experiment': SACTrainer,
         'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
