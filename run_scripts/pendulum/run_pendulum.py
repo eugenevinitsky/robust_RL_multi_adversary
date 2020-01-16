@@ -99,12 +99,12 @@ def setup_exps(args):
     config['gamma'] = 0.995
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
-    config['vf_clip_param'] = 100.0
+    config['vf_clip_param'] = 20.0
     config['lambda'] = 0.1
     if args.grid_search:
         config['lr'] = tune.grid_search([5e-4, 5e-5])
     elif args.big_grid_search:
-        config['lr'] = tune.grid_search([5e-4, 5e-5, 5e-6])
+        config['lr'] = tune.grid_search([5e-3, 5e-4, 5e-5])
         config['lambda'] = tune.grid_search([0.1, 0.5, 0.9])
     else:
         config['lr'] = 5e-4
@@ -156,8 +156,9 @@ def setup_exps(args):
         config['model']['use_lstm'] = True
         if args.grid_search:
             config['model']['max_seq_len'] = tune.grid_search([20, 40])
+        # we aren't sweeping over this due to limited CPU numbers
         elif args.big_grid_search:
-            config['model']['max_seq_len'] = 10
+            config['model']['max_seq_len'] = 20
 
     if args.grid_search:
         if args.horizon > 200:
