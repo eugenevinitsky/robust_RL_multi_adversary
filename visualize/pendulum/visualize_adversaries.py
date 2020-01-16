@@ -9,6 +9,7 @@ import numpy as np
 import ray
 from ray.rllib.env.base_env import _DUMMY_AGENT_ID
 from ray.rllib.evaluation.episode import _flatten_action
+from ray.rllib.models.tf.tf_action_dist import DiagGaussian
 import seaborn as sns; sns.set()
 
 from visualize.pendulum.run_rollout import instantiate_rollout, DefaultMapping
@@ -32,6 +33,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
     adversary_grid_dict = {}
     kl_grid = np.zeros((num_adversaries, num_adversaries))
     for i in range(num_adversaries):
+        import ipdb; ipdb.set_trace()
         adversary_str = 'adversary' + str(i)
         # each adversary grid is a map of agent action versus observation dimension
         adversary_grid = np.zeros((grid_size - 1, grid_size - 1, env.observation_space.low.shape[0])).astype(int)
@@ -66,7 +68,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                 multi_obs = {'adversary{}'.format(i): obs for i in range(env.num_adversaries)}
             multi_obs.update({'pendulum': obs})
             action_dict = {}
-            logits_dict = {}
+            action_dist_dict = {}
             for agent_id, a_obs in multi_obs.items():
                 if a_obs is not None:
                     policy_id = mapping_cache.setdefault(
@@ -109,12 +111,13 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                         if isinstance(a_action[0], np.ndarray):
                             a_action[0] = a_action[0].flatten()
                     action_dict[agent_id] = a_action
-                    logits_dict[agent_id] = logits
+                    action_dist_dict[agent_id] = DiagGaussian(logits, None)
                     prev_action = _flatten_action(a_action)  # tuple actions
                     prev_actions[agent_id] = prev_action
 
                     # Now store the agent action in the corresponding grid
                     if agent_id != 'pendulum':
+                        import ipdb; ipdb.set_trace()
                         action_bins = adversary_grid_dict[agent_id]['action_bins']
                         obs_bins = adversary_grid_dict[agent_id]['obs_bins']
 
@@ -137,17 +140,17 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                     # Now iterate through the agents and compute the kl_diff
 
                     curr_id = int(agent_id.split('adversary')[1])
-                    your_logits = logits_dict[agent_id]
-                    mean, log_std = np.split(your_logits.numpy()[0], 2)
+                    your_action_dist = action_dist_dict[agent_id]
+                    # mean, log_std = np.split(your_logits[0], 2)
                     for i in range(num_adversaries):
                         # KL diff of something with itself is zero
                         if i == curr_id:
                             pass
                         # otherwise just compute the kl difference between the agents
                         else:
-                            other_logits = logits_dict['adversary{}'.format(i)]
-                            other_mean, other_log_std = np.split(other_logits.numpy()[0], 2)
-                            kl_diff = compute_kl_diff(mean, log_std, other_mean, other_log_std)
+                            other_action_dist = action_dist_dict['adversary{}'.format(i)]
+                            # other_mean, other_log_std = np.split(other_logits.numpy()[0], 2)
+                            kl_diff = your_action_dist.kl(other_action_dist)
                             kl_grid[curr_id, i] += kl_diff
 
             action = action_dict
@@ -197,6 +200,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
         # ax = sns.heatmap(heat_map, annot=True, fmt="d")
         titles = ['x', 'y', 'thetadot']
         for i in range(heat_map.shape[-1]):
+            import ipdb; ipdb.set_trace()
             plt.figure()
             # increasing the row index implies moving down on the y axis
             sns.heatmap(heat_map[:, :, i], yticklabels=np.round(action_bins[0], 1), xticklabels=np.round(obs_bins[i], 1))
@@ -232,7 +236,6 @@ def main():
     ray.init(num_cpus=args.num_cpus)
 
     visualize_adversaries(rllib_config, checkpoint, args.grid_size, args.num_rollouts, args.output_dir)
-
 
 if __name__ == '__main__':
     main()
