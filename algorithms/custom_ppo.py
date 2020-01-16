@@ -319,6 +319,7 @@ class KLDiffMixin(object):
         # KL Coefficient
         self.kl_diff_coeff_val = config["kl_diff_weight"]
         self.kl_target = config["kl_diff_target"]
+        self.kl_diff_clip = config["kl_diff_clip"]
         # self.adaptive_kl = config["adaptive_kl"]
         # self.kl_diff_coeff = tf.compat.v1.get_variable(
         #     initializer=tf.constant_initializer(self.kl_diff_coeff_val),
