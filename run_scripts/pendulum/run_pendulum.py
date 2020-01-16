@@ -151,6 +151,7 @@ def setup_exps(args):
         # ModelCatalog.register_custom_model("rnn", LSTM)
         # config['model']['custom_model'] = "rnn"
         # config['model']['custom_options'] = {'lstm_use_prev_action': True}
+        config['vf_share_layers'] = True
         config['model']['lstm_cell_size'] = 128
         config['model']['use_lstm'] = True
         if args.grid_search:
