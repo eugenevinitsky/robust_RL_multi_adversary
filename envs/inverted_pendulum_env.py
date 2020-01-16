@@ -197,7 +197,7 @@ class ModelBasedPendulumEnv(PendulumEnv):
             self.state_weights = config['weights']
         # used to track the previously observed states
         self.observed_states = np.zeros(self.observation_space.shape[0])
-        self.correct_adv_score = 0.4
+        self.correct_adv_score = 5.0
         self.correct_state_coeff = 1.0
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
         self.num_correct_guesses = 0
