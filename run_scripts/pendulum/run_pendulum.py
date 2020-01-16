@@ -148,10 +148,11 @@ def setup_exps(args):
     else:
         config['model']['fcnet_hiddens'] = [256, 256, 256]
     if args.use_lstm:
-        ModelCatalog.register_custom_model("rnn", LSTM)
-        config['model']['custom_model'] = "rnn"
-        config['model']['custom_options'] = {'lstm_use_prev_action': True}
+        # ModelCatalog.register_custom_model("rnn", LSTM)
+        # config['model']['custom_model'] = "rnn"
+        # config['model']['custom_options'] = {'lstm_use_prev_action': True}
         config['model']['lstm_cell_size'] = 128
+        config['model']['use_lstm'] = True
         if args.grid_search:
             config['model']['max_seq_len'] = tune.grid_search([20, 40])
         elif args.big_grid_search:
