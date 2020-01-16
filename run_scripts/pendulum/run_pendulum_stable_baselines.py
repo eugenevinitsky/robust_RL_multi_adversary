@@ -28,11 +28,11 @@ gym.register(
 )
 
 # multiprocess environment
-n_cpus = 4
+n_cpus = 1
 env = make_vec_env('ModelBasedPendulum-v0', n_envs=n_cpus)
 import time
 curr_time = time.time()
-model = PPO2(policy="MlpLstmPolicy", env=env, n_steps=256,
+model = PPO2(policy="MlpLstmPolicy", env=env, n_steps=512,
              tensorboard_log="/Users/eugenevinitsky/tb_logs").learn(total_timesteps=10000)
 print('run time is ', time.time() - curr_time)
 model.save("pendulum")

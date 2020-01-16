@@ -144,9 +144,9 @@ def setup_exps(args):
     config['env_config']['run'] = alg_run
 
     if args.use_lstm:
-        config['model']['fcnet_hiddens'] = [256, 256, 256]
-    else:
         config['model']['fcnet_hiddens'] = [64, 64]
+    else:
+        config['model']['fcnet_hiddens'] = [256, 256, 256]
     if args.use_lstm:
         ModelCatalog.register_custom_model("rnn", LSTM)
         config['model']['custom_model'] = "rnn"
