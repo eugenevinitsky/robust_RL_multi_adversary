@@ -222,7 +222,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
     for i in range(num_adversaries):
         adversary_str = 'adversary' + str(i)
         # each adversary grid is a map of agent action versus observation dimension
-        adversary_grid = np.zeros((grid_size, grid_size, env.observation_space.low.shape[0])).astype(int)
+        adversary_grid = np.zeros((grid_size, grid_size, env._get_obs().shape[0])).astype(int)
         strength_grid = np.linspace(env.adv_action_space.low, env.adv_action_space.high, grid_size).T
         obs_grid = np.linspace(env.observation_space.low, env.observation_space.high, grid_size).T
         adversary_grid_dict[adversary_str] = {'grid': adversary_grid, 'action_bins': strength_grid, 'obs_bins': obs_grid,
@@ -230,7 +230,12 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
 
     for r_iter in range(num_rollouts):
         obs = env.reset()
-        for agent_id, a_obs in obs.items():
+        if isinstance(env.adv_observation_space, Dict):
+            multi_obs = {'adversary{}'.format(i): {'obs': obs['pendulum'], 'is_active': np.array([1])} for i in
+                         range(env.num_adversaries)}
+        else:
+            multi_obs = {'adversary{}'.format(i): obs['pendulum'] for i in range(env.num_adversaries)}
+        for agent_id, a_obs in multi_obs.items():
             if agent_id == 'pendulum':
                 continue
             if a_obs is not None:
@@ -238,9 +243,11 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                     agent_id, policy_agent_mapping(agent_id))
 
             all_obs_comb = np.asarray(np.meshgrid(*np.split(obs_grid, obs_grid.shape[0]))).T.reshape(-1,obs_grid.shape[0])
-
             for obs in all_obs_comb:
-                multi_obs = {'obs': obs, 'is_active': np.array([1])}
+                if isinstance(env.adv_observation_space, Dict):
+                    multi_obs = {'obs': obs, 'is_active': np.array([1])}
+                else:
+                    multi_obs = obs
                 flat_action = _flatten_action(multi_obs)
                 try:
                     a_action = agent.compute_action(flat_action, prev_action=[0], prev_reward=0, policy_id=policy_id)
@@ -304,9 +311,13 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
         for i in range(heat_map.shape[-1]):
             prob_action = np.sum(heat_map[:,:,i], axis=1) #sum across all states
             prob_action = prob_action/heat_map.shape[1] #normalize probability
+            prob_action = np.squeeze(prob_action)
 
             for j in range(heat_map.shape[1]):
-                chisq, p_val = chisquare(prob_action+1, f_exp=heat_map[:,j, i]+1)
+                #remove bins with 0 count for more accurate chi-squared value
+                prob_action_filtered = prob_action[~(heat_map[:,j,i] == 0)]
+                prob_actionstate_filtered = heat_map[~(heat_map[:,j,i] == 0), j, i]
+                chisq, p_val = chisquare(prob_action_filtered, f_exp=prob_actionstate_filtered)
                 p_vals[j, i] = p_val
 
             plt.figure()
