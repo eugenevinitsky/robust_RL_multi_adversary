@@ -166,7 +166,7 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
         # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
         # then we are double counting
         self.strengths = np.linspace(start=0, stop=self.adversary_strength,
-                                     num=(self.num_adversaries / self.num_adv_per_strength) + 1)[1:]
+                                     num=self.num_adversaries + 1)[1:]
         # repeat the bins so that we can index the adversaries easily
         self.strengths = np.repeat(self.strengths, self.num_adv_per_strength)
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)

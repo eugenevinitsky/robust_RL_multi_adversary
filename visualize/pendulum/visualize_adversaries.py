@@ -32,9 +32,9 @@ def dict_func(env, options_dict):
     for i in range(num_adversaries):
         adversary_str = 'adversary' + str(i)
         # each adversary grid is a map of agent action versus observation dimension
-        adversary_grid = np.zeros((grid_size - 1, grid_size - 1, env.observation_space.low.shape[0])).astype(int)
+        adversary_grid = np.zeros((grid_size - 1, grid_size - 1, env.high.shape[0])).astype(int)
         strength_grid = np.linspace(env.adv_action_space.low, env.adv_action_space.high, grid_size).T
-        obs_grid = np.linspace(env.observation_space.low, env.observation_space.high, grid_size).T
+        obs_grid = np.linspace(env.low, env.high, grid_size).T
         adversary_grid_dict[adversary_str] = {'grid': adversary_grid, 'action_bins': strength_grid,
                                               'obs_bins': obs_grid,
                                               'action_list': [],
@@ -70,7 +70,7 @@ def step_func(obs_dict, action_dict, logits_dict, results_dict, env):
                 # digitize will set the right edge of the box to the wrong value
                 if action_index == heat_map.shape[0]:
                     action_index -= 1
-                for obs_loop_index, obs_elem in enumerate(obs_dict['pendulum'] * env.obs_norm):
+                for obs_loop_index, obs_elem in enumerate(env._get_obs()):
                     obs_index = np.digitize(obs_elem, obs_bins[obs_loop_index, :]) - 1
                     if obs_index == heat_map.shape[1]:
                         obs_index -= 1
@@ -112,7 +112,7 @@ def on_result(results_dict, outdir):
         obs_bins = adv_dict['obs_bins']
         action_list = adv_dict['action_list']
 
-        plt.figure()
+        fig = plt.figure()
         sns.distplot(action_list)
         output_str = '{}/{}'.format(outdir, adversary + 'action_histogram.png')
         plt.savefig(output_str)
@@ -129,12 +129,14 @@ def on_result(results_dict, outdir):
             plt.xlabel(titles[i])
             output_str = '{}/{}'.format(outdir, adversary + 'action_heatmap_{}.png'.format(i))
             plt.savefig(output_str)
+        plt.close(fig)
 
     # Plot the kl difference between agents
-    plt.figure()
+    fig = plt.figure()
     sns.heatmap(results_dict['kl_grid'] / results_dict['total_steps'])
     output_str = '{}/{}'.format(outdir, 'kl_heatmap.png')
     plt.savefig(output_str)
+    plt.close(fig)
 
 
 def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, outdir):
@@ -153,8 +155,9 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
     # generate heatmap of adversary actions for all possible states
     adversary_grid_dict = {}
     mapping_cache = {}  # in case policy_agent_mapping is stochastic
-    if 'num_adversaries' in rllib_config['env_config'].keys():
-        for i in range(rllib_config['env_config']['num_adversaries']):
+    if 'num_adversaries' in rllib_config['env_config'].keys() and rllib_config['env_config']['num_concat_states'] == 1:
+        num_adversaries = rllib_config['env_config']['num_adversaries'] * rllib_config['env_config'].get('num_adv_per_strength', 1)
+        for i in range(num_adversaries):
             adversary_str = 'adversary' + str(i)
             # each adversary grid is a map of agent action versus observation dimension
             adversary_grid = np.zeros((grid_size, grid_size, env._get_obs().shape[0])).astype(int)
@@ -190,8 +193,6 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                         a_action = agent.compute_action(flat_action, prev_action=[0], prev_reward=0, policy_id=policy_id)
                     except Exception as e:
                         print(e)
-                        import ipdb;
-                        ipdb.set_trace()
                         a_action = agent.compute_action(flat_action, prev_action=[0], prev_reward=0, policy_id=policy_id)
 
                     # handle the tuple case
@@ -211,6 +212,9 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                             # digitize will set the right edge of the box to the wrong value
                             if action_index == heat_map.shape[0]:
                                 action_index -= 1
+                            # remove the action since we don't want to plot it
+                            if rllib_config['env_config']['concat_actions']:
+                                obs = obs[:-1]
                             for obs_loop_index, obs_elem in enumerate(obs):
                                 obs_index = np.digitize(obs_elem, obs_bins[obs_loop_index, :]) - 1
                                 if obs_index == heat_map.shape[1]:
@@ -225,7 +229,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
             obs_bins = adv_dict['obs_bins']
             action_list = adv_dict['action_list']
 
-            plt.figure()
+            fig = plt.figure()
             sns.distplot(action_list)
             output_str = '{}/{}'.format(outdir, adversary + 'action_histogram_all.png')
             plt.savefig(output_str)
@@ -242,6 +246,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                 plt.xlabel(titles[i])
                 output_str = '{}/{}'.format(outdir, adversary + 'action_heatmap_{}_all.png'.format(i))
                 plt.savefig(output_str)
+            plt.close(fig)
 
         # Compute state dependence, i.e. whether p(action|state) != p(action)
         for adversary, adv_dict in adversary_grid_dict.items():
@@ -260,12 +265,13 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                     chisq, p_val = chisquare(prob_action_filtered, f_exp=prob_actionstate_filtered)
                     p_vals[j, i] = p_val
 
-                plt.figure()
+                fig = plt.figure()
                 plt.plot(obs_bins[i], p_vals[:, i])
                 plt.ylabel('P-val')
                 plt.xlabel(titles[i])
                 output_str = '{}/{}'.format(outdir, adversary + 'p_vals_heatmap_{}.png'.format(i))
                 plt.savefig(output_str)
+                plt.close(fig)
             print(p_vals)
 
 

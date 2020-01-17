@@ -341,8 +341,6 @@ class KLDiffMixin(object):
 
         self.kl_diff_coeff_val = min(self.kl_diff_coeff_val, 1e5)
         self.kl_diff_coeff.load(self.kl_diff_coeff_val, session=self.get_session())
-        print(self.kl_diff_coeff, "KL diff coeff")
-        print(self.kl_diff_coeff_val, "KL diff coeff val")
         return self.kl_diff_coeff_val
 
 

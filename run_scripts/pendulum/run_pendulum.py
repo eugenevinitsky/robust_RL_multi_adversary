@@ -123,7 +123,8 @@ def setup_exps(args):
     config['lambda'] = 0.1
 
     if args.grid_search:
-        config['lr'] = tune.grid_search([5e-4, 5e-5])
+        config['lr'] = tune.grid_search([5e-3, 5e-4, 5e-5])
+        config['lambda'] = tune.grid_search([0.1, 0.5])
     elif args.big_grid_search:
         config['lr'] = tune.grid_search([1e-3, 5e-3, 5e-4])
         config['lambda'] = tune.grid_search([0.1, 0.5, 0.9])
@@ -177,7 +178,12 @@ def setup_exps(args):
     if args.use_lstm:
         config['model']['fcnet_hiddens'] = [64, 64]
     else:
-        config['model']['fcnet_hiddens'] = [256, 256, 256]
+        if args.grid_search:
+            config['model']['fcnet_hiddens'] = tune.grid_search([[64, 64], [256, 256, 256]])
+            config['model']['fcnet_activation'] = tune.grid_search(['tanh', 'relu'])
+
+        else:
+            config['model']['fcnet_hiddens'] = [64, 64]
     if args.use_lstm:
         # ModelCatalog.register_custom_model("rnn", LSTM)
         # config['model']['custom_model'] = "rnn"
@@ -191,17 +197,6 @@ def setup_exps(args):
         elif args.big_grid_search:
             config['model']['max_seq_len'] = 20
 
-    if args.grid_search:
-        if args.horizon > 200:
-            config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6])
-        else:
-            config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
-    elif args.big_grid_search and args.use_lstm:
-        config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6, 1e-7])
-    elif args.big_grid_search and not args.use_lstm:
-        config['vf_loss_coeff'] = tune.grid_search([1e0, 1e-1, 1e-2])
-    else:
-        config['vf_loss_coeff'] = 1e0
 
     config['env'] = 'MAPendulumEnv'
     register_env('MAPendulumEnv', pendulum_env_creator)
@@ -272,7 +267,7 @@ def on_episode_step(info):
 def on_train_result(info):
     """Store the mean score of the episode without the auxiliary rewards"""
     result = info["result"]
-    if hasattr(result, 'policy_reward_mean'):
+    if 'policy_reward_mean' in result.keys():
         pendulum_reward = result['policy_reward_mean']['pendulum']
         trainer = info["trainer"]
 
