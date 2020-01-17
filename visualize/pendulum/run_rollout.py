@@ -6,13 +6,13 @@ from ray.rllib.env import MultiAgentEnv
 from ray.rllib.policy.sample_batch import DEFAULT_POLICY_ID
 from ray.rllib.env.base_env import _DUMMY_AGENT_ID
 from ray.rllib.evaluation.episode import _flatten_action
-
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 try:
     from ray.rllib.agents.agent import get_agent_class
 except ImportError:
     from ray.rllib.agents.registry import get_agent_class
+import tensorflow as tf
 
 from utils.pendulum_env_creator import pendulum_env_creator
 
@@ -78,7 +78,7 @@ def instantiate_rollout(rllib_config, checkpoint):
 
 
 def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init, num_rollouts,
-                pre_step_func=None, step_func=None, done_func=None, options_dict=None, results_dict=None):
+                pre_step_func=None, step_func=None, done_func=None, results_dict=None):
     """
     :param env:
     :param agent:
@@ -94,19 +94,16 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
         Dict mapping an agent id to its previous action (needed if using an LSTM)
     :param num_rollouts: (int)
         How many times to run the rollouts
-    :param dict_func: (func: env -> dict)
-        Function that initializes and returns a dict containing all the initialized values we will need in step_func
     :param pre_step_func: (func: obs_dict, env -> obs_dict)
         Function that performs all needed manipulations on obs)duct to make the rollout work appropriately
     :param step_func: (func: (obs_dict, action_dict, results_dict, env) -> None )
         Function that takes a given rollout step and stores the important information
     :param done_func: (func: (env, results_dict) -> None )
         Function that stores info from when the environment ends
-    :param options_dict: (dict)
-        Any additional info needed to configure the runs
     :param results_dict: (dict)
     :return:
     """
+
 
     rewards = []
     total_steps = 0
@@ -129,7 +126,7 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
             total_steps += 1
             multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
             if pre_step_func:
-                multi_obs = pre_step_func(multi_obs, env)
+                multi_obs = pre_step_func(env, multi_obs)
             action_dict = {}
             logits_dict = {}
             for agent_id, a_obs in multi_obs.items():
@@ -153,14 +150,26 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
                         else:
                             flat_obs = _flatten_action(a_obs)[np.newaxis, :]
 
-                        logits, _ = policy.model.from_batch({"obs": flat_obs,
-                                                             "prev_action": prev_action})
+                        executing_eagerly = False
+                        if hasattr(tf, 'executing_eagerly'):
+                            executing_eagerly = tf.executing_eagerly()
+                        if executing_eagerly:
+                            logits, _ = policy.model.from_batch({"obs": flat_obs,
+                                                                 "prev_action": prev_action})
+                        else:
+                            logits = []
                     else:
                         if isinstance(a_obs, dict):
                             flat_obs = np.concatenate([val for val in a_obs.values()])[np.newaxis, :]
                         else:
                             flat_obs = _flatten_action(a_obs)[np.newaxis, :]
-                        logits, _ = policy.model.from_batch({"obs": flat_obs})
+                        executing_eagerly = False
+                        if hasattr(tf, 'executing_eagerly'):
+                            executing_eagerly = tf.executing_eagerly()
+                        if executing_eagerly:
+                            logits, _ = policy.model.from_batch({"obs": flat_obs})
+                        else:
+                            logits = []
                         prev_action = _flatten_action(prev_actions[agent_id])
                         a_action = agent.compute_action(
                             a_obs,
@@ -174,6 +183,8 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
                     action_dict[agent_id] = a_action
                     prev_action = _flatten_action(a_action)  # tuple actions
                     prev_actions[agent_id] = prev_action
+                    if len(logits) > 0:
+                        logits_dict[agent_id] = logits
             action = action_dict
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]

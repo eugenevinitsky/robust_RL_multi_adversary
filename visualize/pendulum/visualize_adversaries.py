@@ -65,7 +65,7 @@ def step_func(obs_dict, action_dict, logits_dict, results_dict, env):
 
             heat_map = results_dict[agent_id]['grid']
             for action_loop_index, action in enumerate(action_dict[agent_id]):
-                results_dict[agent_id]['action_list'].append(action[0])
+                results_dict[agent_id]['action_list'].append(action)
                 action_index = np.digitize(action, action_bins[action_loop_index, :]) - 1
                 # digitize will set the right edge of the box to the wrong value
                 if action_index == heat_map.shape[0]:
@@ -79,18 +79,19 @@ def step_func(obs_dict, action_dict, logits_dict, results_dict, env):
 
             # Now iterate through the agents and compute the kl_diff
             curr_id = int(agent_id.split('adversary')[1])
-            your_logits = logits_dict[agent_id]
-            mean, log_std = np.split(your_logits.numpy()[0], 2)
-            for i in range(env.num_adversaries):
-                # KL diff of something with itself is zero
-                if i == curr_id:
-                    pass
-                # otherwise just compute the kl difference between the agents
-                else:
-                    other_logits = logits_dict['adversary{}'.format(i)]
-                    other_mean, other_log_std = np.split(other_logits.numpy()[0], 2)
-                    kl_diff = compute_kl_diff(mean, log_std, other_mean, other_log_std)
-                    kl_grid[curr_id, i] += kl_diff
+            if len(logits_dict) > 0:
+                your_logits = logits_dict[agent_id]
+                mean, log_std = np.split(your_logits.numpy()[0], 2)
+                for i in range(env.num_adversaries):
+                    # KL diff of something with itself is zero
+                    if i == curr_id:
+                        pass
+                    # otherwise just compute the kl difference between the agents
+                    else:
+                        other_logits = logits_dict['adversary{}'.format(i)]
+                        other_mean, other_log_std = np.split(other_logits.numpy()[0], 2)
+                        kl_diff = compute_kl_diff(mean, log_std, other_mean, other_log_std)
+                        kl_grid[curr_id, i] += kl_diff
 
 
 def on_result(results_dict, outdir):
@@ -104,7 +105,8 @@ def on_result(results_dict, outdir):
                 raise
 
     # Plot the heatmap of the actions
-    for adversary, adv_dict in results_dict.items():
+    adversary_dict = {key: val for key, val in results_dict.items() if 'adversary' in key}
+    for adversary, adv_dict in adversary_dict.items():
         heat_map = adv_dict['grid']
         action_bins = adv_dict['action_bins']
         obs_bins = adv_dict['obs_bins']
@@ -140,10 +142,11 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
         instantiate_rollout(rllib_config, checkpoint)
 
     options_dict = {'grid_size': grid_size}
+    results_dict = dict_func(env, options_dict=options_dict)
 
     results_dict = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                state_init, action_init, num_rollouts,
-                               dict_func, pre_step_func, step_func, None, options_dict)
+                               pre_step_func, step_func, None, results_dict)
     on_result(results_dict, outdir)
 
     # TODO(@evinitsky) clean this up doood. Its not in the same abstraction as the other code
@@ -214,6 +217,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                                     obs_index -= 1
 
                                 heat_map[action_index, obs_index, obs_loop_index] += 1
+
         print(heat_map[:, :, 0])
         for adversary, adv_dict in adversary_grid_dict.items():
             heat_map = adv_dict['grid']
