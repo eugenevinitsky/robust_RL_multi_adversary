@@ -77,8 +77,6 @@ def setup_exps(args):
     parser.add_argument('--guess_next_state', action='store_true', default=False,
                         help='If true, a prediction head is added that the agent uses to guess '
                              'what the next state is going to be')
-    parser.add_argument('--num_concat_states', type=int, default=1,
-                        help='Set the number of states that we will concatenate together')
     parser.add_argument('--adversary_type', type=str, default='cos',
                         help='Set which type of adversary is active. Options are --sin and --state_func'
                              'and --rand_state_func'
@@ -114,11 +112,11 @@ def setup_exps(args):
     alg_run = 'PPO'
 
     # Universal hyperparams
-    config['gamma'] = 0.995
     if args.custom_ppo:
         config = CUSTOM_DEFAULT_CONFIG
     else:
         config = DEFAULT_CONFIG
+    config['gamma'] = 0.995
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
     config['vf_clip_param'] = 100.0
@@ -302,9 +300,11 @@ def on_episode_end(info):
             for key, val in state_err_dict.items():
                 episode.custom_metrics[key] = val
 
-        if hasattr(env, 'select_new_adversary'):
+        if hasattr(env, 'select_new_adversary') and isinstance(info["env"], list):
             for env in info["env"]:
                 env.select_new_adversary()
+        elif hasattr(env, 'select_new_adversary'):
+            env.select_new_adversary()
 
         if hasattr(env, 'adversary_range'):
             episode.custom_metrics["num_active_advs"] = env.adversary_range
