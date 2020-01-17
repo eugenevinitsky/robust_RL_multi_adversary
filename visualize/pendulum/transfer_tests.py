@@ -2,6 +2,7 @@ import argparse
 import configparser
 from copy import deepcopy
 from datetime import datetime
+from gym import spaces
 import os
 import pytz
 
@@ -16,13 +17,11 @@ import errno
 
 def make_set_friction(friction_coef):
     def set_friction(env):
-        # nonlocal friction_coef
         env.model.geom_friction[:] = (env.model.geom_friction * friction_coef)[:]
     return set_friction
 
 def make_set_mass(mass_coef, mass_body='pole'):
     def set_mass(env):
-        # nonlocal friction_coef
         env.model.body_mass[2] = (env.model.body_mass[2] * mass_coef)
     return set_mass
     
@@ -38,19 +37,21 @@ run_list = [
 # test name, is_env_config, config_value, params_name, params_value
 lerrel_run_list = [
     # ['base', []],
-    ['friction04', make_set_friction(0.4)],
-    ['friction06', make_set_friction(0.6)],
-    ['friction08', make_set_friction(0.8)],
-    ['friction12', make_set_friction(1.2)],
-    ['friction14', make_set_friction(1.4)],
-    ['mass05', make_set_mass(0.5)],
-    ['mass075', make_set_mass(0.75)],
-    ['mass10', make_set_mass(1.0)],
-    ['mass125', make_set_mass(1.25)],
-    ['mass15', make_set_mass(1.5)],
+    # ['friction04', make_set_friction(0.4)],
+    # ['friction06', make_set_friction(0.6)],
+    # ['friction08', make_set_friction(0.8)],
+    # ['friction12', make_set_friction(1.2)],
+    # ['friction14', make_set_friction(1.4)],
+    # ['mass05', make_set_mass(0.5)],
+    # ['mass075', make_set_mass(0.75)],
+    # ['mass10', make_set_mass(1.0)],
+    # ['mass125', make_set_mass(1.25)],
+    # ['mass15', make_set_mass(1.5)],
     # ['gaussian_state_noise', ['add_gaussian_state_noise', True]]
 ]
 
+for x in np.linspace(0.5, 3.0, 30):
+    lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
 
 @ray.remote
 def run_test(test_name, outdir, output_file_name, num_rollouts,
@@ -97,6 +98,8 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     )
 
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = instantiate_rollout(rllib_config, checkpoint)
+    high = np.array([1.0, 90.0, env.max_cart_vel, env.max_pole_vel])
+    env.observation_space = spaces.Box(low=-1 * high, high=high, dtype=env.observation_space.dtype)
     if callable(env_modifier):
             env_modifier(env)
     elif len(env_modifier) > 0:
@@ -109,6 +112,7 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
         np.savetxt(file, rewards, delimiter=', ')
 
     print('The average reward for task {} is {}'.format(test_name, np.mean(rewards)))
+    return np.mean(rewards), np.std(rewards)
 
 
 def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir):
@@ -125,7 +129,12 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                  outdir=outdir, output_file_name=output_file_name,
                  num_rollouts=num_rollouts,
                  rllib_config=rllib_config, checkpoint=checkpoint, env_modifier=list[1]) for list in lerrel_run_list]
-    ray.get(temp_output)
+    temp_output = ray.get(temp_output)
+
+    with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "mean_sweep"),
+              'wb') as file:
+        np.save(file, np.array(temp_output))
+    
 
 
 if __name__ == '__main__':
