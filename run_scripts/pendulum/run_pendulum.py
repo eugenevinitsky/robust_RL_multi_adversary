@@ -118,7 +118,7 @@ def setup_exps(args):
         config['num_adversaries'] = args.num_adv
         config['kl_diff_weight'] = args.kl_diff_weight
         config['kl_diff_target'] = args.kl_diff_target
-        config['kl_diff_clip'] = 5.0
+        config['kl_diff_clip'] = args.kl_diff_clip
 
     # Options used in every env
     config['env_config']['horizon'] = args.horizon
@@ -147,7 +147,11 @@ def setup_exps(args):
     if args.use_lstm:
         config['model']['fcnet_hiddens'] = [64, 64]
     else:
-        config['model']['fcnet_hiddens'] = [256, 256, 256]
+        if args.grid_search:
+            config['model']['fcnet_activation'] = tune.grid_search(['tanh', 'relu'])
+            config['model']['fcnet_hiddens'] = tune.grid_search([[256, 256, 256], [64, 64]])
+        else:
+            config['model']['fcnet_hiddens'] = [256, 256, 256]
     if args.use_lstm:
         # ModelCatalog.register_custom_model("rnn", LSTM)
         # config['model']['custom_model'] = "rnn"
