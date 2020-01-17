@@ -131,12 +131,12 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
             if pre_step_func:
                 multi_obs = pre_step_func(multi_obs, env)
             action_dict = {}
-            # TODO Put this in once LSTM issue is resolved
             logits_dict = {}
             for agent_id, a_obs in multi_obs.items():
                 if a_obs is not None:
                     policy_id = mapping_cache.setdefault(
                         agent_id, policy_agent_mapping(agent_id))
+                    policy = agent.get_policy(policy_id)
                     p_use_lstm = use_lstm[policy_id]
                     if p_use_lstm:
                         prev_action = _flatten_action(prev_actions[agent_id])
@@ -148,19 +148,19 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
                             policy_id=policy_id)
                         agent_states[agent_id] = p_state
 
-                        # if isinstance(a_obs, dict):
-                        #     flat_obs = np.concatenate([val for val in a_obs.values()])[np.newaxis, :]
-                        # else:
-                        #     flat_obs = _flatten_action(a_obs)[np.newaxis, :]
+                        if isinstance(a_obs, dict):
+                            flat_obs = np.concatenate([val for val in a_obs.values()])[np.newaxis, :]
+                        else:
+                            flat_obs = _flatten_action(a_obs)[np.newaxis, :]
 
-                        # logits, _ = policy.model.from_batch({"obs": flat_obs,
-                        #                                      "prev_action": prev_action})
+                        logits, _ = policy.model.from_batch({"obs": flat_obs,
+                                                             "prev_action": prev_action})
                     else:
-                        # if isinstance(a_obs, dict):
-                        #     flat_obs = np.concatenate([val for val in a_obs.values()])[np.newaxis, :]
-                        # else:
-                        #     flat_obs = _flatten_action(a_obs)[np.newaxis, :]
-                        # logits, _ = policy.model.from_batch({"obs": flat_obs})
+                        if isinstance(a_obs, dict):
+                            flat_obs = np.concatenate([val for val in a_obs.values()])[np.newaxis, :]
+                        else:
+                            flat_obs = _flatten_action(a_obs)[np.newaxis, :]
+                        logits, _ = policy.model.from_batch({"obs": flat_obs})
                         prev_action = _flatten_action(prev_actions[agent_id])
                         a_action = agent.compute_action(
                             a_obs,
@@ -205,6 +205,7 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
                     reward_total += env.true_rew
                 else:
                     reward_total += reward
+
             obs = next_obs
         print("Episode reward", reward_total)
         if done_func:

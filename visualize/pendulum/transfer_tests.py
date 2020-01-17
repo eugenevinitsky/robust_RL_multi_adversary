@@ -86,7 +86,6 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     # test name, is_env_config, config_value, params_name, params_value
     run_list = [
         ['base', []],
-        ['adversary', [['has_adversary', True]]],
         ['friction_0p025', [['friction', True], ['friction_coef', 0.025]]],
         ['friction_0p05', [['friction', True], ['friction_coef', 0.05]]],
         ['friction_0p1', [['friction', True], ['friction_coef', 0.1]]],
@@ -100,6 +99,9 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         ['gaussian_action_noise', [['add_gaussian_action_noise', True]]],
         ['gaussian_state_noise', [['add_gaussian_state_noise', True]]]
     ]
+    if 'model_based' in rllib_config['env_config'].keys():
+        run_list += ['adversary', [['has_adversary', True]]]
+
 
     temp_output = [run_test.remote(test_name=list[0],
                  outdir=outdir, output_file_name=output_file_name,
@@ -120,7 +122,6 @@ if __name__ == '__main__':
     rllib_config, checkpoint = get_config(args)
 
     ray.init(num_cpus=args.num_cpus)
-
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
     run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name, args.output_dir)

@@ -1,7 +1,6 @@
 import errno
 from datetime import datetime
 from functools import reduce
-import random
 import os
 import subprocess
 import sys
@@ -12,12 +11,11 @@ import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 from ray.rllib.agents.ppo.ppo import PPOTrainer, DEFAULT_CONFIG
 
-from ray.rllib.models import ModelCatalog
 from ray import tune
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
-# from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy, DEFAULT_CONFIG
+from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy, DEFAULT_CONFIG as CUSTOM_DEFAULT_CONFIG
 
 from visualize.pendulum.transfer_tests import run_transfer_tests
 from visualize.pendulum.model_adversary_grid import visualize_model_perf
@@ -26,28 +24,30 @@ from utils.parsers import init_parser, ray_parser, ma_env_parser
 from utils.pendulum_env_creator import pendulum_env_creator
 from utils.rllib_utils import get_config_from_path
 
-from models.recurrent_tf_model_v2 import LSTM
-
 
 def setup_ma_config(config):
     env = pendulum_env_creator(config['env_config'])
 
     num_adversaries = config['env_config']['num_adversaries']
 
-    if num_adversaries > 0 and not config['env_config']['model_based']:
-        policies_to_train = ['pendulum']
-        policy_graphs = {'pendulum': (PPOTFPolicy, env.observation_space, env.action_space, {})}
-        adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-        adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False, 'custom_model': {}}}
-        policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
-                                                env.adv_action_space, adversary_config) for i in range(num_adversaries)})
-    # TODO(@evinitsky) put this back
-    # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
-    #                                         env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    policies_to_train = ['pendulum']
 
-        policies_to_train += adv_policies
+    if num_adversaries == 0:
+        return
+    adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
+    adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False, 'custom_model': {}}}
+    policy_graphs = {'pendulum': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+    if num_adversaries > 0 and not config['env_config']['model_based']:
+        if config['env_config']['kl_diff_training']:
+            policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
+                                                    env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+        else:
+            policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
+                                                    env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     else:
         return
+
+    policies_to_train += adv_policies
 
     def policy_mapping_fn(agent_id):
         return agent_id
@@ -91,17 +91,39 @@ def setup_exps(args):
     parser.add_argument('--big_grid_search', action='store_true', default=False,
                         help='If true, do a really big grid search')
     parser.add_argument('--num_sgd_iters', type=int, default=10, help='Number of sgd iterations per training step')
+    parser.add_argument('--num_adv_per_strength', type=int, default=1,
+                        help='This value sets how many adversaries exist per strength level. The adversary strengths'
+                             'are set by evenly gridding from 0 to --adv_strength. At each of these levels,'
+                             'we will have `num_adv_per_strength` adversaries')
+    parser.add_argument('--adv_incr_freq', type=int, default=10,
+                        help='How many iterations we should stably maintain a score of `turn_on_score` before '
+                             'increasing the number of adversaries')
+    parser.add_argument('--curriculum', action='store_true', default=False,
+                        help='If true, we gradually increase the number of adversaries by `num_adv_per_strength`'
+                             'for every `adv_incr_freq` that we maintain a score above `goal_score`')
+    parser.add_argument('--goal_score', type=float, default=-200,
+                        help='If curriculum is on, we increase the number of adversaries by `num_adv_per_strength`'
+                             'for every `adv_incr_freq` that we maintain a score above this value')
+    parser.add_argument('--num_concat_states', type=int, default=1,
+                        help='This number sets how many previous states we concatenate into the observations')
+    parser.add_argument('--concat_actions', action='store_true', default=False,
+                        help='If true we concatenate prior actions into the state. This helps a lot for prediction.')
+
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
 
     # Universal hyperparams
-    config = DEFAULT_CONFIG
     config['gamma'] = 0.995
+    if args.custom_ppo:
+        config = CUSTOM_DEFAULT_CONFIG
+    else:
+        config = DEFAULT_CONFIG
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
     config['vf_clip_param'] = 100.0
     config['lambda'] = 0.1
+
     if args.grid_search:
         config['lr'] = tune.grid_search([5e-4, 5e-5])
     elif args.big_grid_search:
@@ -115,10 +137,13 @@ def setup_exps(args):
     config['num_workers'] = args.num_cpus
 
     if args.custom_ppo:
-        config['num_adversaries'] = args.num_adv
+        config['num_adversaries'] = args.num_adv * args.num_adv_per_strength
         config['kl_diff_weight'] = args.kl_diff_weight
         config['kl_diff_target'] = args.kl_diff_target
         config['kl_diff_clip'] = 5.0
+        config['env_config']['kl_diff_training'] = True
+    else:
+        config['env_config']['kl_diff_training'] = False
 
     # Options used in every env
     config['env_config']['horizon'] = args.horizon
@@ -130,7 +155,7 @@ def setup_exps(args):
     config['env_config']['guess_next_state'] = args.guess_next_state
     config['env_config']['num_concat_states'] = args.num_concat_states
     config['env_config']['adversary_type'] = args.adversary_type
-    # These are some very specific flags
+    # These are some very specific flags for the model based env
     if args.adversary_type == 'state_func':
         config['env_config']['weights'] = [np.random.uniform(low=-1, high=1, size=3)
                              for _ in range(args.num_adv)]
@@ -141,6 +166,13 @@ def setup_exps(args):
         for scale_factor in scale_factors:
             state_weights.append(base_vector * scale_factor)
         config['env_config']['weights'] = state_weights
+
+    # These next options are for the multi-agent env
+    config['env_config']['num_adv_per_strength'] = args.num_adv_per_strength
+    config['env_config']['adv_incr_freq'] = args.adv_incr_freq
+    config['env_config']['curriculum'] = args.curriculum
+    config['env_config']['goal_score'] = args.goal_score
+    config['env_config']['concat_actions'] = args.concat_actions
 
     config['env_config']['run'] = alg_run
 
@@ -179,7 +211,8 @@ def setup_exps(args):
     setup_ma_config(config)
 
     # add the callbacks
-    config["callbacks"] = {"on_train_result": on_train_result,
+    if config['env_config']['num_adversaries'] > 0:
+        config["callbacks"] = {"on_train_result": on_train_result,
                            "on_episode_end": on_episode_end}
 
     if args.model_based:
@@ -189,15 +222,23 @@ def setup_exps(args):
     # config["eager_tracing"] = True
     # config["eager"] = True
     # config["eager_tracing"] = True
+    # The custom PPO code flips out here due to a bug in RLlib with eager tracing.
+    # Or, at least I think that's what is happening.
+    if not args.custom_ppo:
+        config["eager"] = True
+        config["eager_tracing"] = True
 
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
         return "{}_{}".format(trial.trainable_name, trial.experiment_tag)
 
+    if args.custom_ppo:
+        trainer = KLPPOTrainer
+    else:
+        trainer = PPOTrainer
     exp_dict = {
         'name': args.exp_title,
-        # 'run_or_experiment': KLPPOTrainer,
-        'run_or_experiment': 'PPO',
+        'run_or_experiment': trainer,
         'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
@@ -233,18 +274,17 @@ def on_episode_step(info):
 def on_train_result(info):
     """Store the mean score of the episode without the auxiliary rewards"""
     result = info["result"]
-    # pendulum_reward = result['policy_reward_mean']['pendulum']
-    trainer = info["trainer"]
+    if hasattr(result, 'policy_reward_mean'):
+        pendulum_reward = result['policy_reward_mean']['pendulum']
+        trainer = info["trainer"]
 
-    # TODO(should we do this every episode or every training iteration)?
-    # trainer.workers.foreach_worker(
-    #     lambda ev: ev.foreach_env(
-    #         lambda env: env.select_new_adversary()))
+        trainer.workers.foreach_worker(
+            lambda ev: ev.foreach_env(
+                lambda env: env.update_curriculum(pendulum_reward)))
 
 
 def on_episode_end(info):
     """Select the currently active adversary"""
-
     # store info about how many adversaries there are
     if hasattr(info["env"], 'envs'):
 
@@ -265,6 +305,10 @@ def on_episode_end(info):
         if hasattr(env, 'select_new_adversary'):
             for env in info["env"]:
                 env.select_new_adversary()
+
+        if hasattr(env, 'adversary_range'):
+            episode.custom_metrics["num_active_advs"] = env.adversary_range
+
     elif hasattr(info["env"], 'vector_env'):
         envs = info["env"].vector_env.envs
         if hasattr(envs[0], 'num_correct_guesses'):
@@ -311,7 +355,7 @@ if __name__ == "__main__":
     elif args.local_mode:
         ray.init(local_mode=True)
     else:
-        ray.init()
+        ray.init(local_mode=False)
 
     run_tune(**exp_dict, queue_trials=False)
 
@@ -330,14 +374,14 @@ if __name__ == "__main__":
                 folder = os.path.dirname(dirpath)
                 tune_name = folder.split("/")[-1]
                 outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
+                script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/pendulum/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
                 run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
                 if args.num_adv > 0:
 
                     if not args.model_based:
-                        visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
+                        visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
 
                     if args.model_based:
                         visualize_model_perf(config, checkpoint_path, 10,  25, output_path)

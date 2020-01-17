@@ -141,8 +141,52 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
         super(MAPendulumEnv, self).__init__(config)
         self.num_adversaries = config["num_adversaries"]
         self.adversary_strength = config["adversary_strength"]
-        self.model_based = config["model_based"]
+        # If this is true we are doing a custom training run that requires all of the adversaries to get
+        # an observation at every timestep
+        self.kl_diff_training = config["kl_diff_training"]
+        # This sets how many adversaries exist per strength level
+        self.num_adv_per_strength = config["num_adv_per_strength"]
+        # How frequently we check whether to increase the adversary range
+        self.adv_incr_freq = config["adv_incr_freq"]
+        # This checks whether we should have a curriculum at all
+        self.curriculum = config["curriculum"]
+        # The score we use for checking if it is time to increase the number of adversaries
+        self.goal_score = config["goal_score"]
+        # This is how many previous observations we concatenate to get the current observation
+        self.num_concat_states = config["num_concat_states"]
+        # This is whether we concatenate the agent action into the observation
+        self.concat_actions = config["concat_actions"]
+        # used to track the previously observed states
+        self.observed_states = np.zeros(self.observation_space.shape[0])
+
+        self.mean_rew = 0.0
+        # index we use to track how many iterations we have maintained above the goal score
+        self.num_iters_above_goal_score = 0
+
+        # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
+        # then we are double counting
+        self.strengths = np.linspace(start=0, stop=self.adversary_strength,
+                                     num=(self.num_adversaries / self.num_adv_per_strength) + 1)[1:]
+        # repeat the bins so that we can index the adversaries easily
+        self.strengths = np.repeat(self.strengths, self.num_adv_per_strength)
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
+        # This tracks how many adversaries are turned on
+        if self.curriculum:
+            self.adversary_range = 0
+        else:
+            self.adversary_range = self.num_adversaries
+
+    @property
+    def observation_space(self):
+        obs_space = super().observation_space
+        if self.concat_actions:
+            action_space = super().action_space
+            low = np.tile(np.concatenate((obs_space.low, action_space.low)), self.num_concat_states)
+            high = np.tile(np.concatenate((obs_space.high, action_space.high)), self.num_concat_states)
+        else:
+            low = np.tile(obs_space.low, self.num_concat_states)
+            high = np.tile(obs_space.high, self.num_concat_states)
+        return Box(low=low, high=high, dtype=np.float32)
 
     @property
     def adv_action_space(self):
@@ -150,28 +194,93 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
 
     @property
     def adv_observation_space(self):
-        return self.observation_space
+        if self.kl_diff_training:
+            # TODO(ydu, evinitsky) should we let the adversaries see the history too?
+            # for now I'm letting them see it, but maybe that makes them too powerful
+            dict_space = spaces.Dict({'obs': self.observation_space,
+                                      'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
+            return dict_space
+        else:
+            return self.observation_space
+
+    def update_curriculum(self, mean_rew):
+        self.mean_rew = mean_rew
+        if self.curriculum:
+            if self.mean_rew > self.goal_score:
+                self.num_iters_above_goal_score += 1
+            else:
+                self.num_iters_above_goal_score = 0
+            if self.num_iters_above_goal_score >= self.adv_incr_freq:
+                self.num_iters_above_goal_score = 0
+                self.adversary_range += self.num_adv_per_strength
+                self.adversary_range = min(self.adversary_range, self.num_adversaries)
 
     def select_new_adversary(self):
-        self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
+        if self.adversary_range > 0:
+            self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
+
+    def update_observed_obs(self, new_obs):
+        """Add in the new observations and overwrite the stale ones"""
+        original_shape = int(self.observation_space.shape[0] / self.num_concat_states)
+        self.observed_states = np.roll(self.observed_states, shift=original_shape, axis=-1)
+        self.observed_states[0: original_shape] = new_obs
+        return self.observed_states
 
     def step(self, actions):
         pendulum_action = actions['pendulum']
         adv_action = 0.0
         if 'adversary{}'.format(self.curr_adversary) in actions.keys():
             adv_action = actions['adversary{}'.format(self.curr_adversary)]
-            pendulum_action += adv_action * self.adversary_strength
+            pendulum_action += adv_action * self.strengths[self.curr_adversary]
             pendulum_action = np.clip(pendulum_action, a_min=self.action_space.low, a_max=self.action_space.high)
         obs, reward, done, info = super().step(pendulum_action)
+
+        if self.concat_actions:
+            self.update_observed_obs(np.concatenate((obs, pendulum_action)))
+        else:
+            self.update_observed_obs(obs)
+
         info = {'pendulum': {'pendulum_reward': reward}}
-        obs_dict = {'pendulum': obs, 'adversary{}'.format(self.curr_adversary): obs}
-        reward_dict = {'pendulum': reward, 'adversary{}'.format(self.curr_adversary): -reward}
+
+        obs_dict = {'pendulum': self.observed_states}
+        reward_dict = {'pendulum': reward}
+
+        if self.kl_diff_training:
+            for i in range(self.num_adversaries):
+                is_active = 1 if self.curr_adversary == i else 0
+                obs_dict.update({
+                    'adversary{}'.format(i): {'obs': self.observed_states, 'is_active': np.array([is_active])}
+                })
+
+                reward_dict.update({'adversary{}'.format(i): -reward})
+        else:
+            if self.adversary_range > 0:
+                obs_dict.update({'adversary{}'.format(self.curr_adversary): self.observed_states})
+                reward_dict.update({'adversary{}'.format(self.curr_adversary): -reward})
+
         done_dict = {'__all__': done}
         return obs_dict, reward_dict, done_dict, info
 
     def reset(self):
         obs = super().reset()
-        return {'pendulum': obs, 'adversary{}'.format(self.curr_adversary): obs}
+        if self.concat_actions:
+            self.update_observed_obs(np.concatenate((obs, [0.0])))
+        else:
+            self.update_observed_obs(obs)
+
+        curr_obs = {'pendulum': self.observed_states}
+        if self.kl_diff_training:
+            for i in range(self.num_adversaries):
+                is_active = 1 if self.curr_adversary == i else 0
+                curr_obs.update({'adversary{}'.format(i):
+                                     {'obs': self.observed_states,
+                                      'is_active': np.array([is_active])
+                                      }})
+        else:
+            if self.adversary_range > 0:
+                curr_obs.update({'adversary{}'.format(self.curr_adversary): self.observed_states})
+
+        return curr_obs
 
 
 class ModelBasedPendulumEnv(PendulumEnv):

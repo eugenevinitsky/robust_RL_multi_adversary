@@ -18,12 +18,11 @@ def ray_parser(parser):
     parser.add_argument('--checkpoint_freq', type=int, default=50)
     parser.add_argument('--num_samples', type=int, default=1)
     parser.add_argument('--grid_search', action='store_true', help='If true, grid search hyperparams')
-    parser.add_argument('--local_mode', action='store_true', help='If true, Ray is in local mode')
-
-    # TODO: Fix this visualization code
     parser.add_argument('--run_transfer_tests', action='store_true', default=False,
                         help='If true run the transfer tests on the results and upload them to AWS')
     parser.add_argument('--render', type=str, default=False)
+    parser.add_argument('--local_mode', action='store_true', default=False,
+                        help='If true this runs on 1 CPU and is easier to debug with')
 
     return parser
 
