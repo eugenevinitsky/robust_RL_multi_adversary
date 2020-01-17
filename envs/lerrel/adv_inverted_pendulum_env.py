@@ -21,8 +21,6 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
         bnames = self.model.body_names
         self._adv_bindex = bnames.index(self._adv_f_bname) #Index of the body on which the adversary force will be applied
 
-        high = np.array([1.0, 90.0, self.max_cart_vel, self.max_pole_vel])
-        self.observation_space = spaces.Box(low=-1 * high, high=high, dtype=self.observation_space.dtype)
         # TODO(kp): find a better obs norm
         self.obs_norm = 1.0
 
