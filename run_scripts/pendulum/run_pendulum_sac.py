@@ -65,7 +65,6 @@ def setup_exps(args):
     parser = init_parser()
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
-    parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--use_lstm', action='store_true', default=False, help='If true, the custom LSTM is turned on')
     parser.add_argument('--num_adv', type=int, default=5, help='Number of active adversaries in the env')
     parser.add_argument('--adv_strength', type=float, default=0.1, help='Strength of active adversaries in the env')
@@ -98,26 +97,19 @@ def setup_exps(args):
     config = DEFAULT_CONFIG
     config['gamma'] = 0.995
     config["batch_mode"] = "complete_episodes"
-    # config['train_batch_size'] = args.train_batch_size
-    # config['vf_clip_param'] = 100.0
-    # config['lambda'] = 0.1
-    # if args.grid_search:
-    #     config['lr'] = tune.grid_search([5e-4, 5e-5])
-    # elif args.big_grid_search:
-    #     config['lr'] = tune.grid_search([5e-3, 5e-4, 5e-5])
-    #     config['lambda'] = tune.grid_search([0.1, 0.5, 0.9])
-    # else:
-    #     config['lr'] = 5e-4
-    # config['sgd_minibatch_size'] = min(500, args.train_batch_size)
-    # # config['num_envs_per_worker'] = 10
-    # config['num_sgd_iter'] = 10
     config['num_workers'] = args.num_cpus
-
-    if args.custom_ppo:
-        config['num_adversaries'] = args.num_adv
-        config['kl_diff_weight'] = args.kl_diff_weight
-        config['kl_diff_target'] = args.kl_diff_target
-        config['kl_diff_clip'] = 5.0
+    if args.big_grid_search:
+        config["optimization"] = {
+            "actor_learning_rate": tune.grid_search([3e-3, 3e-4, 3e-5]),
+            "critic_learning_rate": tune.grid_search([3e-3, 3e-4, 3e-5]),
+            "entropy_learning_rate": tune.grid_search([3e-3, 3e-4, 3e-5]),
+        }
+    else:
+        config["optimization"] = {
+            "actor_learning_rate": 3e-3,
+            "critic_learning_rate": 3e-4,
+            "entropy_learning_rate": 3e-4,
+        }
 
     # Options used in every env
     config['env_config']['horizon'] = args.horizon
@@ -147,29 +139,6 @@ def setup_exps(args):
         config['model']['fcnet_hiddens'] = [64, 64]
     else:
         config['model']['fcnet_hiddens'] = [256, 256, 256]
-    if args.use_lstm:
-        # ModelCatalog.register_custom_model("rnn", LSTM)
-        # config['model']['custom_model'] = "rnn"
-        # config['model']['custom_options'] = {'lstm_use_prev_action': True}
-        config['vf_share_layers'] = True
-        config['model']['lstm_cell_size'] = 128
-        config['model']['use_lstm'] = True
-        if args.grid_search:
-            config['model']['max_seq_len'] = tune.grid_search([20, 40])
-        # we aren't sweeping over this due to limited CPU numbers
-        elif args.big_grid_search:
-            config['model']['max_seq_len'] = 20
-
-    # if args.grid_search:
-    #     if args.horizon > 200:
-    #         config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6])
-    #     else:
-    #         config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
-    # elif args.big_grid_search:
-    #     config['vf_loss_coeff'] = tune.grid_search([1e-5, 1e-6, 1e-7])
-    #
-    # else:
-    #     config['vf_loss_coeff'] = 1e-5
 
     config['env'] = 'MAPendulumEnv'
     register_env('MAPendulumEnv', pendulum_env_creator)
