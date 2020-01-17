@@ -36,7 +36,7 @@ run_list = [
 
 # test name, is_env_config, config_value, params_name, params_value
 lerrel_run_list = [
-    # ['base', []],
+    ['base', []],
     # ['friction04', make_set_friction(0.4)],
     # ['friction06', make_set_friction(0.6)],
     # ['friction08', make_set_friction(0.8)],
@@ -50,7 +50,10 @@ lerrel_run_list = [
     # ['gaussian_state_noise', ['add_gaussian_state_noise', True]]
 ]
 
-for x in np.linspace(0.5, 3.0, 30):
+# for x in np.linspace(0.1, 1.0, 10):
+#     lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
+
+for x in np.linspace(1, 15.0, 15):
     lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
 
 @ray.remote
