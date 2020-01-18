@@ -176,10 +176,10 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     if policy.num_adversaries > 1 and policy.config['kl_diff_weight'] > 0:
         policy.unscaled_kl_loss = kl_diff_loss
         #mean_kl_loss = reduce_mean_valid(kl_diff_loss)
-        clipped_mean_loss = reduce_mean_valid(tf.clip_by_value(kl_diff_loss, 0, policy.kl_diff_clip))
+        policy.clipped_kl_loss = reduce_mean_valid(tf.clip_by_value(kl_diff_loss, 0, policy.kl_diff_clip))
 
         policy.kl_var = tf.math.reduce_std(kl_diff_loss)
-        return -policy.config['kl_diff_weight'] * clipped_mean_loss + standard_loss
+        return -policy.config['kl_diff_weight'] * policy.clipped_kl_loss + standard_loss
         #return -policy.config['kl_diff_weight'] * mean_kl_loss + standard_loss
     else:
         return standard_loss
@@ -190,7 +190,7 @@ def new_kl_and_loss_stats(policy, train_batch):
     """Add the kl stats to the fetches"""
     stats = kl_and_loss_stats(policy, train_batch)
     if policy.num_adversaries > 1:
-        info = {'kl_diff': policy.unscaled_kl_loss,
+        info = {'clipped_kl_diff_loss': policy.clipped_kl_loss,
                 "cur_kl_diff_coeff": tf.cast(policy.kl_diff_coeff, tf.float64),
                 'kl_diff_var': policy.kl_var
                 }
