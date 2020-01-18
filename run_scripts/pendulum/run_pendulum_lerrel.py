@@ -1,3 +1,4 @@
+from copy import copy
 import errno
 from datetime import datetime
 import random
@@ -13,6 +14,8 @@ from ray.rllib.agents.ppo.ppo import PPOTrainer, DEFAULT_CONFIG
 
 from ray.rllib.models import ModelCatalog
 from ray import tune
+from ray.tune import Trainable
+from ray.tune.logger import pretty_print
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
@@ -72,7 +75,11 @@ def setup_exps(args):
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv', type=int, default=1, help='Number of active adversaries in the env. Default - retrain lerrel, single agent')
     parser.add_argument('--adv_strength', type=float, default=5.0, help='Strength of active adversaries in the env')
+    parser.add_argument('--alternate_training', action='store_true', default=True)
     args = parser.parse_args(args)
+
+    if args.alternate_training and args.num_adv > 1:
+        sys.exit('You can only have 1 adversary if you are alternating training')
 
     alg_run = 'PPO'
 
@@ -80,7 +87,7 @@ def setup_exps(args):
     config = DEFAULT_CONFIG
     config['gamma'] = 0.995
     config["batch_mode"] = "complete_episodes"
-    config['train_batch_size'] = 10000 # args.train_batch_size
+    config['train_batch_size'] = args.train_batch_size
     config['vf_clip_param'] = 10.0
     if args.grid_search:
         config['lambda'] = tune.grid_search([0.1, 0.5, 0.9])
@@ -171,6 +178,37 @@ def on_episode_end(info):
         # select a new adversary every episode. Currently disabled.
         env.select_new_adversary()
 
+class AlternateTraining(Trainable):
+    def _setup(self, config):
+        self.config = config
+        self.env = config['env']
+
+    def _train(self):
+        agent_config = self.config
+        adv_config = copy(self.config)
+        agent_config['multiagent']['policies_to_train'] = ['pendulum']
+        adv_config['multiagent']['policies_to_train'] = ['adversary0']
+
+        agent_trainer = PPOTrainer(env=self.env, config=agent_config)
+        adv_trainer = PPOTrainer(env=self.env, config=adv_config)
+
+        for i in range(args.num_iters):
+            print("== Iteration", i, "==")
+
+            # improve the DQN policy
+            print("-- Adversary Training --")
+            print(pretty_print(adv_trainer.train()))
+
+            # swap weights to synchronize
+            agent_trainer.set_weights(adv_trainer.get_weights(["adversary0"]))
+            # improve the PPO policy
+            print("-- Agent Training --")
+            print(pretty_print(agent_trainer.train()))
+
+            # swap weights to synchronize
+            adv_trainer.set_weights(agent_trainer.get_weights(["pendulum"]))
+        return {}
+
 
 if __name__ == "__main__":
 
@@ -188,7 +226,11 @@ if __name__ == "__main__":
     else:
         ray.init(local_mode=True)
 
-    run_tune(**exp_dict, queue_trials=False)
+    if args.alternate_training:
+        exp_dict['run_or_experiment'] = AlternateTraining
+        run_tune(**exp_dict, queue_trials=False)
+    else:
+        run_tune(**exp_dict, queue_trials=False)
 
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
