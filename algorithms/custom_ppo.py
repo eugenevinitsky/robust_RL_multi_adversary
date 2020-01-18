@@ -101,7 +101,20 @@ def new_postprocess_ppo_gae(policy,
                     postprocess[SampleBatch.CUR_OBS + '_' + str(i)] = sample_batch[SampleBatch.CUR_OBS]
                     postprocess[SampleBatch.PREV_ACTIONS + '_' + str(i)] = sample_batch[SampleBatch.PREV_ACTIONS]
                     postprocess[SampleBatch.PREV_REWARDS + '_' + str(i)] = sample_batch[SampleBatch.PREV_REWARDS]
-                i += 1
+                    i += 1
+
+        policy.num_valid_samples = i
+        # Handle the possibility that some adversaries didn't get trained and won't have samples as a consequence
+        while i < policy.num_adversaries - 1:
+            action_dim = sample_batch[SampleBatch.PREV_ACTIONS].shape[1]
+            postprocess["kj_log_std_{}".format(i)] = np.zeros((batch_size, action_dim)).astype(np.float32)
+            postprocess["kj_std_{}".format(i)] = np.zeros((batch_size, action_dim)).astype(np.float32)
+            postprocess["kj_mean_{}".format(i)] = np.zeros((batch_size, action_dim)).astype(np.float32)
+            postprocess[SampleBatch.CUR_OBS + '_' + str(i)] = sample_batch[SampleBatch.CUR_OBS]
+            postprocess[SampleBatch.PREV_ACTIONS + '_' + str(i)] = sample_batch[SampleBatch.PREV_ACTIONS]
+            postprocess[SampleBatch.PREV_REWARDS + '_' + str(i)] = sample_batch[SampleBatch.PREV_REWARDS]
+            postprocess['valid_sample_' + str(i)] = np.zeros((batch_size, 1))
+            i += 1
 
     # handle the fake pass. There aren't any other_agent_batches in the rllib fake pass
     if not other_agent_batches:
@@ -114,7 +127,7 @@ def new_postprocess_ppo_gae(policy,
             postprocess[SampleBatch.CUR_OBS + '_' + str(i)] = sample_batch[SampleBatch.CUR_OBS]
             postprocess[SampleBatch.PREV_ACTIONS + '_' + str(i)] = sample_batch[SampleBatch.PREV_ACTIONS]
             postprocess[SampleBatch.PREV_REWARDS + '_' + str(i)] = sample_batch[SampleBatch.PREV_REWARDS]
-
+        policy.num_valid_samples = policy.num_adversaries - 1
 
     return postprocess
 
@@ -123,7 +136,7 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
     """Since we are computing the logits of model on the observations of adversary i, we compute
        the KL as \mathbb{E}_{adversary i} [log(p(adversary_i) \ p(model)] instead of the other way around."""
     kl_loss = 0.0
-    for i in range(policy.num_adversaries - 1):
+    for i in range(policy.num_valid_samples):
         logits, state = get_logits(model, train_batch, i)
         mean, log_std = tf.split(logits, 2, axis=1)
         std = tf.exp(log_std)
@@ -347,6 +360,9 @@ class KLDiffMixin(object):
 class SetUpConfig(object):
     def __init__(self, config):
         self.num_adversaries = config['num_adversaries']
+        # Tracking how many adversaries have actually received a rollout. Its one less because you can't
+        # kl diff against yourself.
+        self.num_valid_samples = self.num_adversaries - 1
 
 
 def special_setup_mixins(policy, obs_space, action_space, config):

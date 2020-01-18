@@ -174,7 +174,7 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
         if self.curriculum:
             self.adversary_range = 0
         else:
-            self.adversary_range = self.num_adversaries
+            self.adversary_range = self.num_adversaries * self.num_adv_per_strength
 
     @property
     def observation_space(self):
@@ -246,7 +246,7 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
         reward_dict = {'pendulum': reward}
 
         if self.kl_diff_training:
-            for i in range(self.num_adversaries):
+            for i in range(self.adversary_range):
                 is_active = 1 if self.curr_adversary == i else 0
                 obs_dict.update({
                     'adversary{}'.format(i): {'obs': self.observed_states, 'is_active': np.array([is_active])}
@@ -270,7 +270,7 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
 
         curr_obs = {'pendulum': self.observed_states}
         if self.kl_diff_training:
-            for i in range(self.num_adversaries):
+            for i in range(self.adversary_range):
                 is_active = 1 if self.curr_adversary == i else 0
                 curr_obs.update({'adversary{}'.format(i):
                                      {'obs': self.observed_states,

@@ -28,7 +28,7 @@ from utils.rllib_utils import get_config_from_path
 def setup_ma_config(config):
     env = pendulum_env_creator(config['env_config'])
 
-    num_adversaries = config['env_config']['num_adversaries']
+    num_adversaries = config['env_config']['num_adversaries'] * config['env_config']['num_adv_per_strength']
 
     policies_to_train = ['pendulum']
 
