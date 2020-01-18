@@ -72,7 +72,7 @@ def setup_exps(args):
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv', type=int, default=1, help='Number of active adversaries in the env. Default - retrain lerrel, single agent')
     parser.add_argument('--adv_strength', type=float, default=5.0, help='Strength of active adversaries in the env')
-    parser.add_argument('--alternate_training', action='store_true', default=True)
+    parser.add_argument('--alternate_training', action='store_true', default=False)
     args = parser.parse_args(args)
 
     if args.alternate_training and args.num_adv > 1:
@@ -227,9 +227,7 @@ if __name__ == "__main__":
 
     if args.alternate_training:
         exp_dict['run_or_experiment'] = AlternateTraining
-        run_tune(**exp_dict, queue_trials=False)
-    else:
-        run_tune(**exp_dict, queue_trials=False)
+    run_tune(**exp_dict, queue_trials=False)
 
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
