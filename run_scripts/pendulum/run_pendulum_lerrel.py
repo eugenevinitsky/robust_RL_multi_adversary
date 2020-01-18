@@ -175,11 +175,11 @@ def on_episode_end(info):
         # select a new adversary every episode. Currently disabled.
         env.select_new_adversary()
 
+
 class AlternateTraining(Trainable):
     def _setup(self, config):
         self.config = config
         self.env = config['env']
-        self.num_iters = 0
         agent_config = self.config
         adv_config = copy(self.config)
         agent_config['multiagent']['policies_to_train'] = ['pendulum']
@@ -189,14 +189,13 @@ class AlternateTraining(Trainable):
         self.adv_trainer = PPOTrainer(env=self.env, config=adv_config)
 
     def _train(self):
-
         # improve the Adversary policy
         print("-- Adversary Training --")
-        self.adv_trainer.train()
         print(pretty_print(self.adv_trainer.train()))
 
         # swap weights to synchronize
         self.agent_trainer.set_weights(self.adv_trainer.get_weights(["adversary0"]))
+
         # improve the Agent policy
         print("-- Agent Training --")
         output = self.agent_trainer.train()
@@ -204,8 +203,6 @@ class AlternateTraining(Trainable):
 
         # swap weights to synchronize
         self.adv_trainer.set_weights(self.agent_trainer.get_weights(["pendulum"]))
-
-        self.num_iters += 1
         return output
 
     def _save(self, tmp_checkpoint_dir):
