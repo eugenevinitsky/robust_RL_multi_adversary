@@ -1,3 +1,4 @@
+from copy import deepcopy
 import errno
 from datetime import datetime
 from functools import reduce
@@ -113,9 +114,9 @@ def setup_exps(args):
 
     # Universal hyperparams
     if args.custom_ppo:
-        config = CUSTOM_DEFAULT_CONFIG
+        config = deepcopy(CUSTOM_DEFAULT_CONFIG)
     else:
-        config = DEFAULT_CONFIG
+        config = deepcopy(DEFAULT_CONFIG.copy())
     config['gamma'] = 0.995
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
