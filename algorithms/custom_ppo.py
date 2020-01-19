@@ -191,8 +191,8 @@ def new_kl_and_loss_stats(policy, train_batch):
     stats = kl_and_loss_stats(policy, train_batch)
     if policy.num_adversaries > 1:
         info = {'clipped_kl_diff_loss': policy.clipped_kl_loss,
-                "cur_kl_diff_coeff": tf.cast(policy.kl_diff_coeff, tf.float64),
-                'kl_diff_var': policy.kl_var
+                'unclipped_kl_diff': policy.unscaled_kl_loss,
+                "cur_kl_diff_coeff": tf.cast(policy.kl_diff_coeff, tf.float64)
                 }
         stats.update(info)
     return stats
