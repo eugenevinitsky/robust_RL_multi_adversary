@@ -1,4 +1,4 @@
-from copy import copy
+from copy import deepcopy
 import errno
 from datetime import datetime
 import os
@@ -90,8 +90,9 @@ def setup_exps(args):
         config['lambda'] = tune.grid_search([0.1, 0.5, 0.9])
         config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
     else:
-        config['lambda'] = 0.1
-        config['lr'] = 5e-3
+        config['lambda'] = 0.9
+        config['lr'] = 5e-5
+        config['vf_loss_coeff'] = 1e-3
     config['sgd_minibatch_size'] = 64
     # config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
@@ -181,7 +182,7 @@ class AlternateTraining(Trainable):
         self.config = config
         self.env = config['env']
         agent_config = self.config
-        adv_config = copy(self.config)
+        adv_config = deepcopy(self.config)
         agent_config['multiagent']['policies_to_train'] = ['pendulum']
         adv_config['multiagent']['policies_to_train'] = ['adversary0']
 

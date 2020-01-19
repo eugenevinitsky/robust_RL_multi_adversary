@@ -1,4 +1,4 @@
-from copy import copy
+from copy import deepcopy
 import errno
 from datetime import datetime
 import os
@@ -58,7 +58,7 @@ class AlternateTraining(Trainable):
         self.config = config
         self.env = config['env']
         agent_config = self.config
-        adv_config = copy(self.config)
+        adv_config = deepcopy(self.config)
         agent_config['multiagent']['policies_to_train'] = ['pendulum']
         adv_config['multiagent']['policies_to_train'] = ['adversary']
 
@@ -101,6 +101,7 @@ if __name__ == '__main__':
     env = DummyEnv()
     config = DEFAULT_CONFIG
     config['train_batch_size'] = 500
+    config['lr'] = 1.0
     policy_graphs = {'pendulum': (PPOTFPolicy, env.observation_space, env.action_space, {}),
                      'adversary': (PPOTFPolicy, env.observation_space, env.action_space, {})}
 
