@@ -53,8 +53,8 @@ lerrel_run_list = [
 # for x in np.linspace(0.1, 1.0, 10):
 #     lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
 
-for x in np.linspace(1, 15.0, 15):
-    lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
+# for x in np.linspace(1, 15.0, 15):
+#     lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
 
 @ray.remote
 def run_test(test_name, outdir, output_file_name, num_rollouts,
