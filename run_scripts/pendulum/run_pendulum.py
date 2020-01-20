@@ -366,26 +366,38 @@ if __name__ == "__main__":
                     raise
         for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
             if "checkpoint_{}".format(args.num_iters) in dirpath:
-                # grab the experiment name
-                folder = os.path.dirname(dirpath)
-                tune_name = folder.split("/")[-1]
-                outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/pendulum/transfer_test.py"))
-                config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
+                try:
+                    # grab the experiment name
+                    folder = os.path.dirname(dirpath)
+                    tune_name = folder.split("/")[-1]
+                    outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/pendulum/transfer_test.py"))
+                    config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
-                if args.num_adv > 0:
-
-                    if not args.model_based:
-                        visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
-
-                    if args.model_based:
-                        visualize_model_perf(config, checkpoint_path, 10,  25, output_path)
-
+                    run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
                     if args.use_s3:
                         p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                         "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
-                                                                                                                          args.exp_title,
-                                                                                                                          tune_name)).split(
+                                                                         "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(
+                                                                             date,
+                                                                             args.exp_title,
+                                                                             tune_name)).split(
                             ' '))
                         p1.wait()
+                    if args.num_adv > 0:
+
+                        if not args.model_based:
+                            visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
+
+                        if args.model_based:
+                            visualize_model_perf(config, checkpoint_path, 10,  25, output_path)
+
+                        if args.use_s3:
+                            p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+                                                                             "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
+                                                                                                                              args.exp_title,
+                                                                                                                              tune_name)).split(
+                                ' '))
+                            p1.wait()
+                except Exception as e:
+                    print('exception is ', e)
+                    import ipdb; ipdb.set_trace()
