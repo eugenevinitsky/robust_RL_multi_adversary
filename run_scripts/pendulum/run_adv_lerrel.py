@@ -18,25 +18,30 @@ from ray.tune.registry import register_env
 
 # from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy, DEFAULT_CONFIG
 
+from envs.lerrel.adv_hopper import AdvMAHopper
+from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from visualize.pendulum.transfer_tests import run_transfer_tests
 from visualize.pendulum.visualize_adversaries import visualize_adversaries
 from utils.parsers import init_parser, ray_parser, ma_env_parser
-from utils.pendulum_env_creator import lerrel_pendulum_env_creator
 from utils.rllib_utils import get_config_from_path
 
 from models.recurrent_tf_model_v2 import LSTM
 
+def make_create_env(env_class):
+    def create_env(config):
+        return env_class(config)
+    return create_env
 
-def setup_ma_config(config):
-    env = lerrel_pendulum_env_creator(config['env_config'])
-    policies_to_train = ['pendulum']
+def setup_ma_config(config, create_env, env_tag):
+    env = create_env(config['env_config'])
+    policies_to_train = [env_tag]
 
     num_adversaries = config['env_config']['num_adversaries']
     if num_adversaries == 0:
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
-    policy_graphs = {'pendulum': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+    policy_graphs = {env_tag: (PPOTFPolicy, env.observation_space, env.action_space, {})}
     policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
                                             env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     
@@ -65,6 +70,7 @@ def setup_ma_config(config):
             'policies_to_train': policies_to_train
         }})
 
+
 def setup_exps(args):
     parser = init_parser()
     parser = ray_parser(parser)
@@ -72,6 +78,7 @@ def setup_exps(args):
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv', type=int, default=1, help='Number of active adversaries in the env. Default - retrain lerrel, single agent')
     parser.add_argument('--adv_strength', type=float, default=5.0, help='Strength of active adversaries in the env')
+    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper'])
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
@@ -112,10 +119,19 @@ def setup_exps(args):
     if args.grid_search:
         config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
-    config['env'] = 'MALerrelPendulumEnv'
-    register_env('MALerrelPendulumEnv', lerrel_pendulum_env_creator)
+    if args.env_name == "pendulum":
+        env_name = "MALerrelPendulumEnv"
+        env_tag = "pendulum"
+        create_env_fn = make_create_env(AdvMAPendulumEnv)
+    elif args.env_name == "hopper":
+        env_name = "MALerrelHopperEnv"
+        env_tag = "hopper"
+        create_env_fn = make_create_env(AdvMAHopper)
 
-    setup_ma_config(config)
+    config['env'] = env_name
+    register_env(env_name, create_env_fn)
+
+    setup_ma_config(config, create_env_fn, env_tag)
 
     # add the callbacks
     config["callbacks"] = {"on_train_result": on_train_result,
@@ -178,7 +194,7 @@ if __name__ == "__main__":
 
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
-    s3_string = 's3://sim2real/pendulum/' \
+    s3_string = 's3://sim2real/adv_robust/' \
                 + date + '/' + args.exp_title
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
@@ -192,7 +208,7 @@ if __name__ == "__main__":
 
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
-        output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/pendulum'), date), args.exp_title)
+        output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), date), args.exp_title)
         if not os.path.exists(output_path):
             try:
                 os.makedirs(output_path)
@@ -213,7 +229,7 @@ if __name__ == "__main__":
 
                     visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                     "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
+                                                                     "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(date,
                                                                                                                       args.exp_title,
                                                                                                                       tune_name)).split(
                         ' '))

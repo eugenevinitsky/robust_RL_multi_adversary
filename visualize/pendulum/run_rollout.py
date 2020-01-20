@@ -130,7 +130,9 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
             new_dict = {}
             new_dict.update({'pendulum': action['pendulum']})
             next_obs, reward, done, info = env.step(new_dict)
-            # env.render()
+            new_dict.update({'pendulum': action['pendulum']})
+            # next_obs, reward, done, info = env.step(action)
+            env.render()
             if isinstance(done, dict):
                 done = done['__all__']
             if multiagent:
