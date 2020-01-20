@@ -81,7 +81,6 @@ def setup_exps(args):
     config['env_config'] = construct_config(env_params, policy_params, args)
 
     if args.custom_ppo:
-        config['num_adversaries'] = args.num_adv * args.num_adv_per_strength
         config['kl_diff_weight'] = args.kl_diff_weight
         config['kl_diff_target'] = args.kl_diff_target
         config['kl_diff_clip'] = 5.0

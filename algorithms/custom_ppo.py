@@ -27,7 +27,6 @@ BEHAVIOUR_LOGITS = "behaviour_logits"
 
 DEFAULT_CONFIG = copy(DEFAULT_PPO_CONFIG)
 DEFAULT_CONFIG.update({
-    "num_adversaries": 2,
     # Initial weight on the kl diff part of the loss
     "kl_diff_weight": 1.0,
     # Target KL between agents
@@ -48,10 +47,8 @@ def get_logits(model, train_batch, index):
     :return: logits, state
         The logits and the hidden state corresponding to those logits
     """
-
     input_dict = {
         "obs": train_batch[SampleBatch.CUR_OBS + '_' + str(index)],
-        "is_training": False,
     }
     if SampleBatch.PREV_ACTIONS in train_batch:
         input_dict["prev_actions"] = train_batch[SampleBatch.PREV_ACTIONS + '_' + str(index)]
@@ -106,7 +103,7 @@ def new_postprocess_ppo_gae(policy,
     # handle the fake pass. There aren't any other_agent_batches in the rllib fake pass
     if not other_agent_batches:
         # go through and fill in as many kl objects as you will need
-        for i in range(policy.num_adversaries - 1):
+        for i in range(policy.num_robots - 1):
             action_dim = sample_batch[SampleBatch.PREV_ACTIONS].shape[1]
             postprocess["kj_log_std_{}".format(i)] = np.zeros((batch_size, action_dim)).astype(np.float32)
             postprocess["kj_std_{}".format(i)] = np.zeros((batch_size, action_dim)).astype(np.float32)
@@ -123,7 +120,7 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
     """Since we are computing the logits of model on the observations of adversary i, we compute
        the KL as \mathbb{E}_{adversary i} [log(p(adversary_i) \ p(model)] instead of the other way around."""
     kl_loss = 0.0
-    for i in range(policy.num_adversaries - 1):
+    for i in range(3):
         logits, state = get_logits(model, train_batch, i)
         mean, log_std = tf.split(logits, 2, axis=1)
         std = tf.exp(log_std)
@@ -140,12 +137,8 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
 
 # def new_ppo_surrogate_loss(policy, batch_tensors):
 def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
-    if policy.num_adversaries > 1:
-        kl_diff_loss = setup_kl_loss(policy, model, dist_class, train_batch)
+    kl_diff_loss = setup_kl_loss(policy, model, dist_class, train_batch)
 
-    # zero out the loss elements where you weren't actually acting
-    original_space = restore_original_dimensions(train_batch['obs'], model.obs_space)
-    is_active = original_space['is_active']
 
     # extract the ppo_surrogate_loss before the mean is taken
     ppo_custom_surrogate_loss(policy, model, dist_class, train_batch)
@@ -155,12 +148,11 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
         return tf.reduce_mean(tf.boolean_mask(t, policy.loss_obj.valid_mask))
 
     # This mask combines both the valid mask and a check for when we were actually active in the env
-    combined_mask = tf.math.logical_and(policy.loss_obj.valid_mask, tf.cast(tf.squeeze(is_active, -1), tf.bool))
-    standard_loss = tf.reduce_mean(tf.boolean_mask(pre_mean_loss, combined_mask))
+    standard_loss = tf.reduce_mean(pre_mean_loss)
 
     # Since we are happy to evaluate the kl diff over obs in which we weren't active, we only mask this
     # with respect to the valid mask, which tracks padding for RNNs
-    if policy.num_adversaries > 1 and policy.config['kl_diff_weight'] > 0:
+    if policy.config['kl_diff_weight'] > 0:
         policy.unscaled_kl_loss = kl_diff_loss
         clipped_mean_loss = reduce_mean_valid(tf.clip_by_value(kl_diff_loss, 0, policy.kl_diff_clip))
 
@@ -174,12 +166,11 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
 def new_kl_and_loss_stats(policy, train_batch):
     """Add the kl stats to the fetches"""
     stats = kl_and_loss_stats(policy, train_batch)
-    if policy.num_adversaries > 1:
-        info = {'kl_diff': policy.unscaled_kl_loss,
+    info = {'kl_diff': policy.unscaled_kl_loss,
                 "cur_kl_diff_coeff": tf.cast(policy.kl_diff_coeff, tf.float64),
                 'kl_diff_var': policy.kl_var
                 }
-        stats.update(info)
+    stats.update(info)
     return stats
 
 
@@ -346,7 +337,7 @@ class KLDiffMixin(object):
 
 class SetUpConfig(object):
     def __init__(self, config):
-        self.num_adversaries = config['num_adversaries']
+        self.num_robots = 4
 
 
 def special_setup_mixins(policy, obs_space, action_space, config):
