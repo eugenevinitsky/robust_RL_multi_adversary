@@ -92,7 +92,7 @@ def new_postprocess_ppo_gae(policy,
     if other_agent_batches:
         i = 0
         for key, other_agent_batch in other_agent_batches.items():
-            if 'adversary' in key:
+         #   if 'adversary' in key:
                 batch = other_agent_batch[1]
                 if "kj_log_std" in batch:
                     postprocess["kj_log_std_{}".format(i)] = batch["kj_log_std"]
