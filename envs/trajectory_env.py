@@ -115,6 +115,7 @@ class TrajectoryEnv(MultiAgentEnv):
 
         # get current observation
         for robot in self.robots:
+            self.dones[robot.id] = False
             self.states[robot] = [robot.get_full_state()]
             if robot.sensor == 'coordinates':
                 normalized_pos = np.asarray(robot.get_position()) / np.asarray(
@@ -188,6 +189,7 @@ class TrajectoryEnv(MultiAgentEnv):
                 self.states[robot].append([robot.get_full_state()])
                 # update all agents
                 if self.dones[robot.id]: #if robot is at goal, continue
+                    obs[robot.id] = np.zeros((10,))
                     continue
 
                 robot.step(scaled_action)
