@@ -180,7 +180,7 @@ def setup_exps(args):
         config['model']['fcnet_hiddens'] = [64, 64]
     else:
         if args.grid_search:
-            config['model']['fcnet_hiddens'] = tune.grid_search([[64, 64], [256, 256, 256]])
+            config['model']['fcnet_hiddens'] = [64, 64]
             config['model']['fcnet_activation'] = tune.grid_search(['tanh', 'relu'])
 
         else:

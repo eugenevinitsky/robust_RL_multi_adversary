@@ -31,7 +31,9 @@ DEFAULT_CONFIG.update({
     # Initial weight on the kl diff part of the loss
     "kl_diff_weight": 1.0,
     # Target KL between agents
-    "kl_diff_target": 1.0
+    "kl_diff_target": 1.0,
+    # Clip the KL loss to handle huge values
+    "kl_diff_clip": 5.0
 })
 
 
