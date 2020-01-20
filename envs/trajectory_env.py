@@ -52,6 +52,7 @@ class TrajectoryEnv(MultiAgentEnv):
         self.closer_goal = config.getfloat('reward', 'closer_goal')
 
         self.robots = [self.robot1, self.robot2, self.robot3, self.robot4]
+        self.success_reward = config.getfloat('reward', 'success_reward')
 
         self.attention_weights = None
         self.obs_norm = 100
