@@ -131,6 +131,9 @@ def new_postprocess_ppo_gae(policy,
             postprocess[SampleBatch.PREV_REWARDS + '_' + str(i)] = sample_batch[SampleBatch.PREV_REWARDS]
         policy.num_valid_samples = policy.num_adversaries - 1
 
+    # print('----------------------------------------------------------------------------------------------------------')
+    # for k, v in postprocess.items():
+    #     print(k, v.shape)
     return postprocess
 
 
@@ -146,10 +149,15 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
         other_std = train_batch["kj_std_{}".format(i)]
         other_mean = train_batch["kj_mean_{}".format(i)]
 
-        huber_loss = tf.keras.losses.Huber(reduction=tf.keras.losses.Reduction.NONE)
-        kl_loss += huber_loss(tf.reduce_sum(- other_logstd + log_std +
-                                            (tf.square(other_std) + tf.square(mean - other_mean)) /
-                                            (2.0 * tf.square(std)) - 0.5, axis=1), policy.kl_target)
+        kl_mean = tf.reduce_sum(- other_logstd + log_std +
+                                                (tf.square(other_std) + tf.square(mean - other_mean)) /
+                                                (2.0 * tf.square(std)) - 0.5, axis=1)
+        if hasattr(tf.keras.losses, 'Reduction'):
+            huber_loss = tf.keras.losses.Huber(reduction=tf.keras.losses.Reduction.NONE)
+            kl_loss += huber_loss(kl_mean, policy.kl_target)
+        else:
+            target = tf.constant(policy.kl_target, shape=(1,), dtype=tf.float32)
+            kl_loss += tf.losses.huber_loss(kl_mean, target, reduction='none')
     return kl_loss
 
 
@@ -342,10 +350,18 @@ class KLDiffMixin(object):
         #     shape=(),
         #     trainable=False,
         #     dtype=tf.float32)
-        self.kl_diff_coeff = tf.Variable(self.kl_diff_coeff_val,
-            name="kl_coeff_diff",
-            trainable=False,
-            dtype=tf.float32)
+        if tf.__version__ >= '2.0.0':
+            self.kl_diff_coeff = tf.Variable(self.kl_diff_coeff_val,
+                name="kl_coeff_diff",
+                trainable=False,
+                dtype=tf.float32)
+        else:
+            self.kl_diff_coeff = tf.get_variable(
+                initializer=tf.constant_initializer(self.kl_diff_coeff_val),
+                name="kl_coeff_diff",
+                shape=(),
+                trainable=False,
+                dtype=tf.float32)
 
     def update_kl_diff(self, sampled_kl):
         if sampled_kl < 2.0 * self.kl_target:
@@ -356,6 +372,7 @@ class KLDiffMixin(object):
 
         self.kl_diff_coeff_val = min(self.kl_diff_coeff_val, 1e5)
         self.kl_diff_coeff.load(self.kl_diff_coeff_val, session=self.get_session())
+        print(self.get_session().run(self.kl_diff_coeff))
         return self.kl_diff_coeff_val
 
 
