@@ -156,10 +156,10 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     if policy.config['kl_diff_weight'] > 0:
         policy.unscaled_kl_loss = kl_diff_loss
         policy.kl_diff = kl_diff
-        policy.clipped_mean_loss = reduce_mean_valid(tf.clip_by_value(kl_diff_loss, 0, policy.kl_diff_clip))
+        policy.clipped_kl_loss = reduce_mean_valid(tf.clip_by_value(kl_diff_loss, 0, policy.kl_diff_clip))
 
         policy.kl_var = tf.math.reduce_std(kl_diff_loss)
-        return -policy.config['kl_diff_weight'] * policy.clipped_mean_loss + standard_loss
+        return -policy.config['kl_diff_weight'] * policy.clipped_kl_loss + standard_loss
     else:
         return standard_loss
     # return reduce_mean_valid(pre_mean_loss * tf.squeeze(is_active))
@@ -231,9 +231,8 @@ class PPOCustomLoss(object):
                 action distributions.
         """
 
-        self.valid_mask = valid_mask
         def reduce_mean_valid(t):
-            return tf.reduce_mean(tf.boolean_mask(t, valid_mask))
+            return tf.reduce_mean(t)
 
         prev_dist = dist_class(prev_logits, model)
         # Make loss functions.
