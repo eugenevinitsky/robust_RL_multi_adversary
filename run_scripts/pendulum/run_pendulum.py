@@ -116,7 +116,7 @@ def setup_exps(args):
     if args.custom_ppo:
         config = deepcopy(CUSTOM_DEFAULT_CONFIG)
     else:
-        config = deepcopy(DEFAULT_CONFIG.copy())
+        config = deepcopy(DEFAULT_CONFIG)
     config['gamma'] = 0.995
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
@@ -218,9 +218,9 @@ def setup_exps(args):
     # config["eager_tracing"] = True
     # The custom PPO code flips out here due to a bug in RLlib with eager tracing.
     # Or, at least I think that's what is happening.
-    if not args.custom_ppo:
-        config["eager"] = True
-        config["eager_tracing"] = True
+    # if not args.custom_ppo:
+    #     config["eager"] = True
+    #     config["eager_tracing"] = True
 
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
@@ -353,7 +353,7 @@ if __name__ == "__main__":
     else:
         ray.init(local_mode=False)
 
-    run_tune(**exp_dict, queue_trials=False)
+    run_tune(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
 
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
