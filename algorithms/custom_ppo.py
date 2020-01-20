@@ -1,4 +1,4 @@
-from copy import copy
+from copy import deepcopy
 import logging
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ from ray.rllib.policy.tf_policy import ACTION_LOGP
 # Frozen logits of the policy that computed the action
 BEHAVIOUR_LOGITS = "behaviour_logits"
 
-DEFAULT_CONFIG = copy(DEFAULT_PPO_CONFIG)
+DEFAULT_CONFIG = deepcopy(DEFAULT_PPO_CONFIG)
 DEFAULT_CONFIG.update({
     "num_adversaries": 2,
     # Initial weight on the kl diff part of the loss
