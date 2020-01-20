@@ -129,15 +129,16 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
         other_mean = train_batch["kj_mean_{}".format(i)]
 
         huber_loss = tf.keras.losses.Huber(reduction=tf.keras.losses.Reduction.NONE)
-        kl_loss += huber_loss(tf.reduce_sum(- other_logstd + log_std +
+        kl_diff = tf.reduce_sum(- other_logstd + log_std +
                                             (tf.square(other_std) + tf.square(mean - other_mean)) /
-                                            (2.0 * tf.square(std)) - 0.5, axis=1), policy.kl_target)
-    return kl_loss
+                                            (2.0 * tf.square(std)) - 0.5, axis=1)
+        kl_loss += huber_loss(kl_diff, policy.kl_target)
+    return kl_loss, kl_diff
 
 
 # def new_ppo_surrogate_loss(policy, batch_tensors):
 def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
-    kl_diff_loss = setup_kl_loss(policy, model, dist_class, train_batch)
+    kl_diff_loss, kl_diff = setup_kl_loss(policy, model, dist_class, train_batch)
 
 
     # extract the ppo_surrogate_loss before the mean is taken
@@ -154,10 +155,11 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     # with respect to the valid mask, which tracks padding for RNNs
     if policy.config['kl_diff_weight'] > 0:
         policy.unscaled_kl_loss = kl_diff_loss
-        clipped_mean_loss = reduce_mean_valid(tf.clip_by_value(kl_diff_loss, 0, policy.kl_diff_clip))
+        policy.kl_diff = kl_diff
+        policy.clipped_mean_loss = reduce_mean_valid(tf.clip_by_value(kl_diff_loss, 0, policy.kl_diff_clip))
 
         policy.kl_var = tf.math.reduce_std(kl_diff_loss)
-        return -policy.config['kl_diff_weight'] * clipped_mean_loss + standard_loss
+        return -policy.config['kl_diff_weight'] * policy.clipped_mean_loss + standard_loss
     else:
         return standard_loss
     # return reduce_mean_valid(pre_mean_loss * tf.squeeze(is_active))
@@ -166,9 +168,11 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
 def new_kl_and_loss_stats(policy, train_batch):
     """Add the kl stats to the fetches"""
     stats = kl_and_loss_stats(policy, train_batch)
-    info = {'kl_diff': policy.unscaled_kl_loss,
-                "cur_kl_diff_coeff": tf.cast(policy.kl_diff_coeff, tf.float64),
-                'kl_diff_var': policy.kl_var
+    info = {'kl_diff' : policy.kl_diff,
+            'clipped_kl_diff_loss': policy.clipped_kl_loss,
+            "unclipped_kl_diff_loss": policy.unscaled_kl_loss,
+            "cur_kl_diff_coeff": tf.cast(policy.kl_diff_coeff, tf.float64),
+            'kl_diff_var': policy.kl_var
                 }
     stats.update(info)
     return stats
