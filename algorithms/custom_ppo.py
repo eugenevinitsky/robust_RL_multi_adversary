@@ -11,7 +11,8 @@ from ray.rllib.agents.ppo.ppo_policy import postprocess_ppo_gae
 from ray.rllib.agents.ppo.ppo_policy import vf_preds_and_logits_fetches
 from ray.rllib.agents.ppo.ppo_policy import kl_and_loss_stats
 
-from ray.rllib.agents.ppo import PPOTrainer
+from ray.rllib.agents.trainer_template import build_trainer
+from ray.rllib.agents.ppo.ppo import choose_policy_optimizer, validate_config, warn_about_bad_reward_scales
 from ray.rllib.agents.ppo import DEFAULT_CONFIG as DEFAULT_PPO_CONFIG
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy, setup_mixins, \
     LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin, ValueNetworkMixin
@@ -432,8 +433,17 @@ CustomPPOPolicy = PPOTFPolicy.with_updates(
     before_loss_init=special_setup_mixins
 )
 
-KLPPOTrainer = PPOTrainer.with_updates(
-    default_policy=CustomPPOPolicy,
+# KLPPOTrainer = PPOTrainer.with_updates(
+#     default_policy=CustomPPOPolicy,
+#     default_config=DEFAULT_CONFIG,
+#     after_optimizer_step=update_kl_and_kl_diff
+# )
+
+KLPPOTrainer = build_trainer(
+    name="KLPPO",
     default_config=DEFAULT_CONFIG,
-    after_optimizer_step=update_kl_and_kl_diff
-)
+    default_policy=CustomPPOPolicy,
+    make_policy_optimizer=choose_policy_optimizer,
+    validate_config=validate_config,
+    after_optimizer_step=update_kl_and_kl_diff,
+    after_train_result=warn_about_bad_reward_scales)
