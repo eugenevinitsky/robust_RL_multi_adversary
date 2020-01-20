@@ -146,7 +146,7 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     pre_mean_loss = policy.loss_obj.pre_mean_loss
 
     def reduce_mean_valid(t):
-        return tf.reduce_mean(tf.boolean_mask(t, policy.loss_obj.valid_mask))
+        return tf.reduce_mean(t)
 
     # This mask combines both the valid mask and a check for when we were actually active in the env
     standard_loss = tf.reduce_mean(pre_mean_loss)
