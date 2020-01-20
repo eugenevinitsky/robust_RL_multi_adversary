@@ -224,9 +224,13 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
         # each adversary grid is a map of agent action versus observation dimension
         adversary_grid = np.zeros((grid_size, grid_size, env._get_obs().shape[0])).astype(int)
         strength_grid = np.linspace(env.adv_action_space.low, env.adv_action_space.high, grid_size).T
-        obs_grid = np.linspace(env.observation_space.low, env.observation_space.high, grid_size).T
+        num_obs = env._get_obs().shape[0]
+        obs_grid = np.linspace(env.observation_space.low[:num_obs], env.observation_space.high[:num_obs], grid_size).T
+        adversary_grid_1rollout =  np.zeros((grid_size, grid_size, env._get_obs().shape[0])).astype(int)
         adversary_grid_dict[adversary_str] = {'grid': adversary_grid, 'action_bins': strength_grid, 'obs_bins': obs_grid,
-                                              'action_list': []}
+                                              'action_list': [], 'grid_1rollout' : adversary_grid_1rollout}
+
+    p_vals_all = np.zeros((num_adversaries, grid_size, env._get_obs().shape[0]))  # shape state value x state type
 
     for r_iter in range(num_rollouts):
         obs = env.reset()
@@ -241,9 +245,14 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
             if a_obs is not None:
                 policy_id = mapping_cache.setdefault(
                     agent_id, policy_agent_mapping(agent_id))
-
+            adversary_grid_dict[agent_id]['grid_1rollout'] = np.zeros_like(adversary_grid_dict[agent_id]['grid'])
             all_obs_comb = np.asarray(np.meshgrid(*np.split(obs_grid, obs_grid.shape[0]))).T.reshape(-1,obs_grid.shape[0])
             for obs in all_obs_comb:
+                if env.concat_actions:
+                    full_obs = np.zeros_like(env.observation_space.low)
+                    full_obs[:num_obs] = obs
+                    obs = full_obs
+
                 if isinstance(env.adv_observation_space, Dict):
                     multi_obs = {'obs': obs, 'is_active': np.array([1])}
                 else:
@@ -267,19 +276,46 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                     obs_bins = adversary_grid_dict[agent_id]['obs_bins']
 
                     heat_map = adversary_grid_dict[agent_id]['grid']
+                    heat_map_1rollout = adversary_grid_dict[agent_id]['grid_1rollout']
                     for action_loop_index, action in enumerate(a_action):
                         adversary_grid_dict[agent_id]['action_list'].append(a_action[0])
                         action_index = np.digitize(action, action_bins[action_loop_index, :]) - 1
                         # digitize will set the right edge of the box to the wrong value
                         if action_index == heat_map.shape[0]:
                             action_index -= 1
-                        for obs_loop_index, obs_elem in enumerate(obs):
+                        for obs_loop_index, obs_elem in enumerate(obs[:num_obs]):
                             obs_index = np.digitize(obs_elem, obs_bins[obs_loop_index, :]) - 1
                             if obs_index == heat_map.shape[1]:
                                 obs_index -= 1
 
                             heat_map[action_index, obs_index, obs_loop_index] += 1
-    print(heat_map[:,:,0])
+                            heat_map_1rollout[action_index, obs_index, obs_loop_index] += 1
+
+        # Compute state dependence, i.e. whether p(action|state) != p(action)
+        adv_count = 0
+        for adversary, adv_dict in adversary_grid_dict.items():
+            heat_map_1rollout = adv_dict['grid_1rollout']
+            p_vals = np.zeros((heat_map_1rollout.shape[1], heat_map_1rollout.shape[-1]))  # shape state value x state type
+
+            for i in range(heat_map_1rollout.shape[-1]):
+                prob_action = np.sum(heat_map_1rollout[:, :, i], axis=1)  # sum across all states
+                prob_action = prob_action / heat_map_1rollout.shape[1]  # normalize probability
+                prob_action = np.squeeze(prob_action)
+
+                for j in range(heat_map_1rollout.shape[1]):
+                    # remove bins with 0 count for more accurate chi-squared value
+                    prob_action_filtered = prob_action + 1#[~(heat_map_1rollout[:, j, i] == 0)]
+                    prob_actionstate_filtered = heat_map_1rollout[:, j, i] + 1#heat_map_1rollout[~(heat_map_1rollout[:, j, i] == 0), j, i]
+                    chisq, p_val = chisquare(prob_action_filtered, f_exp=prob_actionstate_filtered)
+
+                    p_vals[j, i] = p_val
+
+            p_vals_all[adv_count, :, :] += p_vals
+            adv_count +=1
+
+    p_vals_all = p_vals_all/num_rollouts
+
+    adv_count = 0
     for adversary, adv_dict in adversary_grid_dict.items():
         heat_map = adv_dict['grid']
         action_bins = adv_dict['action_bins']
@@ -303,30 +339,13 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
             output_str = '{}/{}'.format(outdir, adversary + 'action_heatmap_{}_all.png'.format(i))
             plt.savefig(output_str)
 
-    #Compute state dependence, i.e. whether p(action|state) != p(action)
-    for adversary, adv_dict in adversary_grid_dict.items():
-        heat_map = adv_dict['grid']
-
-        p_vals = np.zeros((heat_map.shape[1], heat_map.shape[-1])) #shape state value x state type
-        for i in range(heat_map.shape[-1]):
-            prob_action = np.sum(heat_map[:,:,i], axis=1) #sum across all states
-            prob_action = prob_action/heat_map.shape[1] #normalize probability
-            prob_action = np.squeeze(prob_action)
-
-            for j in range(heat_map.shape[1]):
-                #remove bins with 0 count for more accurate chi-squared value
-                prob_action_filtered = prob_action[~(heat_map[:,j,i] == 0)]
-                prob_actionstate_filtered = heat_map[~(heat_map[:,j,i] == 0), j, i]
-                chisq, p_val = chisquare(prob_action_filtered, f_exp=prob_actionstate_filtered)
-                p_vals[j, i] = p_val
-
             plt.figure()
-            plt.plot(obs_bins[i], p_vals[:,i])
-            plt.ylabel('P-val')
+            plt.plot(obs_bins[i], p_vals_all[adv_count, :, i])
             plt.xlabel(titles[i])
-            output_str = '{}/{}'.format(outdir, adversary + 'p_vals_heatmap_{}.png'.format(i))
+            output_str = '{}/{}'.format(outdir, adversary + 'p_vals_{}.png'.format(i))
             plt.savefig(output_str)
-        print(p_vals)
+        adv_count += 1
+        print(p_vals_all)
 
 
 def main():
