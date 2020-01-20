@@ -5,6 +5,7 @@ from functools import reduce
 import os
 import subprocess
 import sys
+import time
 
 import pytz
 import numpy as np
@@ -366,6 +367,10 @@ if __name__ == "__main__":
                     raise
         for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
             if "checkpoint_{}".format(args.num_iters) in dirpath:
+                print(filenames)
+                if args.multi_node:
+                    time.sleep(20)
+                print(filenames)
                 try:
                     # grab the experiment name
                     folder = os.path.dirname(dirpath)
