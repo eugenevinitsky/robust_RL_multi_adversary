@@ -22,15 +22,11 @@ from envs.lerrel.adv_hopper import AdvMAHopper
 from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from visualize.pendulum.transfer_tests import run_transfer_tests
 from visualize.pendulum.visualize_adversaries import visualize_adversaries
+from utils.pendulum_env_creator import make_create_env
 from utils.parsers import init_parser, ray_parser, ma_env_parser
 from utils.rllib_utils import get_config_from_path
 
 from models.recurrent_tf_model_v2 import LSTM
-
-def make_create_env(env_class):
-    def create_env(config):
-        return env_class(config)
-    return create_env
 
 def setup_ma_config(config, create_env, env_tag):
     env = create_env(config['env_config'])

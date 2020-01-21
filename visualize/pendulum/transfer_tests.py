@@ -22,7 +22,18 @@ def make_set_friction(friction_coef):
 
 def make_set_mass(mass_coef, mass_body='pole'):
     def set_mass(env):
-        env.model.body_mass[2] = (env.model.body_mass[2] * mass_coef)
+        bnames = env.model.body_names
+        bindex = bnames.index(mass_body)
+        env.model.body_mass[bindex] = (env.model.body_mass[bindex] * mass_coef)
+    return set_mass
+
+def make_set_mass_and_fric(friction_coef, mass_coef, mass_body='pole'):
+    def set_mass(env):
+        mass_bname = 'torso'
+        bnames = env.model.body_names
+        bindex = bnames.index(mass_bname)
+        env.model.body_mass[bindex] = (env.model.body_mass[bindex] * mass_coef)
+        env.model.geom_friction[:] = (env.model.geom_friction * friction_coef)[:]
     return set_mass
     
 
@@ -50,15 +61,18 @@ lerrel_run_list = [
     # ['gaussian_state_noise', ['add_gaussian_state_noise', True]]
 ]
 
-# for x in np.linspace(0.1, 1.0, 10):
-#     lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
+mass_sweep = np.linspace(.7, 1.3, 2)
+friction_sweep = np.linspace(0.5, 1.5, 2)
+grid = np.meshgrid(mass_sweep, friction_sweep)
+for mass, fric in np.vstack((grid[0].ravel(), grid[1].ravel())).T:
+    lerrel_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
 
 # for x in np.linspace(1, 15.0, 15):
 #     lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
 
 @ray.remote
 def run_test(test_name, outdir, output_file_name, num_rollouts,
-             rllib_config, checkpoint, env_modifier):
+             rllib_config, checkpoint, env_modifier, render):
     """Run an individual transfer test
 
     Parameters
@@ -101,14 +115,14 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     )
 
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = instantiate_rollout(rllib_config, checkpoint)
-    high = np.array([1.0, 90.0, env.max_cart_vel, env.max_pole_vel])
-    env.observation_space = spaces.Box(low=-1 * high, high=high, dtype=env.observation_space.dtype)
+    # high = np.array([1.0, 90.0, env.max_cart_vel, env.max_pole_vel])
+    # env.observation_space = spaces.Box(low=-1 * high, high=high, dtype=env.observation_space.dtype)
     if callable(env_modifier):
-            env_modifier(env)
+        env_modifier(env)
     elif len(env_modifier) > 0:
         setattr(env, env_modifier[0], env_modifier[1])
     rewards = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
-                                 state_init, action_init, num_rollouts)
+                                 state_init, action_init, num_rollouts, render)
 
     with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, test_name),
               'wb') as file:
@@ -118,7 +132,7 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     return np.mean(rewards), np.std(rewards)
 
 
-def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir):
+def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir, render=False):
 
     output_file_path = os.path.join(outdir, output_file_name)
     if not os.path.exists(os.path.dirname(output_file_path)):
@@ -131,7 +145,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     temp_output = [run_test.remote(test_name=list[0],
                  outdir=outdir, output_file_name=output_file_name,
                  num_rollouts=num_rollouts,
-                 rllib_config=rllib_config, checkpoint=checkpoint, env_modifier=list[1]) for list in lerrel_run_list]
+                 rllib_config=rllib_config, checkpoint=checkpoint, env_modifier=list[1], render=render) for list in lerrel_run_list]
     temp_output = ray.get(temp_output)
 
     with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "mean_sweep"),
@@ -159,4 +173,4 @@ if __name__ == '__main__':
 
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
-    run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name, os.path.join(args.output_dir, date))
+    run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name, os.path.join(args.output_dir, date), render=args.show_images)
