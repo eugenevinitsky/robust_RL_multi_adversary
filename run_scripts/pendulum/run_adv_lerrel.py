@@ -1,22 +1,22 @@
+from copy import deepcopy
 import errno
 from datetime import datetime
-import random
 import os
 import subprocess
 import sys
 
 import pytz
-import numpy as np
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 from ray.rllib.agents.ppo.ppo import PPOTrainer, DEFAULT_CONFIG
 
 from ray.rllib.models import ModelCatalog
 from ray import tune
+from ray.tune import Trainable
+from ray.tune.logger import pretty_print
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
-# from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy, DEFAULT_CONFIG
 
 from envs.lerrel.adv_hopper import AdvMAHopper
 from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
@@ -78,8 +78,15 @@ def setup_exps(args):
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv', type=int, default=1, help='Number of active adversaries in the env. Default - retrain lerrel, single agent')
     parser.add_argument('--adv_strength', type=float, default=5.0, help='Strength of active adversaries in the env')
+<<<<<<< HEAD:run_scripts/pendulum/run_adv_lerrel.py
     parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper'])
+=======
+    parser.add_argument('--alternate_training', action='store_true', default=False)
+>>>>>>> 87935c8b1764150e63f29144e72f84ffdb01485c:run_scripts/pendulum/run_pendulum_lerrel.py
     args = parser.parse_args(args)
+
+    if args.alternate_training and args.num_adv > 1:
+        sys.exit('You can only have 1 adversary if you are alternating training')
 
     alg_run = 'PPO'
 
@@ -87,14 +94,15 @@ def setup_exps(args):
     config = DEFAULT_CONFIG
     config['gamma'] = 0.995
     config["batch_mode"] = "complete_episodes"
-    config['train_batch_size'] = 10000 # args.train_batch_size
+    config['train_batch_size'] = args.train_batch_size
     config['vf_clip_param'] = 10.0
     if args.grid_search:
         config['lambda'] = tune.grid_search([0.1, 0.5, 0.9])
         config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
     else:
-        config['lambda'] = 0.1
-        config['lr'] = 5e-3
+        config['lambda'] = 0.9
+        config['lr'] = 5e-5
+        config['vf_loss_coeff'] = 1e-3
     config['sgd_minibatch_size'] = 64
     # config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
@@ -188,6 +196,39 @@ def on_episode_end(info):
         env.select_new_adversary()
 
 
+class AlternateTraining(Trainable):
+    def _setup(self, config):
+        self.config = config
+        self.env = config['env']
+        agent_config = self.config
+        adv_config = deepcopy(self.config)
+        agent_config['multiagent']['policies_to_train'] = ['pendulum']
+        adv_config['multiagent']['policies_to_train'] = ['adversary0']
+
+        self.agent_trainer = PPOTrainer(env=self.env, config=agent_config)
+        self.adv_trainer = PPOTrainer(env=self.env, config=adv_config)
+
+    def _train(self):
+        # improve the Adversary policy
+        print("-- Adversary Training --")
+        print(pretty_print(self.adv_trainer.train()))
+
+        # swap weights to synchronize
+        self.agent_trainer.set_weights(self.adv_trainer.get_weights(["adversary0"]))
+
+        # improve the Agent policy
+        print("-- Agent Training --")
+        output = self.agent_trainer.train()
+        print(pretty_print(output))
+
+        # swap weights to synchronize
+        self.adv_trainer.set_weights(self.agent_trainer.get_weights(["pendulum"]))
+        return output
+
+    def _save(self, tmp_checkpoint_dir):
+        return self.agent_trainer._save(tmp_checkpoint_dir)
+
+
 if __name__ == "__main__":
 
     exp_dict, args = setup_exps(sys.argv[1:])
@@ -204,6 +245,8 @@ if __name__ == "__main__":
     else:
         ray.init(local_mode=True)
 
+    if args.alternate_training:
+        exp_dict['run_or_experiment'] = AlternateTraining
     run_tune(**exp_dict, queue_trials=False)
 
     # Now we add code to loop through the results and create scores of the results
@@ -225,9 +268,9 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
                 if args.num_adv > 0:
-                    run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
+                    run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
 
-                    visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
+                    visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(date,
                                                                                                                       args.exp_title,
