@@ -63,8 +63,8 @@ lerrel_run_list = [
     # ['gaussian_state_noise', ['add_gaussian_state_noise', True]]
 ]
 
-mass_sweep = np.linspace(.7, 1.3, 6)
-friction_sweep = np.linspace(0.5, 1.5, 6)
+mass_sweep = np.linspace(.7, 1.3, 11)
+friction_sweep = np.linspace(0.5, 1.5, 11)
 grid = np.meshgrid(mass_sweep, friction_sweep)
 for mass, fric in np.vstack((grid[0].ravel(), grid[1].ravel())).T:
     lerrel_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
