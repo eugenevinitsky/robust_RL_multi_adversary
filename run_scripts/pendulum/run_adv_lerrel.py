@@ -245,7 +245,8 @@ if __name__ == "__main__":
 
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
-        ray.shutdonw()
+        ray.shutdown()
+        ray.init()
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), date), args.exp_title)
         if not os.path.exists(output_path):
             try:
