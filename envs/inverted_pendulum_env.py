@@ -217,7 +217,8 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
 
     def select_new_adversary(self):
         if self.adversary_range > 0:
-            self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
+            # the -1 corresponds to not having any adversary on at all
+            self.curr_adversary = np.random.randint(low=-1, high=self.adversary_range)
 
     def update_observed_obs(self, new_obs):
         """Add in the new observations and overwrite the stale ones"""
@@ -228,7 +229,6 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
 
     def step(self, actions):
         pendulum_action = actions['pendulum']
-        adv_action = 0.0
         if 'adversary{}'.format(self.curr_adversary) in actions.keys():
             adv_action = actions['adversary{}'.format(self.curr_adversary)]
             pendulum_action += adv_action * self.strengths[self.curr_adversary]
@@ -254,7 +254,7 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
 
                 reward_dict.update({'adversary{}'.format(i): -reward})
         else:
-            if self.adversary_range > 0:
+            if self.adversary_range > 0 and self.curr_adversary >= 0:
                 obs_dict.update({'adversary{}'.format(self.curr_adversary): self.observed_states})
                 reward_dict.update({'adversary{}'.format(self.curr_adversary): -reward})
 
@@ -277,7 +277,7 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
                                       'is_active': np.array([is_active])
                                       }})
         else:
-            if self.adversary_range > 0:
+            if self.adversary_range > 0 and self.curr_adversary >= 0:
                 curr_obs.update({'adversary{}'.format(self.curr_adversary): self.observed_states})
 
         return curr_obs
