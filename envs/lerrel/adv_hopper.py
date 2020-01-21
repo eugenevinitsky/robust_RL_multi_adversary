@@ -33,8 +33,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         return self.observation_space
 
     def _adv_to_xfrc(self, adv_act):
-        self.sim.data.xfrc_applied[self._adv_bindex][0] = 5 #adv_act[0]
-        self.sim.data.xfrc_applied[self._adv_bindex][2] = 5 #adv_act[1]
+        self.sim.data.xfrc_applied[self._adv_bindex][0] = adv_act[0]
+        self.sim.data.xfrc_applied[self._adv_bindex][2] = adv_act[1]
 
     def select_new_adversary(self):
         if self.num_adversaries:
