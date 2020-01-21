@@ -190,7 +190,7 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
 
     @property
     def adv_action_space(self):
-        return Box(low=-3, high=3, shape=(1,))
+        return Box(low=-self.max_torque, high=self.max_torque, shape=(1,))
 
     @property
     def adv_observation_space(self):
