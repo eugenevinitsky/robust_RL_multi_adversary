@@ -78,11 +78,8 @@ def setup_exps(args):
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv', type=int, default=1, help='Number of active adversaries in the env. Default - retrain lerrel, single agent')
     parser.add_argument('--adv_strength', type=float, default=5.0, help='Strength of active adversaries in the env')
-<<<<<<< HEAD:run_scripts/pendulum/run_adv_lerrel.py
     parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper'])
-=======
     parser.add_argument('--alternate_training', action='store_true', default=False)
->>>>>>> 87935c8b1764150e63f29144e72f84ffdb01485c:run_scripts/pendulum/run_pendulum_lerrel.py
     args = parser.parse_args(args)
 
     if args.alternate_training and args.num_adv > 1:
