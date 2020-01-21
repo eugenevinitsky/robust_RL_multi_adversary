@@ -379,14 +379,13 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
                 run_transfer_tests(config, checkpoint_path, 1, args.exp_title, output_path)
-                import ipdb; ipdb.set_trace()
-                if args.use_s3:
-                    p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                     "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(
+                save_str = "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(
                                                                          date,
                                                                          args.exp_title,
-                                                                         tune_name)).split(
-                        ' '))
+                                                                         tune_name)
+                save_str = save_str.replace('[', '').replace(']', '').replace(' ', '').replace(',', '')
+                if args.use_s3:
+                    p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,  save_str).split( ' '))
                     p1.wait()
                 if args.num_adv > 0:
 
@@ -397,9 +396,5 @@ if __name__ == "__main__":
                         visualize_model_perf(config, checkpoint_path, 10,  25, output_path)
 
                     if args.use_s3:
-                        p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                         "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
-                                                                                                                          args.exp_title,
-                                                                                                                          tune_name)).split(
-                            ' '))
+                        p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path, save_str).split(' '))
                         p1.wait()
