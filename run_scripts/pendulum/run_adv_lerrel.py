@@ -89,6 +89,7 @@ def setup_exps(args):
 
     # Universal hyperparams
     config = DEFAULT_CONFIG
+    config['num_workers'] = args.num_cpus
     config['gamma'] = 0.995
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
@@ -248,6 +249,7 @@ if __name__ == "__main__":
 
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
+        ray.shutdonw()
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), date), args.exp_title)
         if not os.path.exists(output_path):
             try:
