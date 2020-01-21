@@ -157,7 +157,16 @@ class TrajectoryEnv(MultiAgentEnv):
         done = True
 
         for robot in self.robots:
+            if self.dones[robot.id]:
+                continue
+
             action = action_dict[robot.id]
+
+            #if self.dones[robot.id]:  # if robot is at goal, continue
+            #   obs[robot.id] = np.zeros((10,))
+            #    rews[robot.id] = 0
+            #    continue
+
             # rescale the actions so that they are within the bounds of the robot motions
             scaled_action = self.transform_actions(action)
             r, v = scaled_action
@@ -189,9 +198,6 @@ class TrajectoryEnv(MultiAgentEnv):
                 # store state, action value and attention weights
                 self.states[robot].append([robot.get_full_state()])
                 # update all agents
-                if self.dones[robot.id]: #if robot is at goal, continue
-                    obs[robot.id] = np.zeros((10,))
-                    continue
 
                 robot.step(scaled_action)
 
@@ -212,7 +218,7 @@ class TrajectoryEnv(MultiAgentEnv):
                     obs[robot.id] = ob
                 elif robot.sensor == 'RGB':
                     raise NotImplementedError
-        all_done = {}
+        all_done = self.dones
         all_done['__all__'] = done
 
         return obs, rews, all_done, {}
