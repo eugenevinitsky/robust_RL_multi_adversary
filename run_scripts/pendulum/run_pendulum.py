@@ -378,12 +378,13 @@ if __name__ == "__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/pendulum/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                run_transfer_tests(config, checkpoint_path, 1, args.exp_title, output_path)
+                run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
                 save_str = "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(
                                                                          date,
                                                                          args.exp_title,
                                                                          tune_name)
                 save_str = save_str.replace('[', '').replace(']', '').replace(' ', '').replace(',', '')
+                print(save_str)
                 if args.use_s3:
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,  save_str).split( ' '))
                     p1.wait()
