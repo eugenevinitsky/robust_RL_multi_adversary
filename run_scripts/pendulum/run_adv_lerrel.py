@@ -245,6 +245,7 @@ if __name__ == "__main__":
 
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
+        import ipdb; ipdb.set_trace()
         ray.shutdown()
         ray.init()
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), date), args.exp_title)
@@ -266,7 +267,7 @@ if __name__ == "__main__":
                 if args.num_adv > 0:
                     run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
 
-                    visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
+                    # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(date,
                                                                                                                       args.exp_title,
