@@ -7,6 +7,7 @@ import os
 import pytz
 
 import numpy as np
+import matplotlib.pyplot as plt
 import ray
 
 from utils.parsers import replay_parser
@@ -152,7 +153,18 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
               'wb') as file:
         np.save(file, np.array(temp_output))
     
-
+    base = np.array(temp_output)[0,0]
+    means = np.array(temp_output)[1:,0].reshape(len(mass_sweep), len(friction_sweep))
+    with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"),'wb') as transfer_robustness:
+        fig = plt.figure()
+        plt.imshow(means - base, interpolation='nearest', cmap='hot', aspect='equal')
+        plt.title("Delta from base score: {}".format(base))
+        plt.xticks(ticks=np.arange(len(mass_sweep)), labels=mass_sweep)
+        plt.xlabel("Mass coef")
+        plt.yticks(ticks=np.arange(len(friction_sweep)), labels=friction_sweep)
+        plt.xlabel("Friction coef")
+        plt.colorbar()
+        plt.savefig(transfer_robustness)
 
 if __name__ == '__main__':
     date = datetime.now(tz=pytz.utc)
