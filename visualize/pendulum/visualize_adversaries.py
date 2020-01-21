@@ -26,6 +26,8 @@ def compute_kl_diff(mean, log_std, other_mean, other_log_std):
 def dict_func(env, options_dict):
     # figure out how many adversaries you have and initialize their grids
     num_adversaries = env.num_adversaries
+    if hasattr(env, 'num_adv_per_strength'):
+        num_adversaries *= env.num_adv_per_strength
     adversary_grid_dict = {}
     grid_size = options_dict['grid_size']
     kl_grid = np.zeros((num_adversaries, num_adversaries))

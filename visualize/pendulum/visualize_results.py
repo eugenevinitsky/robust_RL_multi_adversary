@@ -10,6 +10,11 @@ import numpy as np
 parser = argparse.ArgumentParser()
 parser.add_argument('results_path', type=str, help='Pass the path to the folder containing all yuor results files')
 parser.add_argument('--top_percent', type=float, default=1.0, help='The fraction of the top plots to plot')
+parser.add_argument('--folder_names', nargs='+',
+                    help='If passed, we only plot results if the hyperparam folder matches this')
+
+parser.add_argument('--plot_names', nargs='+',
+                    help='If passed, these are the names for the folder matching')
 
 
 args = parser.parse_args()
@@ -27,14 +32,15 @@ for (dirpath, dirnames, filenames) in os.walk(args.results_path):
                 file_output = np.loadtxt(os.path.join(dirpath, file))
                 mean = np.mean(file_output)
                 var = np.var(file_output)
-                rew_results[i].append((mean, var, file))
+                outer_folder = dirpath.split('/')[-1]
+                rew_results[i].append((mean, var, file, outer_folder))
 
 
 output_path = args.results_path.split('/')[-1]
 if not os.path.exists('transfer_results/pendulum/{}'.format(output_path)):
     os.makedirs('transfer_results/pendulum/{}'.format(output_path))
 
-# TODO(@evinitsky) go through the results and pull out the one with the highest mean for a given experiment
+#go through the results and pull out the one with the highest mean for a given experiment
 unique_rew_results = []
 for result in rew_results:
     temp_results = []
@@ -47,19 +53,23 @@ for result in rew_results:
             temp_results.append(result[indices[0][max_value]])
         unique_rew_results.append(temp_results)
 
-
 for i, result in enumerate(unique_rew_results):
     result = sorted(result, key=lambda x: x[2])
     plt.figure(figsize=(40, 5))
     legends = []
     means = []
     vars = []
-    for mean, var, legend in result:
+    outerfolders = []
+    for mean, var, legend, outerfolder in result:
         means.append(mean)
         vars.append(var)
         legends.append(legend.split('.')[0].split('_' + prefix_list[i])[0])
+        outerfolders.append(outerfolder)
 
-    print('the winner for test {} with score {} is {}'.format(prefix_list[i], np.max(means), legends[np.argmax(means)]))
+    print('the winner for test {} with score {} is {} from folder {}'.format(prefix_list[i],
+                                                                             np.max(means),
+                                                                             legends[np.argmax(means)],
+                                                                             outerfolders[np.argmax(means)]))
 
     # Now we sort
     means = np.array(means)
@@ -99,3 +109,51 @@ for i, result in enumerate(unique_rew_results):
         plt.title('Score under {} test, top score is {}'.format(prefix_list[i], legends[np.argmax(means)]))
 
     plt.savefig('transfer_results/pendulum/{}/{}{}'.format(output_path, prefix_list[i], 'rew'))
+
+# Now go through and plot all of them by folder name if so desired
+if args.folder_names:
+
+    if args.plot_names:
+        legends = args.plot_names
+    else:
+        legends = args.folder_names
+
+    new_results = [[0.0] * len(prefix_list) for i in range(len(legends))]
+    for i, results in enumerate(rew_results):
+        for result in results:
+            if np.any([result[3] == folder_name for folder_name in args.folder_names]):
+                exp_name = result[3]
+                curr_index = 0
+                for j, folder_name in enumerate(args.folder_names):
+                    if folder_name == exp_name:
+                        curr_index = j
+                new_results[curr_index][i] = result[0]
+
+    x = np.arange(len(prefix_list))  # the label locations
+    width = 0.2  # the width of the bars
+    fig, ax = plt.subplots()
+    fig.set_figwidth(25)
+
+    width_range = np.linspace(-width * (len(legends) - 1) / 2 , width * (len(legends) - 1) / 2, len(legends))
+    for trial_num, result in enumerate(new_results):
+        if args.plot_names:
+            rects1 = ax.bar(x + width_range[trial_num], result, width, label=args.plot_names[trial_num])
+        else:
+            rects1 = ax.bar(x + width_range[trial_num], result, width, label=''.join(args.folder_names[trial_num].split('_')[0:2]))
+
+    ax.set_ylabel('Scores')
+    ax.set_title('Blah')
+    ax.set_xticks(x)
+    # This is a hyper hand tuned way of labelling for the particular file names above
+    xlabels = []
+    for prefix in prefix_list:
+        split = prefix.split('_')
+        if len(split) == 1:
+            xlabels.append(prefix)
+        elif len(split) > 1 and 'noise' not in prefix:
+            xlabels.append(''.join(prefix.split('_')[1:]))
+        else:
+            xlabels.append(prefix.split('_')[1][0]+ '_n')
+    ax.set_xticklabels(xlabels)
+    ax.legend()
+    plt.savefig('transfer_results/pendulum/{}/{}'.format(output_path, 'folder_comparison'))
