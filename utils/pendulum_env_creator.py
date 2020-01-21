@@ -13,3 +13,8 @@ def pendulum_env_creator(env_config):
 def lerrel_pendulum_env_creator(env_config):
     env = AdvMAPendulumEnv(env_config)
     return env
+
+def make_create_env(env_class):
+    def create_env(config):
+        return env_class(config)
+    return create_env
