@@ -21,7 +21,7 @@ from ray.tune.registry import register_env
 from envs.lerrel.adv_hopper import AdvMAHopper
 from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from visualize.pendulum.transfer_tests import run_transfer_tests
-from visualize.pendulum.visualize_adversaries import visualize_adversaries
+# from visualize.pendulum.visualize_adversaries import visualize_adversaries
 from utils.pendulum_env_creator import make_create_env
 from utils.parsers import init_parser, ray_parser, ma_env_parser
 from utils.rllib_utils import get_config_from_path
