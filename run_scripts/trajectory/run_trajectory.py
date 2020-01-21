@@ -83,7 +83,7 @@ def setup_exps(args):
     if args.custom_ppo:
         config['kl_diff_weight'] = args.kl_diff_weight
         config['kl_diff_target'] = args.kl_diff_target
-        config['kl_diff_clip'] = 5.0
+        config['kl_diff_clip'] = args.kl_diff_clip
         config['env_config']['kl_diff_training'] = True
     else:
         config['env_config']['kl_diff_training'] = False

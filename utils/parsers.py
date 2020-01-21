@@ -68,6 +68,8 @@ def ma_env_parser(parser):
                         help="How much weight to reward differences in kl between policies")
     parser.add_argument("--kl_diff_target", type=float, default=10.0,
                         help="The desired average kl diff between the policies")
+    parser.add_argument("--kl_diff_clip", type=float, default=5.0,
+                        help="What to clip the kl_diff loss to")
     return parser
 
 

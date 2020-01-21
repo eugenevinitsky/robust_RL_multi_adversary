@@ -120,6 +120,7 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
     """Since we are computing the logits of model on the observations of adversary i, we compute
        the KL as \mathbb{E}_{adversary i} [log(p(adversary_i) \ p(model)] instead of the other way around."""
     kl_loss = 0.0
+    kl_diff_all = 0.0
     for i in range(3):
         logits, state = get_logits(model, train_batch, i)
         mean, log_std = tf.split(logits, 2, axis=1)
@@ -132,8 +133,9 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
         kl_diff = tf.reduce_sum(- other_logstd + log_std +
                                             (tf.square(other_std) + tf.square(mean - other_mean)) /
                                             (2.0 * tf.square(std)) - 0.5, axis=1)
+        kl_diff_all += kl_diff
         kl_loss += huber_loss(kl_diff, policy.kl_target)
-    return kl_loss, kl_diff
+    return kl_loss, kl_diff_all
 
 
 # def new_ppo_surrogate_loss(policy, batch_tensors):
@@ -325,10 +327,10 @@ class KLDiffMixin(object):
             dtype=tf.float32)
 
     def update_kl_diff(self, sampled_kl):
-        if sampled_kl < 2.0 * self.kl_target:
+        if sampled_kl > 2.0 * self.kl_target or sampled_kl < 0.5*self.kl_target:
             self.kl_diff_coeff_val *= 1.5
-        elif sampled_kl > 0.5 * self.kl_target:
-            self.kl_diff_coeff_val *= 0.5
+        #elif sampled_kl > 0.5 * self.kl_target:
+        #    self.kl_diff_coeff_val *= 0.5
         # There is literally no reason to let this go off to infinity and subsequently overflow
 
         self.kl_diff_coeff_val = min(self.kl_diff_coeff_val, 1e5)
