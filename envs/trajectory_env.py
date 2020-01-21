@@ -157,15 +157,18 @@ class TrajectoryEnv(MultiAgentEnv):
         done = True
 
         for robot in self.robots:
-            if self.dones[robot.id]:
+            #if self.dones[robot.id]:
+            #    continue
+            #
+            # if robot.id not in action_dict.keys():
+            #     continue
+
+            if self.dones[robot.id]:  # if robot is at goal, continue
+                obs[robot.id] = np.zeros((10,))
+                rews[robot.id] = 0
                 continue
 
             action = action_dict[robot.id]
-
-            #if self.dones[robot.id]:  # if robot is at goal, continue
-            #   obs[robot.id] = np.zeros((10,))
-            #    rews[robot.id] = 0
-            #    continue
 
             # rescale the actions so that they are within the bounds of the robot motions
             scaled_action = self.transform_actions(action)
@@ -184,13 +187,16 @@ class TrajectoryEnv(MultiAgentEnv):
             if self.global_time >= self.time_limit - 1:
                 rews[robot.id] = 0
                 self.dones[robot.id] = True
+                #dones[robot.id] = True
             elif reached_goal:
                 rews[robot.id] = self.success_reward
                 self.dones[robot.id] = True
+                #dones[robot.id] = True
             else:
                 rews[robot.id] = 0
                 self.dones[robot.id] = False
                 done = False
+                #dones[robot.id] = False
 
             #rews[robot.id] += self.closer_goal * (cur_dist_to_goal - next_dist_to_goal)
 
@@ -218,7 +224,9 @@ class TrajectoryEnv(MultiAgentEnv):
                     obs[robot.id] = ob
                 elif robot.sensor == 'RGB':
                     raise NotImplementedError
-        all_done = self.dones
+        #all_done = self.dones.copy()
+        all_done = {}
+        assert np.asarray(list(self.dones.values())).all() == done, (self.dones.values(), done)
         all_done['__all__'] = done
 
         return obs, rews, all_done, {}
