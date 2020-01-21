@@ -670,18 +670,18 @@ ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_
 --train_batch_size 20000 --num_iters 1000 --checkpoint_freq 100 --curriculum --concat_actions --num_concat_states 1 \
 --num_adv 0 --horizon 500 --grid_search --use_s3 \
 --exp_title pend_0adv_h500_tb2e4_concat1_curr --num_cpus 4 --run_transfer_tests --multi_node" --start --stop --tmux --cluster-name=ev_pend_test1
-
-# 1 adversary baseline with low strength
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---train_batch_size 20000 --num_iters 1000 --checkpoint_freq 100 --concat_actions --num_concat_states 1 \
---num_adv 1 --num_adv_per_strength 1 --adv_strength 0.5 --horizon 500 --grid_search --use_s3 --multi_node \
---exp_title pend_1adv_1ps_str0p5_h500_tb2e4_concat1 --num_cpus 4 --run_transfer_tests --goal_score -300" --start --stop --tmux --cluster-name=ev_pend_test2
-
-# 1 adversary baseline with high strength
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---train_batch_size 20000 --num_iters 1000 --checkpoint_freq 100 --concat_actions --num_concat_states 1 \
---num_adv 1 --num_adv_per_strength 1 --adv_strength 1.0 --horizon 500 --grid_search --use_s3 --multi_node \
---exp_title pend_1adv_1ps_str1p0_h500_tb2e4_concat1 --num_cpus 4 --run_transfer_tests --goal_score -300" --start --stop --tmux --cluster-name=ev_pend_test3
+#
+## 1 adversary baseline with low strength
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--train_batch_size 20000 --num_iters 1000 --checkpoint_freq 100 --concat_actions --num_concat_states 1 \
+#--num_adv 1 --num_adv_per_strength 1 --adv_strength 0.5 --horizon 500 --grid_search --use_s3 --multi_node \
+#--exp_title pend_1adv_1ps_str0p5_h500_tb2e4_concat1 --num_cpus 4 --run_transfer_tests --goal_score -300" --start --stop --tmux --cluster-name=ev_pend_test2
+#
+## 1 adversary baseline with high strength
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--train_batch_size 20000 --num_iters 1000 --checkpoint_freq 100 --concat_actions --num_concat_states 1 \
+#--num_adv 1 --num_adv_per_strength 1 --adv_strength 1.0 --horizon 500 --grid_search --use_s3 --multi_node \
+#--exp_title pend_1adv_1ps_str1p0_h500_tb2e4_concat1 --num_cpus 4 --run_transfer_tests --goal_score -300" --start --stop --tmux --cluster-name=ev_pend_test3
 
 # curriculum with 2 adversaries per strength and no memory
 ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
@@ -707,18 +707,18 @@ ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_
 --num_adv 1 --num_adv_per_strength 10 --adv_strength 0.5 --horizon 500 --grid_search --use_s3 --multi_node \
 --exp_title pend_1adv_10ps_str0p5_h500_tb2e4_concat20_curr --num_cpus 4 --run_transfer_tests --goal_score -300" --start --stop --tmux --cluster-name=ev_pend_test7
 
-# custom ppo with 1 adversaries per strength and no memory and lower strength
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---train_batch_size 20000 --num_iters 1000 --checkpoint_freq 100 --concat_actions --num_concat_states 1 \
---num_adv 5 --num_adv_per_strength 1 --adv_strength 0.5 --horizon 500 --grid_search --use_s3 --multi_node \
---kl_diff_target 1000 \
---exp_title pend_5adv_1ps_str0p5_h500_tb2e4_concat1_customppo_kd1000 --custom_ppo \
---num_cpus 4 --run_transfer_tests" --start --stop --tmux --cluster-name=ev_pend_test8
-
-# custom ppo with 1 adversaries per strength and memory and lower strength
-ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
---train_batch_size 20000 --num_iters 1000 --checkpoint_freq 100 --concat_actions --num_concat_states 20 \
---num_adv 5 --num_adv_per_strength 1 --adv_strength 0.5 --horizon 500 --grid_search --use_s3 --multi_node \
---kl_diff_target 1000 \
---exp_title pend_5adv_1ps_str0p5_h500_tb2e4_concat20_customppo_kd1000 --custom_ppo \
---num_cpus 4 --run_transfer_tests" --start --stop --tmux --cluster-name=ev_pend_test9
+## custom ppo with 1 adversaries per strength and no memory and lower strength
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--train_batch_size 20000 --num_iters 1000 --checkpoint_freq 100 --concat_actions --num_concat_states 1 \
+#--num_adv 5 --num_adv_per_strength 1 --adv_strength 0.5 --horizon 500 --grid_search --use_s3 --multi_node \
+#--kl_diff_target 1000 \
+#--exp_title pend_5adv_1ps_str0p5_h500_tb2e4_concat1_customppo_kd1000 --custom_ppo \
+#--num_cpus 4 --run_transfer_tests" --start --stop --tmux --cluster-name=ev_pend_test8
+#
+## custom ppo with 1 adversaries per strength and memory and lower strength
+#ray exec ././../../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_pendulum.py \
+#--train_batch_size 20000 --num_iters 1000 --checkpoint_freq 100 --concat_actions --num_concat_states 20 \
+#--num_adv 5 --num_adv_per_strength 1 --adv_strength 0.5 --horizon 500 --grid_search --use_s3 --multi_node \
+#--kl_diff_target 1000 \
+#--exp_title pend_5adv_1ps_str0p5_h500_tb2e4_concat20_customppo_kd1000 --custom_ppo \
+#--num_cpus 4 --run_transfer_tests" --start --stop --tmux --cluster-name=ev_pend_test9

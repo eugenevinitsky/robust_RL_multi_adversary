@@ -378,7 +378,8 @@ if __name__ == "__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/pendulum/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
+                run_transfer_tests(config, checkpoint_path, 1, args.exp_title, output_path)
+                import ipdb; ipdb.set_trace()
                 if args.use_s3:
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(
@@ -390,7 +391,7 @@ if __name__ == "__main__":
                 if args.num_adv > 0:
 
                     if not args.model_based:
-                        visualize_adversaries(config, checkpoint_path, 7, 100, output_path)
+                        visualize_adversaries(config, checkpoint_path, 7, 25, output_path)
 
                     if args.model_based:
                         visualize_model_perf(config, checkpoint_path, 10,  25, output_path)
