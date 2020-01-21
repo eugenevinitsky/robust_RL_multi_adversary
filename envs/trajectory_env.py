@@ -183,7 +183,7 @@ class TrajectoryEnv(MultiAgentEnv):
                 self.dones[robot.id] = False
                 done = False
 
-            rews[robot.id] += self.closer_goal * (cur_dist_to_goal - next_dist_to_goal)
+            #rews[robot.id] += self.closer_goal * (cur_dist_to_goal - next_dist_to_goal)
 
             if update:
                 # store state, action value and attention weights
