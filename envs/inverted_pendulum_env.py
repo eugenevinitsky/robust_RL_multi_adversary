@@ -212,7 +212,7 @@ class MAPendulumEnv(PendulumEnv, MultiAgentEnv):
                 self.num_iters_above_goal_score = 0
             if self.num_iters_above_goal_score >= self.adv_incr_freq:
                 self.num_iters_above_goal_score = 0
-                self.adversary_range += self.num_adv_per_strength
+                self.adversary_range += 1
                 self.adversary_range = min(self.adversary_range, self.num_adversaries)
 
     def select_new_adversary(self):

@@ -44,7 +44,7 @@ def dict_func(env, options_dict):
 
 
 def pre_step_func(env, obs_dict):
-    if isinstance(env.adv_observation_space, dict):
+    if isinstance(env.adv_observation_space, Dict):
         multi_obs = {'adversary{}'.format(i): {'obs': obs_dict['pendulum'],
                                                'is_active': np.array([1])} for i in range(env.num_adversaries)}
     else:
@@ -180,10 +180,15 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                 if a_obs is not None:
                     policy_id = mapping_cache.setdefault(
                         agent_id, policy_agent_mapping(agent_id))
-
-                all_obs_comb = np.asarray(np.meshgrid(*np.split(obs_grid, obs_grid.shape[0]))).T.reshape(-1,
-                                                                                                         obs_grid.shape[0])
+                if env.concat_actions:
+                    all_obs_comb = np.asarray(np.meshgrid(*np.split(obs_grid[0:3, :], obs_grid.shape[0] - 1))).T.reshape(-1,
+                                                                                                             obs_grid.shape[0] - 1)
+                else:
+                    all_obs_comb = np.asarray(np.meshgrid(*np.split(obs_grid, obs_grid.shape[0]))).T.reshape(-1,
+                                                                                                             obs_grid.shape[0])
                 for obs in all_obs_comb:
+                    if env.concat_actions:
+                        obs = np.concatenate((obs, [0.0]))
                     if isinstance(env.adv_observation_space, Dict):
                         multi_obs = {'obs': obs, 'is_active': np.array([1])}
                     else:

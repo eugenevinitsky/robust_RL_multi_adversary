@@ -181,8 +181,8 @@ def setup_exps(args):
         config['model']['fcnet_hiddens'] = [64, 64]
     else:
         if args.grid_search:
-            config['model']['fcnet_hiddens'] = [64, 64]
-            config['model']['fcnet_activation'] = tune.grid_search(['tanh', 'relu'])
+            config['model']['fcnet_hiddens'] = tune.grid_search([[64, 64], [256, 256, 256]])
+            config['model']['fcnet_activation'] = 'tanh'
 
         else:
             config['model']['fcnet_hiddens'] = [64, 64]
@@ -390,7 +390,7 @@ if __name__ == "__main__":
                 if args.num_adv > 0:
 
                     if not args.model_based:
-                        visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
+                        visualize_adversaries(config, checkpoint_path, 7, 100, output_path)
 
                     if args.model_based:
                         visualize_model_perf(config, checkpoint_path, 10,  25, output_path)

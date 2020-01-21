@@ -40,7 +40,12 @@ def instantiate_rollout(rllib_config, checkpoint):
 
     # Determine agent and checkpoint
     assert rllib_config['env_config']['run'], "No RL algorithm specified in env config!"
-    agent_cls = get_agent_class(rllib_config['env_config']['run'])
+    # handle the custom KL PPO case
+    if 'kl_diff_weight' in rllib_config.keys():
+        from algorithms.custom_ppo import KLPPOTrainer
+        agent_cls = KLPPOTrainer
+    else:
+        agent_cls = get_agent_class(rllib_config['env_config']['run'])
     # configure the env
     env_name ='MAPendulumEnv'
     register_env(env_name, pendulum_env_creator)
