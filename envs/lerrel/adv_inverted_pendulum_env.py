@@ -64,16 +64,15 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
         bnames = self.model.body_names
         self._adv_bindex = bnames.index(self._adv_f_bname) # Index of the body on which the adversary force will be applied
 
-    def observation_space(self):
-        obs_space = super().observation_space
+        obs_space = self.observation_space
         if self.concat_actions:
-            action_space = super().action_space
+            action_space = self.action_space
             low = np.tile(np.concatenate((obs_space.low, action_space.low)), self.num_concat_states)
             high = np.tile(np.concatenate((obs_space.high, action_space.high)), self.num_concat_states)
         else:
             low = np.tile(obs_space.low, self.num_concat_states)
             high = np.tile(obs_space.high, self.num_concat_states)
-        return Box(low=low, high=high, dtype=np.float32)
+        self.observation_space = Box(low=low, high=high, dtype=np.float32)
 
     @property
     def adv_action_space(self):
