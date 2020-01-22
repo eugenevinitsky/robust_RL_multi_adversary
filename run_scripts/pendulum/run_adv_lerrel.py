@@ -265,11 +265,11 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
                 run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
 
-                if args.num_adv > 0:
-                    visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
-                    p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                     "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(date,
-                                                                                                                      args.exp_title,
-                                                                                                                      tune_name)).split(
-                        ' '))
-                    p1.wait()
+                # if args.num_adv > 0:
+                    # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
+                p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+                                                                    "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(date,
+                                                                                                                    args.exp_title,
+                                                                                                                    tune_name)).split(
+                    ' '))
+                p1.wait()
