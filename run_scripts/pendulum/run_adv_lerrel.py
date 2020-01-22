@@ -165,8 +165,6 @@ def setup_exps(args):
     # config['model']['custom_model'] = "rnn"
     config['model']['lstm_use_prev_action_reward'] = False
     config['model']['lstm_cell_size'] = 128
-    if args.grid_search:
-        config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
     if args.env_name == "pendulum":
         env_name = "MALerrelPendulumEnv"
