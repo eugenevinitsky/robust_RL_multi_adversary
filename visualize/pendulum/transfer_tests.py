@@ -14,6 +14,7 @@ import ray
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from visualize.pendulum.run_rollout import run_rollout, instantiate_rollout
+from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep
 import errno
 
 
@@ -50,22 +51,9 @@ run_list = [
 # test name, is_env_config, config_value, params_name, params_value
 lerrel_run_list = [
     ['base', []],
-    # ['friction04', make_set_friction(0.4)],
-    # ['friction06', make_set_friction(0.6)],
-    # ['friction08', make_set_friction(0.8)],
-    # ['friction12', make_set_friction(1.2)],
-    # ['friction14', make_set_friction(1.4)],
-    # ['mass05', make_set_mass(0.5)],
-    # ['mass075', make_set_mass(0.75)],
-    # ['mass10', make_set_mass(1.0)],
-    # ['mass125', make_set_mass(1.25)],
-    # ['mass15', make_set_mass(1.5)],
-    # ['gaussian_state_noise', ['add_gaussian_state_noise', True]]
 ]
 
-mass_sweep = np.linspace(.7, 1.3, 11)
-friction_sweep = np.linspace(0.5, 1.5, 11)
-grid = np.meshgrid(mass_sweep, friction_sweep)
+grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
 for mass, fric in np.vstack((grid[0].ravel(), grid[1].ravel())).T:
     lerrel_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
 
@@ -152,28 +140,20 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
 
     with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "mean_sweep"),
               'wb') as file:
-        np.save(file, np.array(temp_output))
+        np.save(file, )
     
-    base = np.array(temp_output)[0,0]
-    means = np.array(temp_output)[1:,0].reshape(len(mass_sweep), len(friction_sweep))
-    with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"),'wb') as transfer_robustness:
-        fig = plt.figure()
-        plt.imshow(means - base, interpolation='nearest', cmap='hot', aspect='equal')
-        plt.title("Delta from base score: {}".format(base))
-        plt.xticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x) for x in mass_sweep])
-        plt.xlabel("Mass coef")
-        plt.yticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
-        plt.xlabel("Friction coef")
-        plt.colorbar()
-        plt.savefig(transfer_robustness)
+    means = np.array(temp_output).reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
+    save_heatmap(means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_file_name, False)
 
+    return means
+    
 if __name__ == '__main__':
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
-    output_path = os.path.expanduser('~/transfer_results/pendulum')
+    output_path = os.path.expanduser('~/transfer_results/')
 
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--output_file_name', type=str, default='transfer_out/pendulum',
+    parser.add_argument('--output_file_name', type=str, default='transfer_out',
                         help='The file name we use to save our results')
     parser.add_argument('--output_dir', type=str, default=output_path,
                         help='')
