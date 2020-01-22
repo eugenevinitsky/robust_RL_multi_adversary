@@ -262,11 +262,10 @@ if __name__ == "__main__":
                 outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
+                run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
 
                 if args.num_adv > 0:
-                    run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
-
-                    # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
+                    visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(date,
                                                                                                                       args.exp_title,
