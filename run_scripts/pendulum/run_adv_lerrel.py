@@ -90,13 +90,16 @@ def setup_exps(args):
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
     config['vf_clip_param'] = 10.0
+    config["observation_filter"] = "MeanStdFilter"
+    config['seed'] = 12487
+
     if args.grid_search:
         config['lambda'] = tune.grid_search([0.1, 0.5, 0.9])
         config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
     else:
         config['lambda'] = 0.9
         config['lr'] = 5e-5
-        config['vf_loss_coeff'] = 1e-3
+    config['vf_loss_coeff'] = 1e-3
     config['sgd_minibatch_size'] = 64
     # config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
@@ -118,8 +121,6 @@ def setup_exps(args):
     # config['model']['custom_model'] = "rnn"
     config['model']['lstm_use_prev_action_reward'] = False
     config['model']['lstm_cell_size'] = 128
-    if args.grid_search:
-        config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
     if args.env_name == "pendulum":
         env_name = "MALerrelPendulumEnv"
