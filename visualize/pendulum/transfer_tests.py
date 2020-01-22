@@ -140,7 +140,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
 
     with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "mean_sweep"),
               'wb') as file:
-        np.save(file, )
+        np.save(file, np.array(temp_output))
     
     means = np.array(temp_output).reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
     save_heatmap(means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_file_name, False)
