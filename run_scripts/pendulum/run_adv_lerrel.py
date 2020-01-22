@@ -8,7 +8,11 @@ import sys
 import pytz
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
-from ray.rllib.agents.ppo.ppo import PPOTrainer, DEFAULT_CONFIG
+from ray.rllib.agents.ppo.ppo import PPOTrainer, DEFAULT_CONFIG as DEFAULT_PPO_CONFIG
+from ray.rllib.agents.sac.sac_policy import SACTFPolicy
+from ray.rllib.agents.sac.sac import SACTrainer, DEFAULT_CONFIG as DEFAULT_SAC_CONFIG
+
+from ray.rllib.agents.ddpg.td3 import TD3Trainer, TD3_DEFAULT_CONFIG as DEFAULT_TD3_CONFIG
 
 from ray.rllib.models import ModelCatalog
 from ray import tune
@@ -72,6 +76,7 @@ def setup_exps(args):
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
     parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper'])
+    parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO, SAC, TD3')
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
                                                                          'Multiply this by `advs_per_strength` to get the total number of adversaries'
@@ -97,27 +102,45 @@ def setup_exps(args):
     if args.alternate_training and args.num_adv > 1:
         sys.exit('You can only have 1 adversary if you are alternating training')
 
-    alg_run = 'PPO'
+    alg_run = args.algorithm
 
     # Universal hyperparams
-    config = DEFAULT_CONFIG
+    if args.algorithm == 'PPO':
+        config = DEFAULT_PPO_CONFIG
+        config['train_batch_size'] = args.train_batch_size
+        if args.grid_search:
+            config['lambda'] = tune.grid_search([0.85, 0.9, 0.95])
+            config['lr'] = tune.grid_search([1e-4, 5e-4])
+            config['vf_clip_param'] = 100.0
+        else:
+            if args.env_name == 'hopper':
+                config['lambda'] = 0.97
+                config['lr'] = 1e-2
+                config['vf_clip_param'] = 100.0
+            else:
+                config['lambda'] = 0.9
+                config['lr'] = 5e-5
+        config['sgd_minibatch_size'] = 64
+        config['num_sgd_iter'] = 10
+        config['observation_filter'] = 'NoFilter'
+    elif args.algorithm == 'SAC':
+        config = DEFAULT_SAC_CONFIG
+        config['target_network_update_freq'] = 1
+    elif args.algorithm == 'TD3':
+        config = DEFAULT_TD3_CONFIG
+        # === Exploration ===
+        config['learning_starts'] = 10000
+        config['pure_exploration_steps'] = 10000
+        # === Evaluation ===
+        config['evaluation_interval'] = 5
+        config['evaluation_num_episodes'] = 10
+    else:
+        sys.exit('Only PPO, TD3, and SAC are supported')
+
     config['num_workers'] = args.num_cpus
     config['gamma'] = 0.995
+    # config["batch_mode"] = "complete_episodes"
     config['seed'] = 0
-    config["batch_mode"] = "complete_episodes"
-    config['train_batch_size'] = args.train_batch_size
-    config['vf_clip_param'] = 10.0
-    if args.grid_search:
-        config['lambda'] = tune.grid_search([0.5, 0.9])
-        config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
-    else:
-        config['lambda'] = 0.9
-        config['lr'] = 5e-5
-        config['vf_loss_coeff'] = 1e-3
-    config['sgd_minibatch_size'] = 64
-    # config['num_envs_per_worker'] = 10
-    config['num_sgd_iter'] = 10
-    config['observation_filter'] = 'MeanStdFilter'
 
     # config['num_adversaries'] = args.num_adv
     # config['kl_diff_weight'] = args.kl_diff_weight
@@ -174,7 +197,7 @@ def setup_exps(args):
     exp_dict = {
         'name': args.exp_title,
         # 'run_or_experiment': KLPPOTrainer,
-        'run_or_experiment': 'PPO',
+        'run_or_experiment': args.algorithm,
         'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
