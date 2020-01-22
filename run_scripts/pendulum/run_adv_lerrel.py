@@ -71,13 +71,13 @@ def setup_exps(args):
     parser = init_parser()
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
+    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper'])
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
                                                                          'Multiply this by `advs_per_strength` to get the total number of adversaries'
                                                                          'Default - retrain lerrel, single agent')
     parser.add_argument('--advs_per_strength', type=int, default=1, help='How many adversaries exist at each strength level')
     parser.add_argument('--adv_strength', type=float, default=5.0, help='Strength of active adversaries in the env')
-    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper'])
     parser.add_argument('--alternate_training', action='store_true', default=False)
     parser.add_argument('--curriculum', action='store_true', default=False,
                         help='If true, the number of adversaries is increased every `adv_incr_freq` steps that'
@@ -284,13 +284,23 @@ if __name__ == "__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                if args.num_adv > 0:
-                    run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
+                if args.num_adv_strengths * args.advs_per_strength > 0:
+                    # TODO(@ev) gross find somewhere else to put this
 
-                    # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
-                    p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                     "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(date,
-                                                                                                                      args.exp_title,
-                                                                                                                      tune_name)).split(
-                        ' '))
-                    p1.wait()
+                    if config['env'] == "MALerrelPendulumEnv":
+                        from visualize.pendulum.transfer_tests import pendulum_run_list
+                        lerrel_run_list = pendulum_run_list
+                    elif config['env'] == "MALerrelHopperEnv":
+                        from visualize.pendulum.transfer_tests import hopper_run_list
+                        lerrel_run_list = hopper_run_list
+
+                    run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path, run_list=lerrel_run_list)
+
+                    if args.use_s3:
+                        # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
+                        p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+                                                                         "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(date,
+                                                                                                                          args.exp_title,
+                                                                                                                          tune_name)).split(
+                            ' '))
+                        p1.wait()
