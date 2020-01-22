@@ -60,12 +60,12 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
         step_num = 0
         while not done:
             multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
-            obs = multi_obs['pendulum'] * env.obs_norm
+            obs = multi_obs['agent'] * env.obs_norm
             if isinstance(env.adv_observation_space, dict):
                 multi_obs = {'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([1])} for i in range(env.num_adversaries)}
             else:
                 multi_obs = {'adversary{}'.format(i): obs for i in range(env.num_adversaries)}
-            multi_obs.update({'pendulum': obs})
+            multi_obs.update({'agent': obs})
             action_dict = {}
             action_dist_dict = {}
             for agent_id, a_obs in multi_obs.items():
@@ -115,7 +115,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                     prev_actions[agent_id] = prev_action
 
                     # Now store the agent action in the corresponding grid
-                    if agent_id != 'pendulum':
+                    if agent_id != 'agent':
                         action_bins = adversary_grid_dict[agent_id]['action_bins']
                         obs_bins = adversary_grid_dict[agent_id]['obs_bins']
 
@@ -134,7 +134,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                                 heat_map[action_index, obs_index, obs_loop_index, action_loop_index] += 1
 
             for agent_id in multi_obs.keys():
-                if agent_id != 'pendulum':
+                if agent_id != 'agent':
                     # Now iterate through the agents and compute the kl_diff
 
                     curr_id = int(agent_id.split('adversary')[1])
@@ -157,7 +157,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
 
             # we turn the adversaries off so you only send in the pendulum keys
             new_dict = {}
-            new_dict.update({'pendulum': action['pendulum']})
+            new_dict.update({'agent': action['agent']})
             next_obs, reward, done, info = env.step(new_dict)
             if isinstance(done, dict):
                 done = done['__all__']
@@ -169,7 +169,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                 prev_rewards[_DUMMY_AGENT_ID] = reward
 
             # we only want the robot reward, not the adversary reward
-            reward_total += info['pendulum']['pendulum_reward']
+            reward_total += info['agent']['agent_reward']
             obs = next_obs
         total_steps += step_num
 

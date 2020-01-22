@@ -141,17 +141,17 @@ class MAPendulumEnv(MultiAgentEnv, PendulumEnv):
         self.curr_adversary = np.random.randint(low=0, high=self.num_adversaries)
 
     def step(self, actions):
-        pendulum_action = actions['pendulum']
+        agent_action = actions['agent']
         if 'adversary{}'.format(self.curr_adversary) in actions.keys():
             adv_action = actions['adversary{}'.format(self.curr_adversary)]
-            pendulum_action += adv_action * self.adversary_strength
-            pendulum_action = np.clip(pendulum_action, a_min=self.action_space.low, a_max=self.action_space.high)
-        obs, reward, done, info = super().step(pendulum_action)
-        info = {'pendulum': {'pendulum_reward': reward}}
+            agent_action += adv_action * self.adversary_strength
+            agent_action = np.clip(agent_action, a_min=self.action_space.low, a_max=self.action_space.high)
+        obs, reward, done, info = super().step(agent_action)
+        info = {'agent': {'agent_reward': reward}}
 
 
-        obs_dict = {'pendulum': obs}
-        reward_dict = {'pendulum': reward}
+        obs_dict = {'agent': obs}
+        reward_dict = {'agent': reward}
 
         for i in range(self.num_adversaries):
             is_active = 1 if self.curr_adversary == i else 0
@@ -166,7 +166,7 @@ class MAPendulumEnv(MultiAgentEnv, PendulumEnv):
 
     def reset(self):
         obs = super().reset()
-        curr_obs = {'pendulum': obs}
+        curr_obs = {'agent': obs}
         for i in range(self.num_adversaries):
             is_active = 1 if self.curr_adversary == i else 0
             curr_obs.update({'adversary{}'.format(i):

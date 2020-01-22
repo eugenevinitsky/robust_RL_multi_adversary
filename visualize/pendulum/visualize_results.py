@@ -47,7 +47,6 @@ for result in rew_results:
 
 
 for i, result in enumerate(unique_rew_results):
-    import ipdb; ipdb.set_trace()
     result = sorted(result, key=lambda x: x[2])
     plt.figure(figsize=(25, 5))
     legends = []
