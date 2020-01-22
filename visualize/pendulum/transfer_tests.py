@@ -48,26 +48,26 @@ run_list = [
 ]
 
 # test name, is_env_config, config_value, params_name, params_value
-lerrel_run_list = [
+mass_list = [0.5, 0.75, 1.0, 1.25, 1.5]
+pendulum_run_list = [
     ['base', []],
-    # ['friction04', make_set_friction(0.4)],
-    # ['friction06', make_set_friction(0.6)],
-    # ['friction08', make_set_friction(0.8)],
-    # ['friction12', make_set_friction(1.2)],
-    # ['friction14', make_set_friction(1.4)],
-    # ['mass05', make_set_mass(0.5)],
-    # ['mass075', make_set_mass(0.75)],
-    # ['mass10', make_set_mass(1.0)],
-    # ['mass125', make_set_mass(1.25)],
-    # ['mass15', make_set_mass(1.5)],
-    # ['gaussian_state_noise', ['add_gaussian_state_noise', True]]
+    ['mass05', make_set_mass(mass_list[0])],
+    ['mass075', make_set_mass(mass_list[1])],
+    ['mass10', make_set_mass(mass_list[2])],
+    ['mass125', make_set_mass(mass_list[3])],
+    ['mass15', make_set_mass(mass_list[4])],
+]
+
+hopper_run_list = [
+    ['base', []]
 ]
 
 mass_sweep = np.linspace(.7, 1.3, 11)
 friction_sweep = np.linspace(0.5, 1.5, 11)
 grid = np.meshgrid(mass_sweep, friction_sweep)
 for mass, fric in np.vstack((grid[0].ravel(), grid[1].ravel())).T:
-    lerrel_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
+    hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
+
 
 # for x in np.linspace(1, 15.0, 15):
 #     lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
@@ -134,7 +134,7 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     return np.mean(rewards), np.std(rewards)
 
 
-def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir, render=False):
+def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir, run_list, render=False):
 
     output_file_path = os.path.join(outdir, output_file_name)
     if not os.path.exists(os.path.dirname(output_file_path)):
@@ -147,27 +147,38 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     temp_output = [run_test.remote(test_name=list[0],
                  outdir=outdir, output_file_name=output_file_name,
                  num_rollouts=num_rollouts,
-                 rllib_config=rllib_config, checkpoint=checkpoint, env_modifier=list[1], render=render) for list in lerrel_run_list]
+                 rllib_config=rllib_config, checkpoint=checkpoint, env_modifier=list[1], render=render) for list in run_list]
     temp_output = ray.get(temp_output)
 
     with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "mean_sweep"),
               'wb') as file:
         np.save(file, np.array(temp_output))
-    
-    base = np.array(temp_output)[0,0]
-    means = np.array(temp_output)[1:,0].reshape(len(mass_sweep), len(friction_sweep))
-    with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"),'wb') as transfer_robustness:
-        fig = plt.figure()
-        plt.imshow(means - base, interpolation='nearest', cmap='hot', aspect='equal')
-        plt.title("Delta from base score: {}".format(base))
-        plt.xticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x) for x in mass_sweep])
-        plt.xlabel("Mass coef")
-        plt.yticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
-        plt.xlabel("Friction coef")
-        plt.colorbar()
-        plt.savefig(transfer_robustness)
+
+    if 'Hopper' in rllib_config['env']:
+        base = np.array(temp_output)[0,0]
+        means = np.array(temp_output)[1:,0].reshape(len(mass_sweep), len(friction_sweep))
+        with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"),'wb') as transfer_robustness:
+            fig = plt.figure()
+            plt.imshow(means - base, interpolation='nearest', cmap='hot', aspect='equal')
+            plt.title("Delta from base score: {}".format(base))
+            plt.xticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x) for x in mass_sweep])
+            plt.xlabel("Mass coef")
+            plt.yticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
+            plt.xlabel("Friction coef")
+            plt.colorbar()
+            plt.savefig(transfer_robustness)
+    elif 'Pendulum' in rllib_config['env']:
+        means = np.array(temp_output)[1:, 0]
+        with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"), 'wb') as transfer_robustness:
+            fig = plt.figure()
+            plt.bar(np.arange(len(mass_list)), means)
+            plt.title("Pendulum performance across mass values")
+            plt.xticks(ticks=np.arange(len(mass_list)), labels=["{:0.2f}".format(x) for x in mass_list])
+            plt.xlabel("Mass coef")
+            plt.savefig(transfer_robustness)
 
 if __name__ == '__main__':
+
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
     output_path = os.path.expanduser('~/transfer_results/pendulum')
@@ -184,6 +195,12 @@ if __name__ == '__main__':
 
     ray.init(num_cpus=args.num_cpus)
 
+    if rllib_config['env'] == "MALerrelPendulumEnv":
+        lerrel_run_list = pendulum_run_list
+    elif rllib_config['env'] == "MALerrelHopperEnv":
+        lerrel_run_list = hopper_run_list
+
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
-    run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name, os.path.join(args.output_dir, date), render=args.show_images)
+    run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name,
+                       os.path.join(args.output_dir, date), run_list=lerrel_run_list, render=args.show_images)

@@ -15,6 +15,7 @@ except ImportError:
     from ray.rllib.agents.registry import get_agent_class
 
 from envs.lerrel.adv_hopper import AdvMAHopper
+from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
 
 from utils.pendulum_env_creator import pendulum_env_creator, lerrel_pendulum_env_creator, make_create_env
 
@@ -43,9 +44,15 @@ def instantiate_rollout(rllib_config, checkpoint):
     assert rllib_config['env_config']['run'], "No RL algorithm specified in env config!"
     agent_cls = get_agent_class(rllib_config['env_config']['run'])
     # configure the env
-    env_name ='AdvMAHopper'
-    env_creator = make_create_env(AdvMAHopper)
-    register_env(env_name, env_creator)
+
+    if rllib_config['env'] == "MALerrelPendulumEnv":
+        env_name = "MALerrelPendulumEnv"
+        create_env_fn = make_create_env(AdvMAPendulumEnv)
+    elif rllib_config['env'] == "MALerrelHopperEnv":
+        env_name = "MALerrelHopperEnv"
+        create_env_fn = make_create_env(AdvMAHopper)
+
+    register_env(env_name, create_env_fn)
 
     # Instantiate the agent
     # create the agent that will be used to compute the actions
@@ -74,7 +81,7 @@ def instantiate_rollout(rllib_config, checkpoint):
         action_init = {}
 
     # We always have to remake the env since we may want to overwrite the config
-    env = env_creator(rllib_config['env_config'])
+    env = create_env_fn(rllib_config['env_config'])
 
     return env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init
 
@@ -131,9 +138,9 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
 
             # we turn the adversaries off so you only send in the pendulum keys
             new_dict = {}
-            new_dict.update({'hopper': action['hopper']})
+            new_dict.update({'agent': action['agent']})
             next_obs, reward, done, info = env.step(new_dict)
-            new_dict.update({'hopper': action['hopper']})
+            new_dict.update({'agent': action['agent']})
             # next_obs, reward, done, info = env.step(action)
             if render:
                 env.render()
@@ -146,7 +153,7 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
                 prev_rewards[_DUMMY_AGENT_ID] = reward
 
             # we only want the robot reward, not the adversary reward
-            reward_total += info['hopper']['hopper_reward']
+            reward_total += info['agent']['agent_reward']
             obs = next_obs
         print("Episode reward", reward_total)
 
