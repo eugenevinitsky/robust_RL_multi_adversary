@@ -76,7 +76,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
     def adv_action_space(self):
         """ 2D adversarial action. Maximum of self.adversary_strength in each dimension.
         """
-        return Box(low=self.action_space.low[0], high=self.action_space.high[0], shape=(2,))
+        return Box(low=-1, high=1, shape=(2,))
 
     @property
     def adv_observation_space(self):
@@ -116,7 +116,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             hopper_action = actions['agent']
 
             if self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in actions.keys():
-                adv_action = actions['adversary{}'.format(self.curr_adversary)]
+                adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
                 self._adv_to_xfrc(adv_action)
         else:
             assert actions in self.action_space

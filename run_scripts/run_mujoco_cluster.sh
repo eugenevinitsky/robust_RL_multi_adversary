@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ######################################################################################################################################
-## 1/21/20 tests. Tests for hopper
+## 1/22/20 tests. Tests for hopper
 
 # curriculum with 2 adversaries per strength and memory
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
