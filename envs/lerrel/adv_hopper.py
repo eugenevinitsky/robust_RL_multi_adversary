@@ -52,7 +52,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.obs_size = 11
         self.num_actions = 3
         if self.concat_actions:
-            self.obs_size += 1
+            self.obs_size += self.num_actions
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
 
         # Do the initialization
@@ -62,16 +62,15 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self._adv_bindex = bnames.index(
             self._adv_f_bname)  # Index of the body on which the adversary force will be applied
 
-    def observation_space(self):
-        obs_space = super().observation_space
+        obs_space = self.observation_space
         if self.concat_actions:
-            action_space = super().action_space
+            action_space = self.action_space
             low = np.tile(np.concatenate((obs_space.low, action_space.low)), self.num_concat_states)
             high = np.tile(np.concatenate((obs_space.high, action_space.high)), self.num_concat_states)
         else:
             low = np.tile(obs_space.low, self.num_concat_states)
             high = np.tile(obs_space.high, self.num_concat_states)
-        return Box(low=low, high=high, dtype=np.float32)
+        self.observation_space = Box(low=low, high=high, dtype=np.float32)
 
     @property
     def adv_action_space(self):
@@ -107,8 +106,6 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
     def update_observed_obs(self, new_obs):
         """Add in the new observations and overwrite the stale ones"""
         original_shape = new_obs.shape[0]
-        if self.concat_actions:
-            original_shape -= 1
         self.observed_states = np.roll(self.observed_states, shift=original_shape, axis=-1)
         self.observed_states[0: original_shape] = new_obs
         return self.observed_states
@@ -165,7 +162,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         obs = super().reset()
 
         if self.concat_actions:
-            self.update_observed_obs(np.concatenate((obs, [0.0])))
+            self.update_observed_obs(np.concatenate((obs, [0.0] * 3)))
         else:
             self.update_observed_obs(obs)
 

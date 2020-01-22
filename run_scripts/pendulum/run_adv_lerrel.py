@@ -108,7 +108,7 @@ def setup_exps(args):
     config['train_batch_size'] = args.train_batch_size
     config['vf_clip_param'] = 10.0
     if args.grid_search:
-        config['lambda'] = tune.grid_search([0.1, 0.5, 0.9])
+        config['lambda'] = tune.grid_search([0.5, 0.9])
         config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
     else:
         config['lambda'] = 0.9
@@ -191,12 +191,13 @@ def on_train_result(info):
     result = info["result"]
 
     if 'policy_reward_mean' in result.keys():
-        pendulum_reward = result['policy_reward_mean']['agent']
-        trainer = info["trainer"]
+        if 'agent' in result['policy_reward_mean'].keys():
+            pendulum_reward = result['policy_reward_mean']['agent']
+            trainer = info["trainer"]
 
-        trainer.workers.foreach_worker(
-            lambda ev: ev.foreach_env(
-                lambda env: env.update_curriculum(pendulum_reward)))
+            trainer.workers.foreach_worker(
+                lambda ev: ev.foreach_env(
+                    lambda env: env.update_curriculum(pendulum_reward)))
 
 
 def on_episode_end(info):
@@ -257,12 +258,14 @@ if __name__ == "__main__":
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
-    else:
+    elif args.local_mode:
         ray.init(local_mode=True)
+    else:
+        ray.init()
 
     if args.alternate_training:
         exp_dict['run_or_experiment'] = AlternateTraining
-    run_tune(**exp_dict, queue_trials=False)
+    run_tune(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
 
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
@@ -284,23 +287,22 @@ if __name__ == "__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                if args.num_adv_strengths * args.advs_per_strength > 0:
-                    # TODO(@ev) gross find somewhere else to put this
+                # TODO(@ev) gross find somewhere else to put this
 
-                    if config['env'] == "MALerrelPendulumEnv":
-                        from visualize.pendulum.transfer_tests import pendulum_run_list
-                        lerrel_run_list = pendulum_run_list
-                    elif config['env'] == "MALerrelHopperEnv":
-                        from visualize.pendulum.transfer_tests import hopper_run_list
-                        lerrel_run_list = hopper_run_list
+                if config['env'] == "MALerrelPendulumEnv":
+                    from visualize.pendulum.transfer_tests import pendulum_run_list
+                    lerrel_run_list = pendulum_run_list
+                elif config['env'] == "MALerrelHopperEnv":
+                    from visualize.pendulum.transfer_tests import hopper_run_list
+                    lerrel_run_list = hopper_run_list
 
-                    run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path, run_list=lerrel_run_list)
+                run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path, run_list=lerrel_run_list)
 
-                    if args.use_s3:
-                        # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
-                        p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                         "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(date,
-                                                                                                                          args.exp_title,
-                                                                                                                          tune_name)).split(
-                            ' '))
-                        p1.wait()
+                if args.use_s3:
+                    # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
+                    p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+                                                                     "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(date,
+                                                                                                                      args.exp_title,
+                                                                                                                      tune_name)).split(
+                        ' '))
+                    p1.wait()
