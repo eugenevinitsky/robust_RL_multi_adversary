@@ -78,7 +78,7 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
     def adv_action_space(self):
         """ 2D adversarial action. Maximum of self.adversary_strength in each dimension.
         """
-        return Box(low=self.action_space.low[0], high=self.action_space.high[0], shape=(2,))
+        return Box(low=-1, high=1, shape=(2,))
 
     @property
     def adv_observation_space(self):

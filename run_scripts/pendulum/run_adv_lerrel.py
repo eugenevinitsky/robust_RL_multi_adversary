@@ -110,7 +110,7 @@ def setup_exps(args):
         config['train_batch_size'] = args.train_batch_size
         if args.grid_search:
             config['lambda'] = tune.grid_search([0.85, 0.9, 0.95])
-            config['lr'] = tune.grid_search([1e-4, 5e-4])
+            config['lr'] = tune.grid_search([1e-4, 5e-4, 1e-3])
             config['vf_clip_param'] = 100.0
         else:
             if args.env_name == 'hopper':
@@ -317,7 +317,7 @@ if __name__ == "__main__":
                     from visualize.pendulum.transfer_tests import hopper_run_list
                     lerrel_run_list = hopper_run_list
 
-                run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path, run_list=lerrel_run_list)
+                run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=lerrel_run_list)
 
                 if args.use_s3:
                     # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
