@@ -28,16 +28,16 @@ from utils.rllib_utils import get_config_from_path
 
 from models.recurrent_tf_model_v2 import LSTM
 
-def setup_ma_config(config, create_env, env_tag):
+def setup_ma_config(config, create_env):
     env = create_env(config['env_config'])
-    policies_to_train = [env_tag]
+    policies_to_train = ['agent']
 
-    num_adversaries = config['env_config']['num_adversaries']
+    num_adversaries = config['env_config']['num_adv_strengths'] * config['env_config']['advs_per_strength']
     if num_adversaries == 0:
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
-    policy_graphs = {env_tag: (PPOTFPolicy, env.observation_space, env.action_space, {})}
+    policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
     policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
                                             env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     
@@ -72,10 +72,26 @@ def setup_exps(args):
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
-    parser.add_argument('--num_adv', type=int, default=1, help='Number of active adversaries in the env. Default - retrain lerrel, single agent')
+    parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
+                                                                         'Multiply this by `advs_per_strength` to get the total number of adversaries'
+                                                                         'Default - retrain lerrel, single agent')
+    parser.add_argument('--advs_per_strength', type=int, default=1, help='How many adversaries exist at each strength level')
     parser.add_argument('--adv_strength', type=float, default=5.0, help='Strength of active adversaries in the env')
     parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper'])
     parser.add_argument('--alternate_training', action='store_true', default=False)
+    parser.add_argument('--curriculum', action='store_true', default=False,
+                        help='If true, the number of adversaries is increased every `adv_incr_freq` steps that'
+                             'we are above goal score')
+    parser.add_argument('--goal_score', type=float, default=3000.0,
+                        help='This is the score we need to maintain for `adv_incr_freq steps before the number'
+                             'of adversaries increase')
+    parser.add_argument('--adv_incr_freq', type=int, default=20,
+                        help='If you stay above `goal_score` for this many steps, the number of adversaries'
+                             'will increase')
+    parser.add_argument('--num_concat_states', type=int, default=1,
+                        help='This number sets how many previous states we concatenate into the observations')
+    parser.add_argument('--concat_actions', action='store_true', default=False,
+                        help='If true we concatenate prior actions into the state. This helps a lot for prediction.')
     args = parser.parse_args(args)
 
     if args.alternate_training and args.num_adv > 1:
@@ -87,6 +103,7 @@ def setup_exps(args):
     config = DEFAULT_CONFIG
     config['num_workers'] = args.num_cpus
     config['gamma'] = 0.995
+    config['seed'] = 0
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
     config['vf_clip_param'] = 10.0
@@ -100,14 +117,21 @@ def setup_exps(args):
     config['sgd_minibatch_size'] = 64
     # config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
+    config['observation_filter'] = 'MeanStdFilter'
 
     # config['num_adversaries'] = args.num_adv
     # config['kl_diff_weight'] = args.kl_diff_weight
     # config['kl_diff_target'] = args.kl_diff_target
     # config['kl_diff_clip'] = 5.0
 
-    config['env_config']['num_adversaries'] = args.num_adv
+    config['env_config']['num_adv_strengths'] = args.num_adv_strengths
+    config['env_config']['advs_per_strength'] = args.advs_per_strength
     config['env_config']['adversary_strength'] = args.adv_strength
+    config['env_config']['curriculum'] = args.curriculum
+    config['env_config']['goal_score'] = args.goal_score
+    config['env_config']['adv_incr_freq'] = args.adv_incr_freq
+    config['env_config']['concat_actions'] = args.concat_actions
+    config['env_config']['num_concat_states'] = args.num_concat_states
 
     config['env_config']['run'] = alg_run
 
@@ -133,7 +157,7 @@ def setup_exps(args):
     config['env'] = env_name
     register_env(env_name, create_env_fn)
 
-    setup_ma_config(config, create_env_fn, env_tag)
+    setup_ma_config(config, create_env_fn)
 
     # add the callbacks
     config["callbacks"] = {"on_train_result": on_train_result,
@@ -165,14 +189,14 @@ def setup_exps(args):
 def on_train_result(info):
     """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
     result = info["result"]
-    # pendulum_reward = result['policy_reward_mean']['pendulum']
-    trainer = info["trainer"]
 
-    # TODO(should we do this every episode or every training iteration)?
-    return
-    trainer.workers.foreach_worker(
-        lambda ev: ev.foreach_env(
-            lambda env: env.select_new_adversary()))
+    if 'policy_reward_mean' in result.keys():
+        pendulum_reward = result['policy_reward_mean']['agent']
+        trainer = info["trainer"]
+
+        trainer.workers.foreach_worker(
+            lambda ev: ev.foreach_env(
+                lambda env: env.update_curriculum(pendulum_reward)))
 
 
 def on_episode_end(info):
@@ -181,13 +205,10 @@ def on_episode_end(info):
     # store info about how many adversaries there are
     if hasattr(info["env"], 'envs'):
         env = info["env"].envs[0]
-        episode = info["episode"]
-
-        # if env.prediction_reward and env.adversary_range > 1:
-        #     episode.custom_metrics["predict_frac"] = env.num_correct_predict / episode.length
-
-        # select a new adversary every episode. Currently disabled.
         env.select_new_adversary()
+
+        episode = info["episode"]
+        episode.custom_metrics["num_active_advs"] = env.adversary_range
 
 
 class AlternateTraining(Trainable):
@@ -196,7 +217,7 @@ class AlternateTraining(Trainable):
         self.env = config['env']
         agent_config = self.config
         adv_config = deepcopy(self.config)
-        agent_config['multiagent']['policies_to_train'] = ['pendulum']
+        agent_config['multiagent']['policies_to_train'] = ['agent']
         adv_config['multiagent']['policies_to_train'] = ['adversary0']
 
         self.agent_trainer = PPOTrainer(env=self.env, config=agent_config)
@@ -216,7 +237,7 @@ class AlternateTraining(Trainable):
         print(pretty_print(output))
 
         # swap weights to synchronize
-        self.adv_trainer.set_weights(self.agent_trainer.get_weights(["pendulum"]))
+        self.adv_trainer.set_weights(self.agent_trainer.get_weights(["agent"]))
         return output
 
     def _save(self, tmp_checkpoint_dir):

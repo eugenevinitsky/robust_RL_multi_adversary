@@ -42,7 +42,7 @@ class DummyEnv(MultiAgentEnv):
 
     def reset(self):
         self.step_num = 0.0
-        return {'pendulum': np.zeros(2), 'adversary': np.zeros(2)}
+        return {'agent': np.zeros(2), 'adversary': np.zeros(2)}
 
     def step(self, action):
         self.step_num += 1
@@ -50,7 +50,7 @@ class DummyEnv(MultiAgentEnv):
             done = {'__all__': True}
         else:
             done = {'__all__': False}
-        return {'pendulum': np.zeros(2), 'adversary': np.zeros(2)}, {'pendulum': 100, 'adversary': 100}, done, {}
+        return {'agent': np.zeros(2), 'adversary': np.zeros(2)}, {'agent': 100, 'adversary': 100}, done, {}
 
 
 class AlternateTraining(Trainable):
@@ -59,7 +59,7 @@ class AlternateTraining(Trainable):
         self.env = config['env']
         agent_config = self.config
         adv_config = deepcopy(self.config)
-        agent_config['multiagent']['policies_to_train'] = ['pendulum']
+        agent_config['multiagent']['policies_to_train'] = ['agent']
         adv_config['multiagent']['policies_to_train'] = ['adversary']
 
         self.agent_trainer = PPOTrainer(env=self.env, config=agent_config)
@@ -89,7 +89,7 @@ class AlternateTraining(Trainable):
         assert first_weight == new_weight, 'The weight of the adversary matrix has changed but it shouldnt have been updated!'
 
         # swap weights to synchronize
-        self.adv_trainer.set_weights(self.agent_trainer.get_weights(["pendulum"]))
+        self.adv_trainer.set_weights(self.agent_trainer.get_weights(["agent"]))
 
         return output
 
@@ -102,13 +102,13 @@ if __name__ == '__main__':
     config = DEFAULT_CONFIG
     config['train_batch_size'] = 500
     config['lr'] = 1.0
-    policy_graphs = {'pendulum': (PPOTFPolicy, env.observation_space, env.action_space, {}),
+    policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {}),
                      'adversary': (PPOTFPolicy, env.observation_space, env.action_space, {})}
 
     print("========= Policy Graphs ==========")
     print(policy_graphs)
 
-    policies_to_train = ['pendulum', 'adversary']
+    policies_to_train = ['agent', 'adversary']
 
 
     def policy_mapping_fn(agent_id):

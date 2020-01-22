@@ -29,14 +29,14 @@ from models.recurrent_tf_model_v2 import LSTM
 
 def setup_ma_config(config):
     env = pendulum_env_creator(config['env_config'])
-    policies_to_train = ['pendulum']
+    policies_to_train = ['agent']
 
     num_adversaries = config['env_config']['num_adversaries']
     if num_adversaries == 0:
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
-    policy_graphs = {'pendulum': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+    policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
     policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
                                             env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     # TODO(@evinitsky) put this back
@@ -136,7 +136,7 @@ def setup_exps(args):
 def on_train_result(info):
     """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
     result = info["result"]
-    # pendulum_reward = result['policy_reward_mean']['pendulum']
+    # agent_reward = result['policy_reward_mean']['agent']
     trainer = info["trainer"]
 
     # TODO(should we do this every episode or every training iteration)?
