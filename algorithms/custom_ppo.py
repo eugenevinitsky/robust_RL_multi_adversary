@@ -98,7 +98,7 @@ def new_postprocess_ppo_gae(policy,
                     postprocess[SampleBatch.CUR_OBS + '_' + str(i)] = sample_batch[SampleBatch.CUR_OBS]
                     postprocess[SampleBatch.PREV_ACTIONS + '_' + str(i)] = sample_batch[SampleBatch.PREV_ACTIONS]
                     postprocess[SampleBatch.PREV_REWARDS + '_' + str(i)] = sample_batch[SampleBatch.PREV_REWARDS]
-                i += 1
+                    i += 1
 
     # handle the fake pass. There aren't any other_agent_batches in the rllib fake pass
     if not other_agent_batches:
@@ -327,10 +327,10 @@ class KLDiffMixin(object):
             dtype=tf.float32)
 
     def update_kl_diff(self, sampled_kl):
-        if sampled_kl > 2.0 * self.kl_target or sampled_kl < 0.5*self.kl_target:
+        if sampled_kl > 2.0 * self.kl_target: #or sampled_kl < 0.5*self.kl_target:
             self.kl_diff_coeff_val *= 1.5
-        #elif sampled_kl > 0.5 * self.kl_target:
-        #    self.kl_diff_coeff_val *= 0.5
+        elif sampled_kl < 0.5 * self.kl_target:
+            self.kl_diff_coeff_val *= 0.5
         # There is literally no reason to let this go off to infinity and subsequently overflow
 
         self.kl_diff_coeff_val = min(self.kl_diff_coeff_val, 1e5)
