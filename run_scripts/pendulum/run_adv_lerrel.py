@@ -90,7 +90,7 @@ def setup_exps(args):
     config["batch_mode"] = "complete_episodes"
     config['train_batch_size'] = args.train_batch_size
     config['vf_clip_param'] = 10.0
-    # config["observation_filter"] = "MeanStdFilter"
+    config["observation_filter"] = "MeanStdFilter"
     config['seed'] = 12487
 
     if args.grid_search:
