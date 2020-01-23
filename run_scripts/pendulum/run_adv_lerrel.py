@@ -124,7 +124,7 @@ def setup_exps(args):
                 config['lr'] = 5e-5
         config['sgd_minibatch_size'] = 64
         config['num_sgd_iter'] = 10
-        config['observation_filter'] = 'NoFilter'
+        config['observation_filter'] = 'MeanStdFilter'
     elif args.algorithm == 'SAC':
         config = DEFAULT_SAC_CONFIG
         config['target_network_update_freq'] = 1
