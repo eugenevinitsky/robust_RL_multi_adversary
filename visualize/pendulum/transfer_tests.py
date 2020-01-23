@@ -14,7 +14,7 @@ import ray
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from visualize.pendulum.run_rollout import run_rollout, instantiate_rollout
-from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep
+from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep
 import errno
 
 
@@ -63,9 +63,17 @@ hopper_run_list = [
     ['base', []]
 ]
 
+cheetah_run_list = [
+    ['base', []]
+]
+
 grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
 for mass, fric in np.vstack((grid[0].ravel(), grid[1].ravel())).T:
     hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
+
+cheetah_grid = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep)
+for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).T:
+    cheetah_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
 
 
 # for x in np.linspace(1, 15.0, 15):
@@ -190,6 +198,8 @@ if __name__ == '__main__':
         lerrel_run_list = pendulum_run_list
     elif rllib_config['env'] == "MALerrelHopperEnv":
         lerrel_run_list = hopper_run_list
+    elif rllib_config['env'] == "MALerrelHopperEnv":
+        lerrel_run_list = cheetah_run_list
 
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
