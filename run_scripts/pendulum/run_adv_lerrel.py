@@ -291,8 +291,7 @@ if __name__ == "__main__":
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
         ray.shutdown()
-        ray.init(object_store_memory=min(int(psutil.virtual_memory().free / 2), 15e9),
-                 memory=min(int(psutil.virtual_memory().free / 2), 15e9))
+        ray.init(memory=min(20 * 1024 * 1024 * 1024, psutil.virtual_memory().free))
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), date), args.exp_title)
         if not os.path.exists(output_path):
             try:
