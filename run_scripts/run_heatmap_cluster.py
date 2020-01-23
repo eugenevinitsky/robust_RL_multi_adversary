@@ -20,8 +20,6 @@ if __name__ == '__main__':
     parser.add_argument('num_iters', type=int, help='How many iterations the exp was run for')
     args = parser.parse_args()
 
-    ray.init()
-
     output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), args.date), args.exp_title)
     if not os.path.exists(output_path):
         try:
@@ -47,6 +45,8 @@ if __name__ == '__main__':
                 from visualize.pendulum.transfer_tests import hopper_run_list
                 lerrel_run_list = hopper_run_list
 
+            ray.shutdown()
+            ray.init()
             run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=lerrel_run_list)
 
             # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)

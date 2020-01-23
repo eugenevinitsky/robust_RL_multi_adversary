@@ -290,8 +290,6 @@ if __name__ == "__main__":
 
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
-        ray.shutdown()
-        ray.init()
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), date), args.exp_title)
         if not os.path.exists(output_path):
             try:
@@ -317,6 +315,8 @@ if __name__ == "__main__":
                     from visualize.pendulum.transfer_tests import hopper_run_list
                     lerrel_run_list = hopper_run_list
 
+                ray.shutdown()
+                ray.init()
                 run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=lerrel_run_list)
 
                 if args.use_s3:
