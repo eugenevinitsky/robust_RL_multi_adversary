@@ -166,6 +166,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             plt.xticks(ticks=np.arange(len(mass_list)), labels=["{:0.2f}".format(x) for x in mass_list])
             plt.xlabel("Mass coef")
             plt.savefig(transfer_robustness)
+            plt.close(fig)
 
 if __name__ == '__main__':
 
