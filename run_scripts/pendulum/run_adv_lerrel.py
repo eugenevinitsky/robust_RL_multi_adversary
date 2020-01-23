@@ -26,6 +26,7 @@ from envs.lerrel.adv_hopper import AdvMAHopper
 from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.lerrel.adv_cheetah import AdvMAHalfCheetahEnv
 from visualize.pendulum.transfer_tests import run_transfer_tests
+from visualize.pendulum.action_sampler import sample_actions
 # from visualize.pendulum.visualize_adversaries import visualize_adversaries
 from utils.pendulum_env_creator import make_create_env
 from utils.parsers import init_parser, ray_parser, ma_env_parser
@@ -324,6 +325,7 @@ if __name__ == "__main__":
                 ray.shutdown()
                 ray.init()
                 run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=lerrel_run_list)
+                sample_actions(config, checkpoint_path, 2 * args.train_batch_size, output_path)
 
                 if args.use_s3:
                     # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
