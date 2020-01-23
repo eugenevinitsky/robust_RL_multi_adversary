@@ -16,6 +16,7 @@ except ImportError:
 
 from envs.lerrel.adv_hopper import AdvMAHopper
 from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
+from envs.lerrel.adv_cheetah import AdvMAHalfCheetahEnv
 
 from utils.pendulum_env_creator import pendulum_env_creator, lerrel_pendulum_env_creator, make_create_env
 
@@ -51,6 +52,9 @@ def instantiate_rollout(rllib_config, checkpoint):
     elif rllib_config['env'] == "MALerrelHopperEnv":
         env_name = "MALerrelHopperEnv"
         create_env_fn = make_create_env(AdvMAHopper)
+    elif rllib_config['env'] == "MALerrelCheetahEnv":
+        env_name = "MALerrelHopperEnv"
+        create_env_fn = make_create_env(AdvMAHalfCheetahEnv)
 
     register_env(env_name, create_env_fn)
 

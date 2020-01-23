@@ -24,6 +24,7 @@ from ray.tune.registry import register_env
 
 from envs.lerrel.adv_hopper import AdvMAHopper
 from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
+from envs.lerrel.adv_cheetah import AdvMAHalfCheetahEnv
 from visualize.pendulum.transfer_tests import run_transfer_tests
 # from visualize.pendulum.visualize_adversaries import visualize_adversaries
 from utils.pendulum_env_creator import make_create_env
@@ -75,7 +76,7 @@ def setup_exps(args):
     parser = init_parser()
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
-    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper'])
+    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper', 'cheetah'])
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO, SAC, TD3')
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
@@ -174,6 +175,10 @@ def setup_exps(args):
         env_name = "MALerrelHopperEnv"
         env_tag = "hopper"
         create_env_fn = make_create_env(AdvMAHopper)
+    elif args.env_name == "cheetah":
+        env_name = "MALerrelCheetahEnv"
+        env_tag = "cheetah"
+        create_env_fn = make_create_env(AdvMAHalfCheetahEnv)
 
     config['env'] = env_name
     register_env(env_name, create_env_fn)
@@ -314,6 +319,9 @@ if __name__ == "__main__":
                 elif config['env'] == "MALerrelHopperEnv":
                     from visualize.pendulum.transfer_tests import hopper_run_list
                     lerrel_run_list = hopper_run_list
+                elif config['env'] == "MALerrelCheetahEnv":
+                    from visualize.pendulum.transfer_tests import cheetah_run_list
+                    lerrel_run_list = cheetah_run_list
 
                 ray.shutdown()
                 ray.init()
