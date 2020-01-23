@@ -46,6 +46,7 @@ def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show
         plt.savefig(heatmap)
         if show:
             plt.show()
+        plt.close(fig)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
