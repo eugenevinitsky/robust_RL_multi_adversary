@@ -9,10 +9,9 @@ import pytz
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 from ray.rllib.agents.ppo.ppo import PPOTrainer, DEFAULT_CONFIG as DEFAULT_PPO_CONFIG
-from ray.rllib.agents.sac.sac_policy import SACTFPolicy
-from ray.rllib.agents.sac.sac import SACTrainer, DEFAULT_CONFIG as DEFAULT_SAC_CONFIG
+from ray.rllib.agents.sac.sac import DEFAULT_CONFIG as DEFAULT_SAC_CONFIG
 
-from ray.rllib.agents.ddpg.td3 import TD3Trainer, TD3_DEFAULT_CONFIG as DEFAULT_TD3_CONFIG
+from ray.rllib.agents.ddpg.td3 import TD3_DEFAULT_CONFIG as DEFAULT_TD3_CONFIG
 
 from ray.rllib.models import ModelCatalog
 from ray import tune
@@ -109,8 +108,9 @@ def setup_exps(args):
         config = DEFAULT_PPO_CONFIG
         config['train_batch_size'] = args.train_batch_size
         if args.grid_search:
-            config['lambda'] = tune.grid_search([0.85, 0.9, 0.95])
+            config['lambda'] = tune.grid_search([0.9, 0.95])
             config['lr'] = tune.grid_search([1e-4, 5e-4, 1e-3])
+            config['gamma'] = tune.grid_search([.95, 0.99])
             config['vf_clip_param'] = 100.0
         else:
             if args.env_name == 'hopper':
@@ -138,7 +138,6 @@ def setup_exps(args):
         sys.exit('Only PPO, TD3, and SAC are supported')
 
     config['num_workers'] = args.num_cpus
-    config['gamma'] = 0.995
     # config["batch_mode"] = "complete_episodes"
     config['seed'] = 0
 
