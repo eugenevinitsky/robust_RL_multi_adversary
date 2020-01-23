@@ -79,7 +79,7 @@ for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).
 # for x in np.linspace(1, 15.0, 15):
 #     lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
 
-@ray.remote(memory=2500 * 1024 * 1024)
+@ray.remote(memory=1500 * 1024 * 1024)
 def run_test(test_name, outdir, output_file_name, num_rollouts,
              rllib_config, checkpoint, env_modifier, render):
     """Run an individual transfer test
