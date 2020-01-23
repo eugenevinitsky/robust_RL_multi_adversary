@@ -81,12 +81,12 @@ class AdvMAHalfCheetahEnv(HalfCheetahEnv, MultiAgentEnv):
     def adv_observation_space(self):
         return self.observation_space
 
-    def _adv_to_xfrc(self, adv_act):        
-        self.sim.data.xfrc_applied[self._adv_bindex][0] = adv_act[0]
-        self.sim.data.xfrc_applied[self._adv_bindex][2] = adv_act[1]
+    def _adv_to_xfrc(self, adv_act):      
+        self.sim.data.xfrc_applied[self._adv_bindex[0]][0] = adv_act[0]
+        self.sim.data.xfrc_applied[self._adv_bindex[0]][2] = adv_act[1]
 
-        self.sim.data.xfrc_applied[self._adv_bindex][0] = adv_act[2]
-        self.sim.data.xfrc_applied[self._adv_bindex][2] = adv_act[3]
+        self.sim.data.xfrc_applied[self._adv_bindex[1]][0] = adv_act[2]
+        self.sim.data.xfrc_applied[self._adv_bindex[1]][2] = adv_act[3]
 
     def update_curriculum(self, mean_rew):
         self.mean_rew = mean_rew
