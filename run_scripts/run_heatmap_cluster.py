@@ -20,7 +20,7 @@ if __name__ == '__main__':
     parser.add_argument('num_iters', type=int, help='How many iterations the exp was run for')
     args = parser.parse_args()
 
-    ray.init(object_store_memory=min(psutil.virtual_memory().free, 30e9))
+    ray.init()
 
     output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), args.date), args.exp_title)
     if not os.path.exists(output_path):
