@@ -111,7 +111,7 @@ def setup_exps(args):
         if args.grid_search:
             config['lambda'] = tune.grid_search([0.5, 0.9])
             config['lr'] = tune.grid_search([5e-5, 5e-4])
-            config['gamma'] = tune.grid_search([.95, 0.99, .995])
+            config['gamma'] = tune.grid_search([0.99, .995])
         else:
             if args.env_name == 'hopper':
                 config['lambda'] = 0.9
