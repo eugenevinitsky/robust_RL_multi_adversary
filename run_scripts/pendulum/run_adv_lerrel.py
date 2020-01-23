@@ -104,26 +104,23 @@ def setup_exps(args):
 
     alg_run = args.algorithm
 
-    # Universal hyperparams
     if args.algorithm == 'PPO':
         config = DEFAULT_PPO_CONFIG
         config['train_batch_size'] = args.train_batch_size
         if args.grid_search:
-            config['lambda'] = tune.grid_search([0.9, 0.95])
-            config['lr'] = tune.grid_search([1e-4, 5e-4, 1e-3])
-            config['gamma'] = tune.grid_search([.95, 0.99])
-            config['vf_clip_param'] = 100.0
+            config['lambda'] = tune.grid_search([0.5, 0.9])
+            config['lr'] = tune.grid_search([5e-5, 5e-4])
+            config['gamma'] = tune.grid_search([.95, 0.99, .995])
         else:
             if args.env_name == 'hopper':
-                config['lambda'] = 0.97
-                config['lr'] = 1e-2
-                config['vf_clip_param'] = 100.0
+                config['lambda'] = 0.9
+                config['lr'] = 5e-4
             else:
                 config['lambda'] = 0.9
                 config['lr'] = 5e-5
         config['sgd_minibatch_size'] = 64
         config['num_sgd_iter'] = 10
-        config['observation_filter'] = 'NoFilter'
+        config['observation_filter'] = 'MeanStdFilter'
     elif args.algorithm == 'SAC':
         config = DEFAULT_SAC_CONFIG
         config['target_network_update_freq'] = 1
@@ -138,8 +135,9 @@ def setup_exps(args):
     else:
         sys.exit('Only PPO, TD3, and SAC are supported')
 
+    # Universal hyperparams
     config['num_workers'] = args.num_cpus
-    # config["batch_mode"] = "complete_episodes"
+    config["batch_mode"] = "complete_episodes"
     config['seed'] = 0
 
     # config['num_adversaries'] = args.num_adv
