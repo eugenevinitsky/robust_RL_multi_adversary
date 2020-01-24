@@ -77,13 +77,14 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
     for adversary, adv_dict in adversary_grid_dict.items():
         sampled_actions = adv_dict['sampled_actions']
         for action_idx in range(sampled_actions.shape[-1]):
-            plt.figure()
+            fig = plt.figure()
             sns.distplot(sampled_actions[:, action_idx])
             output_str = '{}/{}'.format(outdir, adversary + 'action_{}_histogram.png'.format(action_idx))
             plt.xlabel('Action magnitude')
             plt.ylabel('Frequency')
             plt.title('Histograms of actions over {} sampled obs'.format(num_samples))
             plt.savefig(output_str)
+            plt.close(fig)
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
