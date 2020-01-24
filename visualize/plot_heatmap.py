@@ -18,7 +18,7 @@ def load_data(results_path):
     all_file_names = {}
     for (dirpath, dirnames, filenames) in os.walk(results_path):
         for run in filenames:
-            if "sweep" in run:
+            if "sweep_rew.txt" in run:
                 tag = dirpath.split("/")[-1]
                 run_results = np.load(os.path.join(dirpath, run))
 
