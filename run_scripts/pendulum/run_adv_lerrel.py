@@ -340,9 +340,13 @@ if __name__ == "__main__":
 
                 if args.use_s3:
                     # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
-                    p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                     "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(date,
-                                                                                                                      args.exp_title,
-                                                                                                                      tune_name)).split(
-                        ' '))
-                    p1.wait()
+                    for i in range(4):
+                        try:
+                            p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+                                                                             "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(date,
+                                                                                                                              args.exp_title,
+                                                                                                                              tune_name)).split(
+                                ' '))
+                            p1.wait(200)
+                        except Exception as e:
+                            print('This is the error ', e)
