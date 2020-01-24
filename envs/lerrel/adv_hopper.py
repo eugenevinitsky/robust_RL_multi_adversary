@@ -6,6 +6,7 @@ from gym.spaces import Box, Discrete
 import numpy as np
 from os import path
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
+from visualize.plot_heatmap import hopper_friction_sweep, hopper_mass_sweep
 
 class AdvMAHopper(HopperEnv, MultiAgentEnv):
     def __init__(self, config):
@@ -26,6 +27,9 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.num_concat_states = config["num_concat_states"]
         # This is whether we concatenate the agent action into the observation
         self.concat_actions = config["concat_actions"]
+        # This is whether we concatenate the agent action into the observation
+        self.domain_randomization = config["domain_randomization"]
+        self.cheating = config["cheating"]
 
         # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
         # then we are double counting
@@ -50,6 +54,10 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         # used to track the previously observed states to induce a memory
         # TODO(@evinitsky) bad hardcoding
         self.obs_size = 11
+        if self.cheating:
+            self.obs_size += 2
+            self.friction_coef = 1.0
+            self.mass_coef = 1.0
         self.num_actions = 3
         if self.concat_actions:
             self.obs_size += self.num_actions
@@ -102,6 +110,16 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         if self.adversary_range > 0:
             # the -1 corresponds to not having any adversary on at all
             self.curr_adversary = np.random.randint(low=-1, high=self.adversary_range)
+    
+    def randomize_domain(self):
+        self.friction_coef = np.random.choice(hopper_friction_sweep)
+        self.mass_coef = np.random.choice(hopper_mass_sweep)
+
+        mass_bname = 'torso'
+        bnames = self.model.body_names
+        bindex = bnames.index(mass_bname)
+        self.model.body_mass[bindex] = (self.model.body_mass[bindex] * self.mass_coef)
+        self.model.geom_friction[:] = (self.model.geom_friction * self.friction_coef)[:]
 
     def update_observed_obs(self, new_obs):
         """Add in the new observations and overwrite the stale ones"""
@@ -133,6 +151,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and
                     (height > .7) and (abs(ang) < .2))
         ob = self._get_obs()
+        if self.cheating:
+            ob = np.concatenate((ob, [self.mass_coef, self.friction_coef]))
         done = done or self.step_num > self.horizon
 
         if self.concat_actions:
