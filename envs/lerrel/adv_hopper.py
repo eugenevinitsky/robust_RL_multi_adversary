@@ -151,6 +151,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and
                     (height > .7) and (abs(ang) < .2))
         ob = self._get_obs()
+        # you are allowed to observe the mass and friction coefficients
         if self.cheating:
             ob = np.concatenate((ob, [self.mass_coef, self.friction_coef]))
         done = done or self.step_num > self.horizon

@@ -347,6 +347,6 @@ if __name__ == "__main__":
                                                                                                                               args.exp_title,
                                                                                                                               tune_name)).split(
                                 ' '))
-                            p1.wait(200)
+                            p1.wait(50)
                         except Exception as e:
                             print('This is the error ', e)
