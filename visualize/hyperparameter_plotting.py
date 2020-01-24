@@ -19,7 +19,7 @@ def plot_total_transfer_scores(output_path, exp_name, exp_path, base_exp=None, s
 
     exp_total_scores = {}
     for file_name in exp_data:
-        means, _ = exp_data[file_name]
+        means, _, _, _ = exp_data[file_name]
         if base_exp:
             means = means - base_data[max_base_data][0]
         total_transfer_score = np.mean(means)

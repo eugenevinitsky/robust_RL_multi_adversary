@@ -130,7 +130,7 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
         env_modifier(env)
     elif len(env_modifier) > 0:
         setattr(env, env_modifier[0], env_modifier[1])
-    rewards = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
+    rewards, step_num = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                  state_init, action_init, num_rollouts, render)
 
     with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, test_name),
@@ -138,7 +138,9 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
         np.savetxt(file, rewards, delimiter=', ')
 
     print('The average reward for task {} is {}'.format(test_name, np.mean(rewards)))
-    return np.mean(rewards), np.std(rewards)
+    print('The average step length for task {} is {}'.format(test_name, np.mean(step_num)))
+
+    return np.mean(rewards), np.std(rewards), np.mean(step_num), np.std(step_num)
 
 
 def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir, run_list, render=False):
@@ -162,8 +164,13 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         np.save(file, np.array(temp_output))
 
     if 'Hopper' in rllib_config['env']:
-        means = np.array(temp_output)[1:, 0].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
-        save_heatmap(means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_file_name, False)
+        reward_means = np.array(temp_output)[1:, 0].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
+        output_name = output_file_name + 'rew'
+        save_heatmap(reward_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False)
+
+        step_means = np.array(temp_output)[1:, 2].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
+        output_name = output_file_name + 'steps'
+        save_heatmap(step_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False)
 
     elif 'Pendulum' in rllib_config['env']:
         means = np.array(temp_output)[1:, 0]

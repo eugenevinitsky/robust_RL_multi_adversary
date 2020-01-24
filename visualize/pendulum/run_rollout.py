@@ -93,6 +93,7 @@ def instantiate_rollout(rllib_config, checkpoint):
 def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init, num_rollouts, render):
 
     rewards = []
+    step_nums = []
 
     # actually do the rollout
     for r_itr in range(num_rollouts):
@@ -105,7 +106,9 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
         prev_rewards = collections.defaultdict(lambda: 0.)
         done = False
         reward_total = 0.0
+        step_num = 0
         while not done:
+            step_num += 1
             multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
             action_dict = {}
             for agent_id, a_obs in multi_obs.items():
@@ -162,8 +165,9 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
         print("Episode reward", reward_total)
 
         rewards.append(reward_total)
+        step_nums.append(step_num)
 
     env.close()
 
     print('the average reward is ', np.mean(rewards))
-    return rewards
+    return rewards, step_num

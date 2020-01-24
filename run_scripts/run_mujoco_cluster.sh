@@ -164,7 +164,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 10 \
 --num_adv_strengths 1 --advs_per_strength 3 --grid_search --use_s3 --env_name hopper \
---exp_title hop_3adv_1ps_concat10_bigbatch --num_cpus 10 --run_transfer_tests --multi_node" \
+--exp_title hop_3adv_1ps_concat10_bigbatch --num_cpus 10 --run_transfer_tests --multi_node --concat_actions" \
 --start --stop --tmux --cluster-name=ev_pend_test4
 
 # 5 adversary
@@ -177,7 +177,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 10 \
 --num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
---exp_title hop_1adv_5ps_concat10_bigbatch --num_cpus 10 --run_transfer_tests --multi_node" \
+--exp_title hop_1adv_5ps_concat10_bigbatch --num_cpus 10 --run_transfer_tests --multi_node --concat_actions" \
 --start --stop --tmux --cluster-name=ev_pend_test6
 
 # CHEETAH EXPS
@@ -205,7 +205,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 10 \
 --num_adv_strengths 1 --advs_per_strength 3 --grid_search --use_s3 --env_name cheetah \
---exp_title cheetah_3adv_1ps_concat10_bigbatch --num_cpus 10 --run_transfer_tests --multi_node" \
+--exp_title cheetah_3adv_1ps_concat10_bigbatch --num_cpus 10 --run_transfer_tests --multi_node --concat_actions" \
 --start --stop --tmux --cluster-name=ev_pend_test10
 
 # 5 adversary
@@ -218,5 +218,5 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 10 \
 --num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name cheetah \
---exp_title cheetah_1adv_5ps_concat10_bigbatch --num_cpus 10 --run_transfer_tests --multi_node" \
+--exp_title cheetah_1adv_5ps_concat10_bigbatch --num_cpus 10 --run_transfer_tests --multi_node --concat_actions" \
 --start --stop --tmux --cluster-name=ev_pend_test12

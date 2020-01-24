@@ -33,7 +33,7 @@ def make_heatmap(results_path, output_path, show=False):
     sweep_data = load_data(results_path)
     for file_name in sweep_data:
         print(file_name)
-        means, _ = sweep_data[file_name]
+        means, _, _, _ = sweep_data[file_name]
         means = means.reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
         save_heatmap(means, hopper_mass_sweep, hopper_friction_sweep, output_path, file_name.split("sweep")[0], show)
 
