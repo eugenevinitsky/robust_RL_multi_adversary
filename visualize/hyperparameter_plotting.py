@@ -20,14 +20,14 @@ def plot_total_transfer_scores(output_path, exp_name, exp_path, base_exp=None, s
     exp_total_scores = {}
     exp_total_steps = {}
     for file_name in exp_data:
-        means, _, step_means, _ = exp_data[file_name]
+        base_score, means, _, step_means, _, _ = exp_data[file_name]
         if base_exp:
             means = means - base_data[max_base_data][0]
         total_transfer_score = np.mean(means)
-        exp_total_scores[file_name] = total_transfer_score
+        exp_total_scores[file_name] = {'base_score': base_score, 'mean_scores': total_transfer_score}
 
         total_transfer_steps = np.mean(step_means)
-        exp_total_steps[file_name] = total_transfer_steps
+        exp_total_steps[file_name] = {'base_score': base_score, 'mean_scores': total_transfer_steps}
 
     save_barchart(exp_total_scores, output_path, exp_path, exp_name, show)
 
@@ -46,13 +46,22 @@ def save_barchart(total_scores, output_path, exp_path, file_name, show):
     if not output_path:
         output_path = exp_path
     with open('{}/{}_{}.png'.format(output_path, file_name, "transfer_heatmap"),'wb') as heatmap:
-        fig = plt.figure(figsize=(18,4))
-        bar_plot = plt.bar(range(len(total_scores)), list(total_scores.values()), yerr=np.std(list(total_scores.values())),align='center')
+        fig, ax = plt.subplots(figsize=(18,4))
+        if isinstance(total_scores, dict):
+            means = {key: val['mean_scores'] for key, val in total_scores.items()}
+            base_score = {key: val['base_score'] for key, val in total_scores.items()}
+            width = 0.35
+            ax.bar(np.arange(len(total_scores)) - width / 2, list(base_score.values()), width, label='base score', align='center')
+            ax.bar(np.arange(len(total_scores)) + width / 2, list(means.values()), width, label='transfer means', align='center')
+            plt.title('Base score vs. transfer mean, {}'.format(file_name))
+        else:
+            bar_plot = ax.bar(range(len(total_scores)), list(total_scores.values()), yerr=np.std(list(total_scores.values())),align='center')
         plt.xticks(range(len(total_scores)), list([key[:6] for key in total_scores.keys()]))
         plt.xlabel("Hyperparameter run")
         plt.ylabel("Mean score across swept transfer values")
         ax = plt.gca()
-        autolabel(ax, bar_plot, list(total_scores.values()))
+        plt.legend()
+        # autolabel(ax, bar_plot, list(total_scores.values()))
         plt.savefig(heatmap)
         if show:
             plt.show()

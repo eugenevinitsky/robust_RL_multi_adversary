@@ -103,6 +103,13 @@ def setup_exps(args):
                         help='If true we use vanilla domain randomization over the transfer task.')
     parser.add_argument('--cheating', action='store_true', default=False,
                         help='Enabled with domain randomization, will provide the learner with the transfer params.')
+    parser.add_argument('--reward_range', action='store_true', default=False,
+                        help='If true, the adversaries try to get agents to goals evenly spaced between `low_reward`'
+                             'and `high_reward')
+    parser.add_argument('--low_reward', type=float, default=0.0, help='The lower range that adversaries try'
+                                                                      'to push you to')
+    parser.add_argument('--high_reward', type=float, default=4000.0, help='The upper range that adversaries try'
+                                                                          'to push you to')
     args = parser.parse_args(args)
 
     if args.alternate_training and args.advs_per_strength > 1:
@@ -129,6 +136,8 @@ def setup_exps(args):
                 config['lambda'] = 0.9
                 config['lr'] = 5e-5
         config['sgd_minibatch_size'] = 64 * max(int(args.train_batch_size / 1e4), 1)
+        if args.use_lstm:
+            config['sgd_minibatch_size'] *= 5
         config['num_sgd_iter'] = 10
         config['observation_filter'] = 'MeanStdFilter'
     elif args.algorithm == 'SAC':
@@ -171,10 +180,11 @@ def setup_exps(args):
     ModelCatalog.register_custom_model("rnn", LSTM)
     config['model']['fcnet_hiddens'] = [64, 64]
     # TODO(@evinitsky) turn this on
-    config['model']['use_lstm'] = False
-    # config['model']['custom_model'] = "rnn"
-    config['model']['lstm_use_prev_action_reward'] = False
-    config['model']['lstm_cell_size'] = 128
+    if args.use_lstm:
+        config['model']['fcnet_hiddens'] = [64]
+        config['model']['use_lstm'] = False
+        config['model']['lstm_use_prev_action_reward'] = True
+        config['model']['lstm_cell_size'] = 64
 
     if args.env_name == "pendulum":
         env_name = "MALerrelPendulumEnv"

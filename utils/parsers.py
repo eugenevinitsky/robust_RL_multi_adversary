@@ -25,6 +25,7 @@ def ray_parser(parser):
     parser.add_argument('--run_transfer_tests', action='store_true', default=False,
                         help='If true run the transfer tests on the results and upload them to AWS')
     parser.add_argument('--render', type=str, default=False)
+    parser.add_argument('--use_lstm', default=False, action='store_true', help='If true, use an LSTM')
 
     return parser
 
