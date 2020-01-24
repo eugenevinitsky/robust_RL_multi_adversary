@@ -242,7 +242,7 @@ def on_episode_end(info):
     if hasattr(info["env"], 'envs'):
         env = info["env"].envs[0]
         env.select_new_adversary()
-        if env.domain_randomization:
+        if hasattr(env, 'domain_randomization') and env.domain_randomization:
             env.randomize_domain()
         episode = info["episode"]
         episode.custom_metrics["num_active_advs"] = env.adversary_range
