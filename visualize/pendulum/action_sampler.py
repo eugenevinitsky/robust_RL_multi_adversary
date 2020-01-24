@@ -74,8 +74,6 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
                 raise
 
     # Plot the histogram of the actions
-    import ipdb;
-    ipdb.launch_ipdb_on_exception()
     for adversary, adv_dict in adversary_grid_dict.items():
         sampled_actions = adv_dict['sampled_actions']
         for action_idx in range(sampled_actions.shape[-1]):

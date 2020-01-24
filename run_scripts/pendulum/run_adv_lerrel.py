@@ -109,10 +109,10 @@ def setup_exps(args):
     if args.algorithm == 'PPO':
         config = DEFAULT_PPO_CONFIG
         config['train_batch_size'] = args.train_batch_size
+        config['gamma'] = 0.995
         if args.grid_search:
-            config['lambda'] = tune.grid_search([0.5, 0.9])
+            config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
             config['lr'] = tune.grid_search([5e-5, 5e-4])
-            config['gamma'] = tune.grid_search([0.99, .995])
         else:
             if args.env_name == 'hopper':
                 config['lambda'] = 0.9
@@ -120,7 +120,7 @@ def setup_exps(args):
             else:
                 config['lambda'] = 0.9
                 config['lr'] = 5e-5
-        config['sgd_minibatch_size'] = 64
+        config['sgd_minibatch_size'] = 64 * max(int(args.train_batch_size / 1e4), 1)
         config['num_sgd_iter'] = 10
         config['observation_filter'] = 'MeanStdFilter'
     elif args.algorithm == 'SAC':
