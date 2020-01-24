@@ -7,7 +7,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-# TODO(@evinitsky) PUT THIS BACK DUDE PLEASE REMEMBER
+# TODO(@evinitsky) please put this back
 hopper_mass_sweep = np.linspace(.7, 1.3, 2)
 hopper_friction_sweep = np.linspace(0.7, 1.3, 2)
 
