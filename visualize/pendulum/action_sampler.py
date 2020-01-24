@@ -40,7 +40,8 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
 
     mapping_cache = {}  # in case policy_agent_mapping is stochastic
 
-    for sample_idx in range(num_samples):
+    sample_idx = 0
+    while sample_idx < num_samples:
         obs = env.reset()['agent']
         done = False
         while not done:
@@ -63,6 +64,7 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
             new_dict = {}
             new_dict.update({'agent': action_dict['agent']})
             obs, reward, done, info = env.step(new_dict)
+            sample_idx += 1
 
     file_path = os.path.dirname(os.path.abspath(__file__))
     output_file_path = os.path.join(file_path, outdir)
