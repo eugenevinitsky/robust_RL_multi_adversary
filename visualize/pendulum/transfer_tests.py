@@ -79,6 +79,11 @@ for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).
 # for x in np.linspace(1, 15.0, 15):
 #     lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
 
+def reset_env(env):
+    """Undo parameters that need to be off"""
+    if hasattr(env, 'domain_randomization'):
+        env.domain_randomization = False
+
 @ray.remote(memory=1500 * 1024 * 1024)
 def run_test(test_name, outdir, output_file_name, num_rollouts,
              rllib_config, checkpoint, env_modifier, render):
@@ -124,6 +129,7 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     )
 
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = instantiate_rollout(rllib_config, checkpoint)
+    reset_env(env)
     # high = np.array([1.0, 90.0, env.max_cart_vel, env.max_pole_vel])
     # env.observation_space = spaces.Box(low=-1 * high, high=high, dtype=env.observation_space.dtype)
     if callable(env_modifier):
