@@ -12,7 +12,6 @@ import ray
 from ray.rllib.env.base_env import _DUMMY_AGENT_ID
 from ray.rllib.evaluation.episode import _flatten_action
 from ray.rllib.models.tf.tf_action_dist import DiagGaussian
-import seaborn as sns; sns.set()
 
 from visualize.pendulum.run_rollout import instantiate_rollout, DefaultMapping
 from utils.parsers import replay_parser
@@ -80,7 +79,7 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
         sampled_actions = adv_dict['sampled_actions']
         for action_idx in range(sampled_actions.shape[-1]):
             fig = plt.figure()
-            sns.distplot(sampled_actions[:, action_idx])
+            plt.hist(sampled_actions[:, action_idx])
             output_str = '{}/{}'.format(outdir, adversary + 'action_{}_histogram.png'.format(action_idx))
             plt.xlabel('Action magnitude')
             plt.ylabel('Frequency')
