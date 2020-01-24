@@ -205,7 +205,7 @@ if __name__ == '__main__':
         lerrel_run_list = pendulum_run_list
     elif rllib_config['env'] == "MALerrelHopperEnv":
         lerrel_run_list = hopper_run_list
-    elif rllib_config['env'] == "MALerrelHopperEnv":
+    elif rllib_config['env'] == "MALerrelCheetahEnv":
         lerrel_run_list = cheetah_run_list
 
     if 'run' not in rllib_config['env_config']:
