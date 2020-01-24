@@ -232,3 +232,17 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 --num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name cheetah \
 --exp_title cheetah_1adv_5ps_concat10_bigbatch --num_cpus 10 --run_transfer_tests --multi_node --concat_actions" \
 --start --stop --tmux --cluster-name=ev_pend_test12
+
+# domain randomization
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+--train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 \
+--num_adv_strengths 0 --advs_per_strength 0 --grid_search --use_s3 --env_name hopper \
+--exp_title hop_0adv_concat1_bigbatch_dr_cheat --num_cpus 10 --run_transfer_tests --multi_node \
+--domain_randomization --cheating" \
+--start --stop --tmux --cluster-name=ev_pend_test15
+
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+--train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 \
+--num_adv_strengths 0 --advs_per_strength 0 --grid_search --use_s3 --env_name hopper \
+--exp_title hop_0adv_concat1_bigbatch_dr --num_cpus 10 --run_transfer_tests --multi_node --domain_randomization" \
+--start --stop --tmux --cluster-name=ev_pend_test16
