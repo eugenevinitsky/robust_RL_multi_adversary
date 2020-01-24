@@ -99,10 +99,18 @@ def setup_exps(args):
                         help='This number sets how many previous states we concatenate into the observations')
     parser.add_argument('--concat_actions', action='store_true', default=False,
                         help='If true we concatenate prior actions into the state. This helps a lot for prediction.')
+    parser.add_argument('--domain_randomization', action='store_true', default=False,
+                        help='If true we use vanilla domain randomization over the transfer task.')
+    parser.add_argument('--cheating', action='store_true', default=False,
+                        help='Enabled with domain randomization, will provide the learner with the transfer params.')
     args = parser.parse_args(args)
 
-    if args.alternate_training and args.num_adv > 1:
+    if args.alternate_training and args.advs_per_strength > 1:
         sys.exit('You can only have 1 adversary if you are alternating training')
+    if args.domain_randomization and args.num_adv_strengths * args.advs_per_strength > 0:
+        sys.exit('cannot have adversaries and domain randomization' )
+    if args.cheating and not args.domain_randomization:
+        sys.exit('cheating should not be enabled without domain randomization' )
 
     alg_run = args.algorithm
 
@@ -155,6 +163,8 @@ def setup_exps(args):
     config['env_config']['adv_incr_freq'] = args.adv_incr_freq
     config['env_config']['concat_actions'] = args.concat_actions
     config['env_config']['num_concat_states'] = args.num_concat_states
+    config['env_config']['domain_randomization'] = args.domain_randomization
+    config['env_config']['cheating'] = args.cheating
 
     config['env_config']['run'] = alg_run
 
@@ -232,7 +242,8 @@ def on_episode_end(info):
     if hasattr(info["env"], 'envs'):
         env = info["env"].envs[0]
         env.select_new_adversary()
-
+        if env.domain_randomization:
+            env.randomize_domain()
         episode = info["episode"]
         episode.custom_metrics["num_active_advs"] = env.adversary_range
 
