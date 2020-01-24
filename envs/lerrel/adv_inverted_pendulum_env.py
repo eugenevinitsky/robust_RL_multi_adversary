@@ -32,7 +32,7 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
 
         # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
         # then we are double counting
-        self.strengths = np.linspace(start=0, stop=self.adversary_strength,
+        self.strengths = np.linspace(start=0, stop=1,
                                      num=self.num_adv_strengths + 1)[1:]
         # repeat the bins so that we can index the adversaries easily
         self.strengths = np.repeat(self.strengths, self.advs_per_strength)
@@ -78,7 +78,7 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
     def adv_action_space(self):
         """ 2D adversarial action. Maximum of self.adversary_strength in each dimension.
         """
-        return Box(low=-1, high=1, shape=(2,))
+        return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(2,))
 
     @property
     def adv_observation_space(self):
@@ -161,6 +161,7 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
 
     def reset(self):
         self.step_num = 0
+        self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
         obs = super().reset()
 
         if self.concat_actions:
