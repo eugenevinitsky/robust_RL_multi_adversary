@@ -21,6 +21,8 @@ import errno
 def make_set_friction(friction_coef):
     def set_friction(env):
         env.model.geom_friction[:] = (env.model.geom_friction * friction_coef)[:]
+        if hasattr(env, 'fric_coef'):
+            env.fric_coef = friction_coef
     return set_friction
 
 def make_set_mass(mass_coef, mass_body='pole'):
@@ -28,6 +30,8 @@ def make_set_mass(mass_coef, mass_body='pole'):
         bnames = env.model.body_names
         bindex = bnames.index(mass_body)
         env.model.body_mass[bindex] = (env.model.body_mass[bindex] * mass_coef)
+        if hasattr(env, 'mass_coef'):
+            env.fric_coef = mass_coef
     return set_mass
 
 def make_set_mass_and_fric(friction_coef, mass_coef, mass_body='pole'):

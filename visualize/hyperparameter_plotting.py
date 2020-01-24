@@ -18,14 +18,20 @@ def plot_total_transfer_scores(output_path, exp_name, exp_path, base_exp=None, s
         max_base_data = max(base_keys, key=lambda x: np.mean(base_data[x][0]))
 
     exp_total_scores = {}
+    exp_total_steps = {}
     for file_name in exp_data:
-        means, _, _, _ = exp_data[file_name]
+        means, _, step_means, _ = exp_data[file_name]
         if base_exp:
             means = means - base_data[max_base_data][0]
         total_transfer_score = np.mean(means)
         exp_total_scores[file_name] = total_transfer_score
-    
+
+        total_transfer_steps = np.mean(step_means)
+        exp_total_steps[file_name] = total_transfer_steps
+
     save_barchart(exp_total_scores, output_path, exp_path, exp_name, show)
+
+    save_barchart(exp_total_steps, output_path , exp_path, exp_name + 'steps', show)
 
 def autolabel(ax, rects, vals):
     """
@@ -61,7 +67,6 @@ if __name__ == "__main__":
     parser.add_argument('--show_plots', action="store_true", help='Show plots as they are created.')
     args = parser.parse_args()
 
-    
     plot_total_transfer_scores(args.output_path, os.path.basename(args.experiment_path), args.experiment_path, base_exp=args.base_experiment, show=args.show_plots)
 
 

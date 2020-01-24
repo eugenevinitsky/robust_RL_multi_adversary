@@ -10,6 +10,7 @@ import ray
 
 from utils.rllib_utils import get_config_from_path
 from visualize.pendulum.transfer_tests import run_transfer_tests
+from visualize.pendulum.action_sampler import sample_actions
 
 
 if __name__ == '__main__':
@@ -44,15 +45,25 @@ if __name__ == '__main__':
             elif config['env'] == "MALerrelHopperEnv":
                 from visualize.pendulum.transfer_tests import hopper_run_list
                 lerrel_run_list = hopper_run_list
+            elif config['env'] == "MALerrelCheetahEnv":
+                from visualize.pendulum.transfer_tests import cheetah_run_list
+                lerrel_run_list = cheetah_run_list
 
             ray.shutdown()
             ray.init()
             run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=lerrel_run_list)
+            sample_actions(config, checkpoint_path, min(2 * args.train_batch_size, 20000), output_path)
 
-            # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
-            p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                             "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(args.date,
-                                                                                                              args.exp_title,
-                                                                                                              tune_name)).split(
-                ' '))
-            p1.wait()
+            if args.use_s3:
+                # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
+                for i in range(4):
+                    try:
+                        p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+                                                                         "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(
+                                                                             args.date,
+                                                                             args.exp_title,
+                                                                             tune_name)).split(
+                            ' '))
+                        p1.wait(50)
+                    except Exception as e:
+                        print('This is the error ', e)

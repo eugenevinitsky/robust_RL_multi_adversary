@@ -24,8 +24,9 @@ def load_data(results_path):
 
                 means = run_results[1:, 0]
                 stds = run_results[1:, 1]
-
-                all_file_names[tag] = (means, stds)
+                step_means = run_results[1:, 2]
+                step_stds = run_results[1:, 3]
+                all_file_names[tag] = (means, stds, step_means, step_stds, dirpath)
 
     return all_file_names
 
@@ -33,8 +34,11 @@ def make_heatmap(results_path, output_path, show=False):
     sweep_data = load_data(results_path)
     for file_name in sweep_data:
         print(file_name)
-        means, _, _, _ = sweep_data[file_name]
+        means, _, _, _, dirpath = sweep_data[file_name]
+        # TODO(@evinitsky) remove hardcoding
         means = means.reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
+        if not output_path:
+            output_path = dirpath
         save_heatmap(means, hopper_mass_sweep, hopper_friction_sweep, output_path, file_name.split("sweep")[0], show)
 
 def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show):
@@ -55,7 +59,7 @@ def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('results_path', type=str, help='Pass the path to the folder containing all yuor results files')
-    parser.add_argument('output_path', type=str, help='Output file location.')
+    parser.add_argument('--output_path', type=str, help='Output file location.')
     parser.add_argument('--show_images', action="store_true", help='Show plots as they are created.')
     args = parser.parse_args()
 
