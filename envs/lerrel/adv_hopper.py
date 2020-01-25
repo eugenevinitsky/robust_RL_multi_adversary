@@ -13,10 +13,20 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.horizon = 1000
         self.step_num = 0
 
+        self.total_reward = 0
+
         self.num_adv_strengths = config["num_adv_strengths"]
         self.adversary_strength = config["adversary_strength"]
         # This sets how many adversaries exist per strength level
         self.advs_per_strength = config["advs_per_strength"]
+
+        # This sets whether we should use adversaries across a reward range
+        self.reward_range = config["reward_range"]
+        # This sets the adversaries low reward range
+        self.low_reward = config["low_reward"]
+        # This sets wthe adversaries high reward range
+        self.high_reward = config["high_reward"]
+
         # How frequently we check whether to increase the adversary range
         self.adv_incr_freq = config["adv_incr_freq"]
         # This checks whether we should have a curriculum at all
@@ -55,6 +65,14 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
         else:
             self.curr_adversary = 0
+
+        # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
+        # then we are double counting
+        self.reward_targets = np.linspace(start=self.low_reward, stop=self.high_reward,
+                                     num=self.num_adv_strengths)
+        # repeat the bins so that we can index the adversaries easily
+        self.reward_targets = np.repeat(self.reward_targets, self.advs_per_strength)
+            
 
         # used to track the previously observed states to induce a memory
         # TODO(@evinitsky) bad hardcoding
@@ -171,12 +189,15 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         else:
             self.update_observed_obs(ob)
 
+        self.total_reward += reward
         if isinstance(actions, dict):
             info = {'agent': {'agent_reward': reward}}
             obs_dict = {'agent': self.observed_states}
             reward_dict = {'agent': reward}
 
             if self.adversary_range > 0 and self.curr_adversary >= 0:
+                # to do the kl or l2 reward we have to get actions from all the agents and so we need
+                # to pass them all obs
                 if self.kl_reward or self.l2_reward:
                     is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
                     obs_dict.update({
@@ -187,6 +208,13 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                         'adversary{}'.format(self.curr_adversary): self.observed_states
                     })
 
+                if self.reward_range:
+                    adv_reward = [-1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
+                       i] - self.total_reward) for i in range(self.adversary_range)]
+                else:
+                    adv_reward = [-reward for i in range(self.adversary_range)]
+
+                # to do the kl or l2 reward we have to get actions from all the agents
                 if self.kl_reward or self.l2_reward:
                     if self.l2_reward and self.adversary_range > 1:
                         action_list = [actions['adversary{}'.format(i)] for i in range(self.adversary_range)]
@@ -195,14 +223,14 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                         # This matrix is symmetric so it shouldn't matter if we sum across rows or columns.
                         l2_dists_mean = np.sum(l2_dists, axis=-1)
                         # we get rewarded for being far away for other agents
-                        adv_rew_dict = {'adversary{}'.format(i): -reward + l2_dists_mean[i] *
+                        adv_rew_dict = {'adversary{}'.format(i): adv_reward[i] + l2_dists_mean[i] *
                                                                  self.l2_reward_coeff for i in range(self.adversary_range)}
                         reward_dict.update(adv_rew_dict)
                     elif self.kl_reward and self.adversary_range > 1:
                         pass
 
                 else:
-                    reward_dict.update({'adversary{}'.format(self.curr_adversary): -reward})
+                    reward_dict.update({'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]})
 
             done_dict = {'__all__': done}
             return obs_dict, reward_dict, done_dict, info
@@ -212,6 +240,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
     def reset(self):
         self.step_num = 0
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
+        self.total_reward = 0
         obs = super().reset()
 
         if self.concat_actions:
