@@ -132,6 +132,8 @@ def setup_exps(args):
         sys.exit('cannot have adversaries and domain randomization' )
     if args.cheating and not args.domain_randomization:
         sys.exit('cheating should not be enabled without domain randomization' )
+    if args.reward_range and args.num_adv_strengths * args.advs_per_strength <= 0:
+        sys.exit('must specify number of strength levels, number of adversaries when using reward range')
 
     alg_run = args.algorithm
 
@@ -181,6 +183,9 @@ def setup_exps(args):
     config['env_config']['num_adv_strengths'] = args.num_adv_strengths
     config['env_config']['advs_per_strength'] = args.advs_per_strength
     config['env_config']['adversary_strength'] = args.adv_strength
+    config['env_config']['reward_range'] = args.reward_range
+    config['env_config']['low_reward'] = args.low_reward
+    config['env_config']['high_reward'] = args.high_reward
     config['env_config']['curriculum'] = args.curriculum
     config['env_config']['goal_score'] = args.goal_score
     config['env_config']['adv_incr_freq'] = args.adv_incr_freq
