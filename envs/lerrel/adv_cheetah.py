@@ -103,7 +103,7 @@ class AdvMAHalfCheetahEnv(HalfCheetahEnv, MultiAgentEnv):
     def select_new_adversary(self):
         if self.adversary_range > 0:
             # the -1 corresponds to not having any adversary on at all
-            self.curr_adversary = np.random.randint(low=-1, high=self.adversary_range)
+            self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
 
     def update_observed_obs(self, new_obs):
         """Add in the new observations and overwrite the stale ones"""

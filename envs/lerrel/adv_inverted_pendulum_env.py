@@ -113,7 +113,7 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
     def select_new_adversary(self):
         if self.adversary_range > 0:
             # the -1 corresponds to not having any adversary on at all
-            self.curr_adversary = np.random.randint(low=-1, high=self.adversary_range)
+            self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
 
     def step(self, actions):
         self.step_num += 1

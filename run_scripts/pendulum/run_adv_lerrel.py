@@ -21,7 +21,8 @@ from ray.tune.logger import pretty_print
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
-
+from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
+from algorithms.custom_kl_distribution import LogitsDist
 from envs.lerrel.adv_hopper import AdvMAHopper
 from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.lerrel.adv_cheetah import AdvMAHalfCheetahEnv
@@ -42,7 +43,10 @@ def setup_ma_config(config, create_env):
     if num_adversaries == 0:
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
+    adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}}
+    if config['env_config']['kl_reward']:
+        ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
+        adversary_config['model']['custom_action_dist'] = "logits_dist"
     policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
     policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
                                             env.adv_action_space, adversary_config) for i in range(num_adversaries)})
@@ -110,6 +114,16 @@ def setup_exps(args):
                                                                       'to push you to')
     parser.add_argument('--high_reward', type=float, default=4000.0, help='The upper range that adversaries try'
                                                                           'to push you to')
+    parser.add_argument('--l2_reward', action='store_true', default=False,
+                        help='If true, each adversary gets a reward for being close to the adversaries. This '
+                             'is NOT a supervised loss')
+    parser.add_argument('--l2_reward_coeff', type=float, default=1.0,
+                        help='Scaling on the l2_reward')
+    parser.add_argument('--kl_reward', action='store_true', default=False,
+                        help='If true, each adversary gets a reward for being close to the adversaries in '
+                             'KL space.')
+    parser.add_argument('--kl_reward_coeff',  type=float, default=1.0,
+                        help='Scaling on the kl_reward')
     args = parser.parse_args(args)
 
     if args.alternate_training and args.advs_per_strength > 1:
@@ -122,7 +136,7 @@ def setup_exps(args):
     alg_run = args.algorithm
 
     if args.algorithm == 'PPO':
-        config = DEFAULT_PPO_CONFIG
+        config = deepcopy(DEFAULT_PPO_CONFIG)
         config['train_batch_size'] = args.train_batch_size
         config['gamma'] = 0.995
         if args.grid_search:
@@ -174,6 +188,10 @@ def setup_exps(args):
     config['env_config']['num_concat_states'] = args.num_concat_states
     config['env_config']['domain_randomization'] = args.domain_randomization
     config['env_config']['cheating'] = args.cheating
+    config['env_config']['l2_reward'] = args.l2_reward
+    config['env_config']['kl_reward'] = args.kl_reward
+    config['env_config']['l2_reward_coeff'] = args.l2_reward_coeff
+    config['env_config']['kl_reward_coeff'] = args.kl_reward_coeff
 
     config['env_config']['run'] = alg_run
 
@@ -216,10 +234,14 @@ def setup_exps(args):
     def trial_str_creator(trial):
         return "{}_{}".format(trial.trainable_name, trial.experiment_tag)
 
+    if args.kl_reward or args.l2_reward:
+        runner = CustomPPOTrainer
+    else:
+        runner = args.algorithm
+
     exp_dict = {
         'name': args.exp_title,
-        # 'run_or_experiment': KLPPOTrainer,
-        'run_or_experiment': args.algorithm,
+        'run_or_experiment': runner,
         'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
