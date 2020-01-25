@@ -2,7 +2,7 @@ import gym
 from gym import spaces
 from gym.utils import seeding
 from gym.envs.mujoco.hopper import HopperEnv
-from gym.spaces import Box, Discrete
+from gym.spaces import Box, Discrete, Dict
 import numpy as np
 from os import path
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
@@ -30,6 +30,11 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         # This is whether we concatenate the agent action into the observation
         self.domain_randomization = config["domain_randomization"]
         self.cheating = config["cheating"]
+        # whether the adversaries are receiving penalties for being too similar
+        self.l2_reward = config['l2_reward']
+        self.kl_reward = config['kl_reward']
+        self.l2_reward_coeff = config['l2_reward_coeff']
+        self.kl_reward_coeff = config['kl_reward_coeff']
 
         # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
         # then we are double counting
@@ -88,7 +93,12 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
     @property
     def adv_observation_space(self):
-        return self.observation_space
+        if self.kl_reward or self.l2_reward:
+            dict_space = Dict({'obs': self.observation_space,
+                               'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
+            return dict_space
+        else:
+            return self.observation_space
 
     def _adv_to_xfrc(self, adv_act):
         self.sim.data.xfrc_applied[self._adv_bindex][0] = adv_act[0]
@@ -109,7 +119,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
     def select_new_adversary(self):
         if self.adversary_range > 0:
             # the -1 corresponds to not having any adversary on at all
-            self.curr_adversary = np.random.randint(low=-1, high=self.adversary_range)
+            self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
     
     def randomize_domain(self):
         self.friction_coef = np.random.choice(hopper_friction_sweep)
@@ -167,11 +177,32 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             reward_dict = {'agent': reward}
 
             if self.adversary_range > 0 and self.curr_adversary >= 0:
-                obs_dict.update({
-                    'adversary{}'.format(self.curr_adversary): self.observed_states
-                })
+                if self.kl_reward or self.l2_reward:
+                    is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
+                    obs_dict.update({
+                        'adversary{}'.format(i): {"obs": self.observed_states, "is_active": np.array([is_active[i]])}
+                        for i in range(self.adversary_range)})
+                else:
+                    obs_dict.update({
+                        'adversary{}'.format(self.curr_adversary): self.observed_states
+                    })
 
-                reward_dict.update({'adversary{}'.format(self.curr_adversary): -reward})
+                if self.kl_reward or self.l2_reward:
+                    if self.l2_reward and self.adversary_range > 1:
+                        action_list = [actions['adversary{}'.format(i)] for i in range(self.adversary_range)]
+                        # row index is the adversary, column index is the adversaries you're diffing against
+                        l2_dists = np.array([[np.linalg.norm(action_i - action_j) for action_j in action_list] for action_i in action_list])
+                        # This matrix is symmetric so it shouldn't matter if we sum across rows or columns.
+                        l2_dists_mean = np.sum(l2_dists, axis=-1)
+                        # we get rewarded for being far away for other agents
+                        adv_rew_dict = {'adversary{}'.format(i): -reward + l2_dists_mean[i] *
+                                                                 self.l2_reward_coeff for i in range(self.adversary_range)}
+                        reward_dict.update(adv_rew_dict)
+                    elif self.kl_reward and self.adversary_range > 1:
+                        pass
+
+                else:
+                    reward_dict.update({'adversary{}'.format(self.curr_adversary): -reward})
 
             done_dict = {'__all__': done}
             return obs_dict, reward_dict, done_dict, info
@@ -190,8 +221,15 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
         curr_obs = {'agent': self.observed_states}
         if self.adversary_range > 0 and self.curr_adversary >= 0:
-            curr_obs.update({'adversary{}'.format(self.curr_adversary):
-                                 self.observed_states})
+            if self.kl_reward or self.l2_reward:
+                is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
+                curr_obs.update({
+                    'adversary{}'.format(i): {"obs": self.observed_states, "is_active": np.array([is_active[i]])}
+                    for i in range(self.adversary_range)})
+            else:
+                curr_obs.update({
+                    'adversary{}'.format(self.curr_adversary): self.observed_states
+                })
 
         return curr_obs
 
