@@ -5,14 +5,10 @@ import os
 import subprocess
 import sys
 
-import psutil
 import pytz
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 from ray.rllib.agents.ppo.ppo import PPOTrainer, DEFAULT_CONFIG as DEFAULT_PPO_CONFIG
-from ray.rllib.agents.sac.sac import DEFAULT_CONFIG as DEFAULT_SAC_CONFIG
-
-from ray.rllib.agents.ddpg.td3 import TD3_DEFAULT_CONFIG as DEFAULT_TD3_CONFIG
 
 from ray.rllib.models import ModelCatalog
 from ray import tune
@@ -97,14 +93,14 @@ def setup_exps(args):
     parser.add_argument('--reward_range', action='store_true', default=False,
                         help='If true, the adversaries try to get agents to goals evenly spaced between `low_reward`'
                              'and `high_reward')
-    parser.add_argument('--low_reward', type=float, default=-10.0, help='The lower range that adversaries try'
+    parser.add_argument('--low_reward', type=float, default=-60.0, help='The lower range that adversaries try'
                                                                       'to push you to')
     parser.add_argument('--high_reward', type=float, default=-1.0, help='The upper range that adversaries try'
                                                                           'to push you to')
     parser.add_argument('--l2_reward', action='store_true', default=False,
                         help='If true, each adversary gets a reward for being close to the adversaries. This '
                              'is NOT a supervised loss')
-    parser.add_argument('--l2_reward_coeff', type=float, default=0.5,
+    parser.add_argument('--l2_reward_coeff', type=float, default=2.0,
                         help='Scaling on the l2_reward')
     # Unused right now
     parser.add_argument('--kl_reward', action='store_true', default=False,
@@ -125,9 +121,9 @@ def setup_exps(args):
         config['gamma'] = 0.95
         if args.grid_search:
             config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
-            config['lr'] = tune.grid_search([5e-5, 5e-4])
+            config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
         else:
-            config['lambda'] = 0.9
+            config['lambda'] = 0.97
             config['lr'] = 5e-4
         config['sgd_minibatch_size'] = 64 * max(int(args.train_batch_size / 1e4), 1)
         if args.use_lstm:
@@ -173,8 +169,9 @@ def setup_exps(args):
     setup_ma_config(config, create_env_fn)
 
     # add the callbacks
-    config["callbacks"] = {"on_train_result": on_train_result,
-                           "on_episode_end": on_episode_end}
+    # config["callbacks"] = {"on_train_result": on_train_result,
+    #                        "on_episode_end": on_episode_end}
+    config["callbacks"] = {"on_episode_end": on_episode_end}
 
     # config["eager_tracing"] = True
     # config["eager"] = True
@@ -203,21 +200,20 @@ def setup_exps(args):
     return exp_dict, args
 
 
-def on_train_result(info):
-    """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
-    result = info["result"]
-
-    if 'policy_reward_mean' in result.keys():
-        if 'agent' in result['policy_reward_mean'].keys():
-            pendulum_reward = result['policy_reward_mean']['agent']
+# def on_train_result(info):
+#     """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
+#     result = info["result"]
+#
+#     if 'policy_reward_mean' in result.keys():
+#         if 'agent' in result['policy_reward_mean'].keys():
+#             pendulum_reward = result['policy_reward_mean']['agent']
 
 
 def on_episode_end(info):
     """Select the currently active adversary"""
 
     # store info about how many adversaries there are
-    if hasattr(info["env"], 'envs'):
-        env = info["env"].envs[0]
+    for env in info["env"].envs:
         env.select_new_adversary()
         episode = info["episode"]
         episode.custom_metrics["num_active_advs"] = env.adversary_range

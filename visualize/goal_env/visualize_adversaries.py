@@ -35,6 +35,9 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
 
     sample_idx = 0
     while sample_idx < num_samples:
+        prev_actions = DefaultMapping(
+            lambda agent_id: action_init[mapping_cache[agent_id]])
+        prev_rewards = collections.defaultdict(lambda: 0.)
         obs = env.reset()['agent']
         # we have an is_active key here
         if env.l2_reward:
@@ -55,6 +58,8 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
                     flat_obs = _flatten_action(a_obs)
                     a_action = agent.compute_action(
                         flat_obs,
+                        prev_action=prev_actions[agent_id],
+                        prev_reward=prev_rewards[agent_id],
                         policy_id=policy_id)
                     if agent_id != 'agent':
                         adversary_grid_dict[agent_id]['sampled_actions'].append(a_action)
@@ -92,8 +97,8 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
     parser = replay_parser(parser)
-    parser.add_argument('--num_samples', type=int, default=1000, help='How many observations to sample')
-    parser.add_argument('--output_dir', type=str, default='transfer_results',
+    parser.add_argument('--num_samples', type=int, default=100, help='How many observations to sample')
+    parser.add_argument('--output_dir', type=str, default=os.path.expanduser('~/transfer_results/goal_env'),
                         help='Directory to output the files into')
     args = parser.parse_args()
 
