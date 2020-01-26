@@ -2,7 +2,10 @@
 
 import sys
 
-# import cv2
+try:
+    import cv2
+except:
+    pass
 import gym
 from gym.spaces import Box, Dict
 import numpy as np
@@ -31,6 +34,7 @@ class GoalEnv(MultiAgentEnv, gym.Env):
         self.goal_pos = np.array([0, 2 * self.range / 3])
 
         self.show_image = False
+        self.image_array = []
 
         # This sets how many adversaries exist at each strength level
         self.num_adv_strengths = config["num_adv_strengths"]
@@ -50,11 +54,12 @@ class GoalEnv(MultiAgentEnv, gym.Env):
                                           num=self.num_adv_strengths)
         # repeat the bins so that we can index the adversaries easily
         self.reward_targets = np.repeat(self.reward_targets, self.advs_per_strength)
+        print('reward targets are', self.reward_targets)
 
         # agent position
         self.curr_pos = np.array([0, 0])
         self.speed = 1.0
-        self.radius = 0.3
+        self.radius = 1.0
 
         self.horizon = config["horizon"]
         self.step_num = 0
@@ -62,6 +67,9 @@ class GoalEnv(MultiAgentEnv, gym.Env):
         self.adversary_range = self.num_adv_strengths * self.advs_per_strength
         self.curr_adversary = 0
         self.total_rew = 0
+
+        # keep track of the actions that they did take
+        self.action_list = []
 
     @property
     def observation_space(self):
@@ -84,10 +92,14 @@ class GoalEnv(MultiAgentEnv, gym.Env):
     def adv_action_space(self):
         return Box(low=-self.range, high=self.range, shape=(2, ))
 
-
     def step(self, action_dict):
-        if self.step_num == 0:
+        if self.step_num == 0 and self.adversary_range > 0:
             self.curr_pos = action_dict['adversary{}'.format(self.curr_adversary)]
+            # store this since the adversary won't get a reward until the last step
+            if self.l2_reward:
+                self.action_list = [action_dict['adversary{}'.format(i)] for i in range(self.adversary_range)]
+        elif self.step_num == 0 and self.adversary_range == 0:
+            self.curr_pos = np.random.uniform(low=-self.range, high=self.range, size=2)
         else:
             self.curr_pos += action_dict['agent']
 
@@ -98,31 +110,31 @@ class GoalEnv(MultiAgentEnv, gym.Env):
             done = True
 
         curr_obs = {'agent': self.curr_pos}
-        base_rew = -1
+        base_rew = -np.linalg.norm(self.curr_pos - self.goal_pos)
         self.total_rew += base_rew
         curr_rew = {'agent': base_rew}
 
-        if self.reward_range:
-            adv_reward = [-1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
-                i] - self.total_rew) for i in range(self.adversary_range)]
-        else:
-            adv_reward = [-self.total_rew for _ in range(self.adversary_range)]
+        if self.adversary_range > 0:
 
-        # the adversaries get observations on the final steps and on the first step
-        if self.step_num == 0 or done:
-            if self.l2_reward:
+            # the adversaries get observations on the final steps and on the first step
+            if done:
+                if self.reward_range:
+                    # we don't want to give the adversaries an incentive to end the rollout early
+                    # so we make a positively shaped reward that peaks at self.reward_targets[i]
+                    adv_reward = [-self.reward_targets[i] - np.abs(self.reward_targets[i] - self.total_rew) for i in range(self.adversary_range)]
+                else:
+                    adv_reward = [-self.total_rew for _ in range(self.adversary_range)]
 
-                is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
-                curr_obs.update({
-                    'adversary{}'.format(i): {"obs": self.curr_pos, "is_active": np.array([is_active[i]])}
-                    for i in range(self.adversary_range)})
-                # the adversary only takes actions at the first step so
-                if self.step_num == 0:
+                if self.l2_reward:
+                    is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
+                    curr_obs.update({
+                        'adversary{}'.format(i): {"obs": self.curr_pos, "is_active": np.array([is_active[i]])}
+                        for i in range(self.adversary_range)})
+                    # the adversary only takes actions at the first step so
                     # update the reward dict
-                    action_list = [action_dict['adversary{}'.format(i)] for i in range(self.adversary_range)]
                     # row index is the adversary, column index is the adversaries you're diffing against
                     l2_dists = np.array(
-                        [[np.linalg.norm(action_i - action_j) for action_j in action_list] for action_i in action_list])
+                        [[np.linalg.norm(action_i - action_j) for action_j in self.action_list] for action_i in self.action_list])
                     # This matrix is symmetric so it shouldn't matter if we sum across rows or columns.
                     l2_dists_mean = np.sum(l2_dists, axis=-1)
                     # we get rewarded for being far away for other agents
@@ -130,16 +142,19 @@ class GoalEnv(MultiAgentEnv, gym.Env):
                                                              self.l2_reward_coeff for i in range(self.adversary_range)}
                     curr_rew.update(adv_rew_dict)
                 else:
-                    adv_rew_dict = {'adversary{}'.format(i): adv_reward[i] for i in range(self.adversary_range)}
+                    curr_obs.update({
+                        'adversary{}'.format(self.curr_adversary): self.curr_pos})
+                    adv_rew_dict = {'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]}
                     curr_rew.update(adv_rew_dict)
 
-            else:
-                curr_obs.update({
-                    'adversary{}'.format(self.curr_adversary): self.curr_pos
-                })
-                curr_rew.update({
-                    'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]
-                })
+                # else:
+                #     pass
+                #     # curr_obs.update({
+                #     #     'adversary{}'.format(self.curr_adversary): self.curr_pos
+                #     # })
+                #     # curr_rew.update({
+                #     #     'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]
+                #     # })
 
         info = {'agent': {'agent_reward': base_rew}}
 
@@ -148,6 +163,14 @@ class GoalEnv(MultiAgentEnv, gym.Env):
         if self.show_image:
             self.render()
 
+        if done and self.show_image:
+            width, height, layers = self.image_array[0].shape
+            out = cv2.VideoWriter('project.avi', cv2.VideoWriter_fourcc(*'DIVX'), 4, (width, height))
+
+            for i in range(len(self.image_array)):
+                out.write(self.image_array[i][:, :, 0:3])
+            out.release()
+
         self.step_num += 1
         return curr_obs, curr_rew, done_dict, info
 
@@ -155,18 +178,21 @@ class GoalEnv(MultiAgentEnv, gym.Env):
     def reset(self):
         self.step_num = 0
         self.total_rew = 0
-        self.curr_pos = np.array([0, 0])
+        self.curr_pos = np.array([0, 0], dtype=np.float32)
 
         curr_obs = {'agent': self.curr_pos}
-        if self.l2_reward:
-            is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
-            curr_obs.update({
-                'adversary{}'.format(i): {"obs": self.curr_pos, "is_active": np.array([is_active[i]])}
-                for i in range(self.adversary_range)})
-        else:
-            curr_obs.update({
-                'adversary{}'.format(self.curr_adversary): self.curr_pos
-            })
+        if self.adversary_range > 0:
+            if self.l2_reward:
+                is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
+                curr_obs.update({
+                    'adversary{}'.format(i): {"obs": self.curr_pos, "is_active": np.array([is_active[i]])}
+                    for i in range(self.adversary_range)})
+            else:
+                curr_obs.update({
+                    'adversary{}'.format(self.curr_adversary): self.curr_pos
+                })
+
+        self.image_array = []
 
         return curr_obs
 
@@ -197,12 +223,13 @@ class GoalEnv(MultiAgentEnv, gym.Env):
 
         # grab the pixel buffer and dump it into a numpy array
         img = np.array(fig.canvas.renderer.buffer_rgba())
+        self.image_array.append(img)
+        plt.close(fig)
 
-
-        # canvas.draw()
-        # img = np.fromstring(canvas.tostring_rgb(), dtype='uint8')
-
+        # # canvas.draw()
+        # # img = np.fromstring(canvas.tostring_rgb(), dtype='uint8')
+        #
         # cv2.namedWindow("image", cv2.WINDOW_NORMAL)
         # cv2.resizeWindow('image', 1000, 1000)
         # cv2.imshow("image", img)
-        # cv2.waitKey(1)
+        # cv2.waitKey(2)
