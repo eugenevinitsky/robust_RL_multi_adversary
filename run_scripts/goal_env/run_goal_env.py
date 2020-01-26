@@ -102,6 +102,9 @@ def setup_exps(args):
                              'is NOT a supervised loss')
     parser.add_argument('--l2_reward_coeff', type=float, default=2.0,
                         help='Scaling on the l2_reward')
+    parser.add_argument('--l2_in_tranche', action='store_true', default=False,
+                        help='If this is true, you only compare l2 values for adversaries that have the same reward '
+                             'goal as you ')
     # Unused right now
     parser.add_argument('--kl_reward', action='store_true', default=False,
                         help='If true, each adversary gets a reward for being close to the adversaries in '
@@ -148,6 +151,7 @@ def setup_exps(args):
     config['env_config']['kl_reward'] = args.kl_reward
     config['env_config']['l2_reward_coeff'] = args.l2_reward_coeff
     config['env_config']['kl_reward_coeff'] = args.kl_reward_coeff
+    config['env_config']['l2_in_tranche'] = args.l2_in_tranche
 
     config['env_config']['run'] = alg_run
 

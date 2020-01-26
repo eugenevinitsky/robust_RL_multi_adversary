@@ -43,6 +43,7 @@ class GoalEnv(MultiAgentEnv, gym.Env):
         # whether the adversaries are receiving penalties for being too similar
         self.l2_reward = config['l2_reward']
         self.l2_reward_coeff = config['l2_reward_coeff']
+        self.l2_in_tranche = config['l2_in_tranche']
 
         # This sets whether we should use adversaries across a reward range
         self.reward_range = config["reward_range"]
@@ -51,9 +52,9 @@ class GoalEnv(MultiAgentEnv, gym.Env):
         # This sets wthe adversaries high reward range
         self.high_reward = config["high_reward"]
         self.reward_targets = np.linspace(start=self.low_reward, stop=self.high_reward,
-                                          num=self.num_adv_strengths)
+                                          num=self.advs_per_strength)
         # repeat the bins so that we can index the adversaries easily
-        self.reward_targets = np.repeat(self.reward_targets, self.advs_per_strength)
+        self.reward_targets = np.repeat(self.reward_targets, self.num_adv_strengths)
         print('reward targets are', self.reward_targets)
 
         # agent position
@@ -70,6 +71,20 @@ class GoalEnv(MultiAgentEnv, gym.Env):
 
         # keep track of the actions that they did take
         self.action_list = []
+
+        # TODO(ev) the adversary strengths and the reward ranges operate backwards.
+        # TODO(ev) for strengths, self.advs_per_strength gives us the number of adversaries in a given strength tranche
+        # TODO(ev) it does the opposite for rewards. There self.num_adv_strengths gives us the number of adversaries
+        # TODO(ev) in a given reward tranche.
+        # construct the adversaries that we actually compare against for l2 distance.
+        # we only compare with adversaries that are in the same self.num_adv_strengths tranche.
+        self.comp_adversaries = []
+        for i in range(self.adversary_range):
+            curr_tranche = int(i / self.num_adv_strengths)
+            low_range = max(curr_tranche * self.num_adv_strengths, i - self.num_adv_strengths)
+            high_range = min((curr_tranche + 1) * self.num_adv_strengths, i + self.num_adv_strengths)
+            self.comp_adversaries.append([low_range, high_range])
+
 
     @property
     def observation_space(self):
@@ -133,8 +148,16 @@ class GoalEnv(MultiAgentEnv, gym.Env):
                     # the adversary only takes actions at the first step so
                     # update the reward dict
                     # row index is the adversary, column index is the adversaries you're diffing against
-                    l2_dists = np.array(
-                        [[np.linalg.norm(action_i - action_j) for action_j in self.action_list] for action_i in self.action_list])
+                    # Also, we only want to do the l2 reward against the adversary in a given reward tranch
+                    if self.l2_in_tranche:
+                        l2_dists = np.array(
+                            [[np.linalg.norm(action_i - action_j) for action_j in
+                              self.action_list[self.comp_adversaries[i][0]: self.comp_adversaries[i][1]]]
+                             for i, action_i in enumerate(self.action_list)])
+                    else:
+                        l2_dists = np.array(
+                            [[np.linalg.norm(action_i - action_j) for action_j in self.action_list]
+                             for action_i in self.action_list])
                     # This matrix is symmetric so it shouldn't matter if we sum across rows or columns.
                     l2_dists_mean = np.sum(l2_dists, axis=-1)
                     # we get rewarded for being far away for other agents

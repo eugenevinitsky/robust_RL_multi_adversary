@@ -43,6 +43,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         # whether the adversaries are receiving penalties for being too similar
         self.l2_reward = config['l2_reward']
         self.kl_reward = config['kl_reward']
+        self.l2_in_tranche = config['l2_in_tranche']
         self.l2_reward_coeff = config['l2_reward_coeff']
         self.kl_reward_coeff = config['kl_reward_coeff']
 
@@ -66,13 +67,19 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         else:
             self.curr_adversary = 0
 
-        # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
-        # then we are double counting
+        # Every adversary at a strength level has different targets. This spurs them to
+        # pursue different strategies
         self.reward_targets = np.linspace(start=self.low_reward, stop=self.high_reward,
-                                     num=self.num_adv_strengths)
+                                     num=self.advs_per_strength)
         # repeat the bins so that we can index the adversaries easily
-        self.reward_targets = np.repeat(self.reward_targets, self.advs_per_strength)
-            
+        self.reward_targets = np.repeat(self.reward_targets, self.num_adv_strengths)
+
+        self.comp_adversaries = []
+        for i in range(self.adversary_range):
+            curr_tranche = int(i / self.num_adv_strengths)
+            low_range = max(curr_tranche * self.num_adv_strengths, i - self.num_adv_strengths)
+            high_range = min((curr_tranche + 1) * self.num_adv_strengths, i + self.num_adv_strengths)
+            self.comp_adversaries.append([low_range, high_range])
 
         # used to track the previously observed states to induce a memory
         # TODO(@evinitsky) bad hardcoding
@@ -222,7 +229,15 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     if self.l2_reward and self.adversary_range > 1:
                         action_list = [actions['adversary{}'.format(i)] for i in range(self.adversary_range)]
                         # row index is the adversary, column index is the adversaries you're diffing against
-                        l2_dists = np.array([[np.linalg.norm(action_i - action_j) for action_j in action_list] for action_i in action_list])
+                        if self.l2_in_tranche:
+                            l2_dists = np.array(
+                                [[np.linalg.norm(action_i - action_j) for action_j in
+                                  action_list[self.comp_adversaries[i][0]: self.comp_adversaries[i][1]]]
+                                 for i, action_i in enumerate(action_list)])
+                        else:
+                            l2_dists = np.array(
+                                [[np.linalg.norm(action_i - action_j) for action_j in action_list]
+                                 for action_i in action_list])
                         # This matrix is symmetric so it shouldn't matter if we sum across rows or columns.
                         l2_dists_mean = np.sum(l2_dists, axis=-1)
                         # we get rewarded for being far away for other agents
