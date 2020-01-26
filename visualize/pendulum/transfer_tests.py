@@ -87,6 +87,7 @@ def reset_env(env):
     """Undo parameters that need to be off"""
     if hasattr(env, 'domain_randomization'):
         env.domain_randomization = False
+    env.adversary_range = 0
 
 @ray.remote(memory=1500 * 1024 * 1024)
 def run_test(test_name, outdir, output_file_name, num_rollouts,
