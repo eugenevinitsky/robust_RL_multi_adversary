@@ -104,7 +104,7 @@ class GoalEnv(MultiAgentEnv, gym.Env):
 
         if self.reward_range:
             adv_reward = [-1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
-                i] - self.total_reward) for i in range(self.adversary_range)]
+                i] - self.total_rew) for i in range(self.adversary_range)]
         else:
             adv_reward = [-self.total_rew for _ in range(self.adversary_range)]
 
@@ -115,9 +115,19 @@ class GoalEnv(MultiAgentEnv, gym.Env):
                 curr_obs.update({
                     'adversary{}'.format(i): {"obs": self.curr_pos, "is_active": np.array([is_active[i]])}
                     for i in range(self.adversary_range)})
-                curr_rew.update({
-                    'adversary{}'.format(i): adv_reward[i]
-                    for i in range(self.adversary_range)})
+
+                # update the reward dict
+                action_list = [action_dict['adversary{}'.format(i)] for i in range(self.adversary_range)]
+                # row index is the adversary, column index is the adversaries you're diffing against
+                l2_dists = np.array(
+                    [[np.linalg.norm(action_i - action_j) for action_j in action_list] for action_i in action_list])
+                # This matrix is symmetric so it shouldn't matter if we sum across rows or columns.
+                l2_dists_mean = np.sum(l2_dists, axis=-1)
+                # we get rewarded for being far away for other agents
+                adv_rew_dict = {'adversary{}'.format(i): adv_reward[i] + l2_dists_mean[i] *
+                                                         self.l2_reward_coeff for i in range(self.adversary_range)}
+                curr_rew.update(adv_rew_dict)
+
             else:
                 curr_obs.update({
                     'adversary{}'.format(self.curr_adversary): self.curr_pos

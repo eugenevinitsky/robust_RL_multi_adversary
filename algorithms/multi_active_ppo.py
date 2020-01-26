@@ -38,7 +38,6 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     # zero out the loss elements where you weren't actually acting
     original_space = restore_original_dimensions(train_batch['obs'], model.obs_space)
     is_active = original_space['is_active']
-    print(is_active)
 
     # extract the ppo_surrogate_loss before the mean is taken
     ppo_custom_surrogate_loss(policy, model, dist_class, train_batch)
