@@ -139,6 +139,7 @@ class GoalEnv(MultiAgentEnv, gym.Env):
 
     def reset(self):
         self.step_num = 0
+        self.total_rew = 0
         self.curr_pos = np.array([0, 0])
 
         curr_obs = {'agent': self.curr_pos}

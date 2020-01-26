@@ -176,9 +176,9 @@ def setup_exps(args):
     config["callbacks"] = {"on_train_result": on_train_result,
                            "on_episode_end": on_episode_end}
 
-    config["eager_tracing"] = True
-    config["eager"] = True
-    config["eager_tracing"] = True
+    # config["eager_tracing"] = True
+    # config["eager"] = True
+    # config["eager_tracing"] = True
 
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
