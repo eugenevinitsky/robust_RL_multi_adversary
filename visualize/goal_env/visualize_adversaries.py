@@ -35,9 +35,18 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
 
     sample_idx = 0
     while sample_idx < num_samples:
-        obs = env.reset()
+        obs = env.reset()['agent']
+        # we have an is_active key here
+        if env.l2_reward:
+            multi_obs = {'agent': obs}
+            adv_dict = {'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([1])} for i in range(num_adversaries)}
+            multi_obs.update(adv_dict)
+        else:
+            multi_obs = {'agent': obs}
+            adv_dict = {'adversary{}'.format(i): obs for i in range(num_adversaries)}
+            multi_obs.update(adv_dict)
         action_dict = {}
-        for agent_id, a_obs in obs.items():
+        for agent_id, a_obs in multi_obs.items():
             if a_obs is not None:
                 policy_id = mapping_cache.setdefault(
                     agent_id, policy_agent_mapping(agent_id))
@@ -65,10 +74,15 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
     # Plot the histogram of the actions
     colors = cm.rainbow(np.linspace(0, 1, num_adversaries))
     fig = plt.figure()
-    for i, adversary, adv_dict in enumerate(adversary_grid_dict.items()):
+    i = 0
+    import ipdb; ipdb.set_trace()
+    for adversary, adv_dict in adversary_grid_dict.items():
         sampled_actions = adv_dict['sampled_actions']
-        plt.scatter(sampled_actions, color=colors[i])
-        plt.title('Histograms of actions over {} sampled obs'.format(num_samples))
+        sampled_actions_x = [action[0] for action in sampled_actions]
+        sampled_actions_y = [action[1] for action in sampled_actions]
+        plt.scatter(sampled_actions_x, sampled_actions_y, color=colors[i])
+        plt.title('Scatter of actions over {} sampled obs'.format(num_samples))
+        i += 1
     output_str = '{}/{}'.format(outdir, 'action_histogram.png')
     plt.savefig(output_str)
     plt.close(fig)
