@@ -75,7 +75,6 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
     colors = cm.rainbow(np.linspace(0, 1, num_adversaries))
     fig = plt.figure()
     i = 0
-    import ipdb; ipdb.set_trace()
     for adversary, adv_dict in adversary_grid_dict.items():
         sampled_actions = adv_dict['sampled_actions']
         sampled_actions_x = [action[0] for action in sampled_actions]
