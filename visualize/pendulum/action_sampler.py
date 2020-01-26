@@ -14,6 +14,7 @@ from ray.rllib.evaluation.episode import _flatten_action
 from ray.rllib.models.tf.tf_action_dist import DiagGaussian
 
 from visualize.pendulum.run_rollout import instantiate_rollout, DefaultMapping
+from visualize.pendulum.transfer_tests import reset_env
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 
@@ -21,6 +22,7 @@ from utils.rllib_utils import get_config
 def sample_actions(rllib_config, checkpoint, num_samples, outdir):
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
         instantiate_rollout(rllib_config, checkpoint)
+    reset_env(env)
 
     # figure out how many adversaries you have and initialize their grids
     num_adversaries = env.num_adv_strengths * env.advs_per_strength
@@ -33,11 +35,17 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
     mapping_cache = {}  # in case policy_agent_mapping is stochastic
 
     sample_idx = 0
+    prev_actions = DefaultMapping(
+        lambda agent_id: action_init[mapping_cache[agent_id]])
+    prev_rewards = collections.defaultdict(lambda: 0.)
     while sample_idx < num_samples:
         obs = env.reset()['agent']
         done = False
         while not done:
-            multi_obs = {'adversary{}'.format(i): obs for i in range(num_adversaries)}
+            if env.kl_reward or env.l2_reward:
+                multi_obs = {'adversary{}'.format(i): {"obs": obs, "is_active": np.array([1])} for i in range(num_adversaries)}
+            else:
+                multi_obs = {'adversary{}'.format(i): obs for i in range(num_adversaries)}
             multi_obs['agent'] = obs
             action_dict = {}
             for agent_id, a_obs in multi_obs.items():
@@ -49,6 +57,8 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
                         flat_obs = _flatten_action(a_obs)
                         a_action = agent.compute_action(
                             flat_obs,
+                            prev_action=prev_actions[agent_id],
+                            prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id)
                         if agent_id != 'agent':
                             adversary_grid_dict[agent_id]['sampled_actions'][sample_idx] = a_action
