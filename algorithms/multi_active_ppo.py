@@ -1,3 +1,6 @@
+"""The purpose of this is to allow you to get the actions of multiple agents, but only pass gradients
+through the one agent that is active at the time"""
+
 from copy import deepcopy
 import logging
 logger = logging.getLogger(__name__)
@@ -8,7 +11,6 @@ import tensorflow as tf
 import ray
 from ray.rllib.models.model import restore_original_dimensions
 from ray.rllib.agents.ppo.ppo_policy import ppo_surrogate_loss
-from ray.rllib.agents.ppo.ppo_policy import postprocess_ppo_gae
 from ray.rllib.agents.ppo.ppo_policy import vf_preds_and_logits_fetches
 from ray.rllib.agents.ppo.ppo_policy import kl_and_loss_stats
 
@@ -16,7 +18,7 @@ from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.agents.trainer_template import build_trainer
 from ray.rllib.agents.ppo import PPOTrainer
 from ray.rllib.agents.ppo import DEFAULT_CONFIG as DEFAULT_PPO_CONFIG
-from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy, setup_mixins, \
+from ray.rllib.agents.ppo.ppo_policy import setup_mixins, postprocess_ppo_gae, \
     LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin, ValueNetworkMixin, clip_gradients, setup_config
 from ray.rllib.policy.sample_batch import SampleBatch
 
@@ -24,7 +26,7 @@ from ray.rllib.evaluation.postprocessing import compute_advantages, \
     Postprocessing
 from ray.rllib.policy.tf_policy import ACTION_LOGP
 
-from ray.rllib.agents.ppo.ppo import choose_policy_optimizer, validate_config, warn_about_bad_reward_scales
+from ray.rllib.agents.ppo.ppo import choose_policy_optimizer, validate_config, warn_about_bad_reward_scales, update_kl
 
 
 # Frozen logits of the policy that computed the action
@@ -36,20 +38,17 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     # zero out the loss elements where you weren't actually acting
     original_space = restore_original_dimensions(train_batch['obs'], model.obs_space)
     is_active = original_space['is_active']
+    print(is_active)
 
     # extract the ppo_surrogate_loss before the mean is taken
     ppo_custom_surrogate_loss(policy, model, dist_class, train_batch)
     pre_mean_loss = policy.loss_obj.pre_mean_loss
-
-    def reduce_mean_valid(t):
-        return tf.reduce_mean(tf.boolean_mask(t, policy.loss_obj.valid_mask))
 
     # This mask combines both the valid mask and a check for when we were actually active in the env
     combined_mask = tf.math.logical_and(policy.loss_obj.valid_mask, tf.cast(tf.squeeze(is_active, -1), tf.bool))
     standard_loss = tf.reduce_mean(tf.boolean_mask(pre_mean_loss, combined_mask))
 
     return standard_loss
-    # return reduce_mean_valid(pre_mean_loss * tf.squeeze(is_active))
 
 
 class PPOCustomLoss(object):
@@ -146,6 +145,7 @@ class PPOCustomLoss(object):
 
 
 def ppo_custom_surrogate_loss(policy, model, dist_class, train_batch):
+
     logits, state = model.from_batch(train_batch)
     action_dist = dist_class(logits, model)
 
@@ -181,23 +181,6 @@ def ppo_custom_surrogate_loss(policy, model, dist_class, train_batch):
     return policy.loss_obj.loss
 
 
-def update_kl(trainer, fetches):
-    """Update both the KL coefficient and the kl diff coefficient"""
-    if "kl" in fetches:
-        # single-agent
-        trainer.workers.local_worker().for_policy(
-            lambda pi: pi.update_kl(fetches["kl"]))
-    else:
-
-        def update(pi, pi_id):
-            if pi_id in fetches:
-                pi.update_kl(fetches[pi_id]["kl"])
-            else:
-                logger.debug("No data for {}, not updating kl".format(pi_id))
-
-        # multi-agent
-        trainer.workers.local_worker().foreach_trainable_policy(update)
-
 
 CustomPPOPolicy = build_tf_policy(
     name="PPOTFPolicy",
@@ -216,7 +199,7 @@ CustomPPOPolicy = build_tf_policy(
 
 
 CustomPPOTrainer=build_trainer(
-    name="KLPPO",
+    name="MultiPPO",
     default_config=deepcopy(DEFAULT_PPO_CONFIG),
     default_policy=CustomPPOPolicy,
     make_policy_optimizer=choose_policy_optimizer,

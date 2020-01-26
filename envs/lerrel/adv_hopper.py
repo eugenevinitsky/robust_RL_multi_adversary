@@ -212,7 +212,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     adv_reward = [-1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
                        i] - self.total_reward) for i in range(self.adversary_range)]
                 else:
-                    adv_reward = [-reward for i in range(self.adversary_range)]
+                    adv_reward = [-reward for _ in range(self.adversary_range)]
 
                 # to do the kl or l2 reward we have to get actions from all the agents
                 if self.kl_reward or self.l2_reward:
