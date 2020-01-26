@@ -35,11 +35,9 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
 
     sample_idx = 0
     while sample_idx < num_samples:
-        obs = env.reset()['agent']
-        multi_obs = {'adversary{}'.format(i): obs for i in range(num_adversaries)}
-        multi_obs['agent'] = obs
+        obs = env.reset()
         action_dict = {}
-        for agent_id, a_obs in multi_obs.items():
+        for agent_id, a_obs in obs.items():
             if a_obs is not None:
                 policy_id = mapping_cache.setdefault(
                     agent_id, policy_agent_mapping(agent_id))
@@ -52,6 +50,7 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
                     if agent_id != 'agent':
                         adversary_grid_dict[agent_id]['sampled_actions'].append(a_action)
                     action_dict[agent_id] = a_action
+        sample_idx += 1
 
 
     file_path = os.path.dirname(os.path.abspath(__file__))
