@@ -73,7 +73,10 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
 
     # Plot the histogram of the actions
     colors = cm.rainbow(np.linspace(0, 1, num_adversaries))
-    fig = plt.figure()
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.gca()
+    ax.set_xlim([-6, 6])
+    ax.set_ylim([-6, 6])
     i = 0
     for adversary, adv_dict in adversary_grid_dict.items():
         sampled_actions = adv_dict['sampled_actions']
