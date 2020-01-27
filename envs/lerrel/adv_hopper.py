@@ -114,8 +114,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
     def adv_action_space(self):
         """ Simple action space that perturbs every element of agent's action space.
         """
-        low = np.array(super(HopperEnv).action_space.low.tolist())
-        high = np.array(super(HopperEnv).action_space.high.tolist())
+        low = np.array(self.action_space.low.tolist())
+        high = np.array(self.action_space.high.tolist())
         box = Box(low=-np.ones(low.shape), high= np.ones(high.shape), shape=None, dtype=np.float32)
         return box
 
