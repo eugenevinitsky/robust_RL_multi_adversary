@@ -128,7 +128,7 @@ class GoalEnv(MultiAgentEnv, gym.Env):
             # store this since the adversary won't get a reward until the last step
             if self.l2_reward and not self.l2_memory:
                 self.action_list = [action_dict['adversary{}'.format(i)] for i in range(self.adversary_range)]
-            if self.l2_memory and self.l2_memory:
+            if self.l2_memory and self.l2_reward:
                 self.action_list = [action_dict['adversary{}'.format(self.curr_adversary)]]
                 self.local_l2_memory_array[self.curr_adversary] += action_dict['adversary{}'.format(self.curr_adversary)]
 
@@ -193,7 +193,6 @@ class GoalEnv(MultiAgentEnv, gym.Env):
                         curr_obs.update({
                             'adversary{}'.format(self.curr_adversary): self.curr_pos})
                         # we get rewarded for being far away for other agents
-                        import ipdb; ipdb.set_trace()
                         adv_rew_dict = {'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]
                                         + l2_dists_mean * self.l2_reward_coeff}
                         curr_rew.update(adv_rew_dict)

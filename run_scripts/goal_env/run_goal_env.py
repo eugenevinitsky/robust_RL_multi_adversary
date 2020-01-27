@@ -222,39 +222,21 @@ def on_train_result(info):
         outputs = trainer.workers.foreach_worker(
             lambda ev: ev.foreach_env(
                 lambda env: env.get_observed_samples()))
-        mean_result_vec = np.zeros(outputs[0][0][0].shape)
+        result_vec = np.zeros(outputs[0][0][0].shape)
         counts_vec = np.zeros(outputs[0][0][1].shape)
         # compute the mean weighted by how much each action was seen. We don't need to reweight the mean_vec,
         # it's already weighted in the env
         for output in outputs:
             mean_vec, counts = output[0]
-            mean_result_vec += mean_vec
+            result_vec += mean_vec
             counts_vec += counts
-        result_vec = np.zeros(mean_result_vec.shape)
-        for i, row in enumerate(mean_vec):
+        mean_result_vec = np.zeros(result_vec.shape)
+        for i, row in enumerate(result_vec):
             if counts_vec[i] > 0:
-                result_vec[i] = row / counts_vec[i]
+                mean_result_vec[i] = row / counts_vec[i]
         trainer.workers.foreach_worker(
             lambda ev: ev.foreach_env(
-                lambda env: env.update_global_action_mean(result_vec)))
-
-    if 'adv_actions_0_0_mean' in result['custom_metrics'].keys():
-        # TODO(@evinitsky) vectorize
-        # now we want to divide these two but not accidentally divide by zeros
-        mean_update = np.zeros((int(result['custom_metrics']['num_active_advs_max']), int(result['custom_metrics']['action_space_max'])))
-        for adv_index in range(mean_update.shape[0]):
-            for action_index in range(mean_update.shape[1]):
-                observed_episode_val = result['custom_metrics']["num_observed_episodes_{}_mean".format(adv_index)]
-                action_val = result['custom_metrics']["adv_actions_{}_{}_mean".format(adv_index, action_index)]
-                if observed_episode_val > 0:
-                    mean_update[adv_index, action_index] = action_val / observed_episode_val
-
-        trainer = info["trainer"]
-        trainer.workers.foreach_worker(
-            lambda ev: ev.foreach_env(
-                lambda env: env.update_global_action_mean(mean_update)))
-
-
+                lambda env: env.update_global_action_mean(mean_result_vec)))
 
 def on_episode_end(info):
     """Select the currently active adversary"""
