@@ -40,7 +40,7 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
         prev_rewards = collections.defaultdict(lambda: 0.)
         obs = env.reset()['agent']
         # we have an is_active key here
-        if env.l2_reward:
+        if env.l2_reward and not env.l2_memory:
             multi_obs = {'agent': obs}
             adv_dict = {'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([1])} for i in range(num_adversaries)}
             multi_obs.update(adv_dict)
@@ -80,17 +80,23 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
     colors = cm.rainbow(np.linspace(0, 1, num_adversaries))
     fig = plt.figure(figsize=(8, 8))
     ax = fig.gca()
+    circle1 = plt.Circle((env.goal_pos[0], env.goal_pos[1]), env.radius, color='b', label='goal')
+    ax.add_artist(circle1)
     ax.set_xlim([-6, 6])
     ax.set_ylim([-6, 6])
     i = 0
+    handle_list = []
     for adversary, adv_dict in adversary_grid_dict.items():
         sampled_actions = adv_dict['sampled_actions']
         sampled_actions_x = [action[0] for action in sampled_actions]
         sampled_actions_y = [action[1] for action in sampled_actions]
-        plt.scatter(sampled_actions_x, sampled_actions_y, color=colors[i])
+        handle_list.append(plt.scatter(sampled_actions_x, sampled_actions_y, color=colors[i], label=adversary))
         plt.title('Scatter of actions over {} sampled obs'.format(num_samples))
         i += 1
     output_str = '{}/{}'.format(outdir, 'action_histogram.png')
+    # legends = ['goal'] + ['adversary{}'.format(i) for i in range(len(adversary_grid_dict))]
+    plt.legend(handles=[circle1] + handle_list)
+    # plt.legend(legends)
     plt.savefig(output_str)
     plt.close(fig)
 

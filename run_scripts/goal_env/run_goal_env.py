@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 
+import numpy as np
 import pytz
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
@@ -40,7 +41,7 @@ def setup_ma_config(config, create_env):
         ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
         adversary_config['model']['custom_action_dist'] = "logits_dist"
     # for both of these we need a graph that zeros out agents that weren't active
-    if config['env_config']['kl_reward'] or config['env_config']['l2_reward']:
+    if config['env_config']['kl_reward'] or (config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
         policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
         policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in
@@ -105,6 +106,12 @@ def setup_exps(args):
     parser.add_argument('--l2_in_tranche', action='store_true', default=False,
                         help='If this is true, you only compare l2 values for adversaries that have the same reward '
                              'goal as you ')
+    parser.add_argument('--l2_memory', action='store_true', default=False,
+                        help='If true we keep running mean statistics of the l2 score for each agent, allowing'
+                             'us to not generate actions for each agent. This is noisier and more incorrect,'
+                             'but WAY fast')
+    parser.add_argument('--l2_memory_target_coeff', type=float, default=0.05,
+                        help='The coefficient used to update the running mean if l2_memory is true')
     # Unused right now
     parser.add_argument('--kl_reward', action='store_true', default=False,
                         help='If true, each adversary gets a reward for being close to the adversaries in '
@@ -152,6 +159,9 @@ def setup_exps(args):
     config['env_config']['l2_reward_coeff'] = args.l2_reward_coeff
     config['env_config']['kl_reward_coeff'] = args.kl_reward_coeff
     config['env_config']['l2_in_tranche'] = args.l2_in_tranche
+    config['env_config']['l2_memory'] = args.l2_memory
+    config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
+
 
     config['env_config']['run'] = alg_run
 
@@ -173,9 +183,8 @@ def setup_exps(args):
     setup_ma_config(config, create_env_fn)
 
     # add the callbacks
-    # config["callbacks"] = {"on_train_result": on_train_result,
-    #                        "on_episode_end": on_episode_end}
-    config["callbacks"] = {"on_episode_end": on_episode_end}
+    config["callbacks"] = {"on_train_result": on_train_result,
+                           "on_episode_end": on_episode_end}
 
     # config["eager_tracing"] = True
     # config["eager"] = True
@@ -185,7 +194,7 @@ def setup_exps(args):
     def trial_str_creator(trial):
         return "{}_{}".format(trial.trainable_name, trial.experiment_tag)
 
-    if args.kl_reward or args.l2_reward:
+    if (args.kl_reward) or (args.l2_reward and not args.l2_memory):
         runner = CustomPPOTrainer
     else:
         runner = args.algorithm
@@ -204,14 +213,30 @@ def setup_exps(args):
     return exp_dict, args
 
 
-# def on_train_result(info):
-#     """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
-#     result = info["result"]
-#
-#     if 'policy_reward_mean' in result.keys():
-#         if 'agent' in result['policy_reward_mean'].keys():
-#             pendulum_reward = result['policy_reward_mean']['agent']
+def on_train_result(info):
+    """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
+    result = info["result"]
 
+    if info["result"]["config"]["env_config"]["l2_memory"]:
+        trainer = info["trainer"]
+        outputs = trainer.workers.foreach_worker(
+            lambda ev: ev.foreach_env(
+                lambda env: env.get_observed_samples()))
+        result_vec = np.zeros(outputs[0][0][0].shape)
+        counts_vec = np.zeros(outputs[0][0][1].shape)
+        # compute the mean weighted by how much each action was seen. We don't need to reweight the mean_vec,
+        # it's already weighted in the env
+        for output in outputs:
+            mean_vec, counts = output[0]
+            result_vec += mean_vec
+            counts_vec += counts
+        mean_result_vec = np.zeros(result_vec.shape)
+        for i, row in enumerate(result_vec):
+            if counts_vec[i] > 0:
+                mean_result_vec[i] = row / counts_vec[i]
+        trainer.workers.foreach_worker(
+            lambda ev: ev.foreach_env(
+                lambda env: env.update_global_action_mean(mean_result_vec)))
 
 def on_episode_end(info):
     """Select the currently active adversary"""
@@ -219,8 +244,16 @@ def on_episode_end(info):
     # store info about how many adversaries there are
     for env in info["env"].envs:
         env.select_new_adversary()
-        episode = info["episode"]
-        episode.custom_metrics["num_active_advs"] = env.adversary_range
+        # episode = info["episode"]
+        # episode.custom_metrics["num_active_advs"] = env.adversary_range
+        # episode.custom_metrics["action_space"] = env.adv_action_space.low.shape[0]
+        # if env.l2_memory:
+        #     # this sucks but custom metrics only supports single values
+        #     for adv_index in range(env.local_l2_memory_array.shape[0]):
+        #         episode.custom_metrics["num_observed_episodes_{}".format(adv_index)] = env.local_num_observed_l2_samples[adv_index]
+        #         for action_index in range(env.local_l2_memory_array.shape[1]):
+        #             episode.custom_metrics["adv_actions_{}_{}".format(adv_index, action_index)] = \
+        #                 env.local_l2_memory_array[adv_index, action_index] * env.local_num_observed_l2_samples[adv_index]
 
 
 if __name__ == "__main__":
