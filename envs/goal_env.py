@@ -44,6 +44,8 @@ class GoalEnv(MultiAgentEnv, gym.Env):
         self.l2_reward = config['l2_reward']
         self.l2_reward_coeff = config['l2_reward_coeff']
         self.l2_in_tranche = config['l2_in_tranche']
+        self.l2_memory = config['l2_memory']
+        self.l2_memory_target_coeff = config['l2_memory_target_coeff']
 
         # This sets whether we should use adversaries across a reward range
         self.reward_range = config["reward_range"]
@@ -85,6 +87,19 @@ class GoalEnv(MultiAgentEnv, gym.Env):
             high_range = min((curr_tranche + 1) * self.num_adv_strengths, i + self.num_adv_strengths)
             self.comp_adversaries.append([low_range, high_range])
 
+        # instantiate the l2 memory tracker
+        if self.adversary_range > 0 and self.l2_memory:
+            self.global_l2_memory_array = np.zeros((self.adversary_range, self.adv_action_space.low.shape[0]))
+            self.local_l2_memory_array = np.zeros((self.adversary_range, self.adv_action_space.low.shape[0]))
+            self.local_num_observed_l2_samples = np.zeros(self.adversary_range)
+
+    def update_global_action_mean(self, mean_array):
+        self.global_l2_memory_array = (1 - self.l2_memory_target_coeff) * self.global_l2_memory_array + self.l2_memory_target_coeff * mean_array
+        self.local_l2_memory_array = np.zeros((self.adversary_range, self.adv_action_space.low.shape[0]))
+        self.local_num_observed_l2_samples = np.zeros(self.adversary_range)
+
+    def get_observed_samples(self):
+        return self.local_l2_memory_array, self.local_num_observed_l2_samples
 
     @property
     def observation_space(self):
@@ -96,7 +111,7 @@ class GoalEnv(MultiAgentEnv, gym.Env):
 
     @property
     def adv_observation_space(self):
-        if self.l2_reward:
+        if self.l2_reward and not self.l2_memory:
             dict_space = Dict({'obs': self.observation_space,
                                'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
             return dict_space
@@ -111,8 +126,12 @@ class GoalEnv(MultiAgentEnv, gym.Env):
         if self.step_num == 0 and self.adversary_range > 0:
             self.curr_pos = action_dict['adversary{}'.format(self.curr_adversary)]
             # store this since the adversary won't get a reward until the last step
-            if self.l2_reward:
+            if self.l2_reward and not self.l2_memory:
                 self.action_list = [action_dict['adversary{}'.format(i)] for i in range(self.adversary_range)]
+            if self.l2_memory and self.l2_memory:
+                self.action_list = [action_dict['adversary{}'.format(self.curr_adversary)]]
+                self.local_l2_memory_array[self.curr_adversary] += action_dict['adversary{}'.format(self.curr_adversary)]
+
         elif self.step_num == 0 and self.adversary_range == 0:
             self.curr_pos = np.random.uniform(low=-self.range, high=self.range, size=2)
         else:
@@ -141,29 +160,52 @@ class GoalEnv(MultiAgentEnv, gym.Env):
                     adv_reward = [-self.total_rew for _ in range(self.adversary_range)]
 
                 if self.l2_reward:
-                    is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
-                    curr_obs.update({
-                        'adversary{}'.format(i): {"obs": self.curr_pos, "is_active": np.array([is_active[i]])}
-                        for i in range(self.adversary_range)})
                     # the adversary only takes actions at the first step so
                     # update the reward dict
                     # row index is the adversary, column index is the adversaries you're diffing against
                     # Also, we only want to do the l2 reward against the adversary in a given reward tranch
-                    if self.l2_in_tranche:
-                        l2_dists = np.array(
-                            [[np.linalg.norm(action_i - action_j) for action_j in
-                              self.action_list[self.comp_adversaries[i][0]: self.comp_adversaries[i][1]]]
-                             for i, action_i in enumerate(self.action_list)])
+
+                    # If we are using the l2_memory, we diff against the mean vector instead of an action vector
+                    if not self.l2_memory:
+                        if self.l2_in_tranche:
+                            l2_dists = np.array(
+                                [[np.linalg.norm(action_i - action_j) for action_j in
+                                  self.action_list[self.comp_adversaries[i][0]: self.comp_adversaries[i][1]]]
+                                 for i, action_i in enumerate(self.action_list)])
+                        else:
+                            l2_dists = np.array(
+                                [[np.linalg.norm(action_i - action_j) for action_j in self.action_list]
+                                 for action_i in self.action_list])
+                        l2_dists_mean = np.sum(l2_dists, axis=-1)
                     else:
-                        l2_dists = np.array(
-                            [[np.linalg.norm(action_i - action_j) for action_j in self.action_list]
-                             for action_i in self.action_list])
-                    # This matrix is symmetric so it shouldn't matter if we sum across rows or columns.
-                    l2_dists_mean = np.sum(l2_dists, axis=-1)
-                    # we get rewarded for being far away for other agents
-                    adv_rew_dict = {'adversary{}'.format(i): adv_reward[i] + l2_dists_mean[i] *
-                                                             self.l2_reward_coeff for i in range(self.adversary_range)}
-                    curr_rew.update(adv_rew_dict)
+                        if self.l2_in_tranche:
+                            l2_dists = np.array(
+                                [[np.linalg.norm(action_i - action_j) for action_j in
+                                  self.global_l2_memory_array[self.comp_adversaries[i][0]: self.comp_adversaries[i][1]]]
+                                 for i, action_i in enumerate(self.action_list)])
+                        else:
+                            l2_dists = np.array(
+                                [[np.linalg.norm(action_i - action_j) for action_j in self.global_l2_memory_array]
+                                 for action_i in self.action_list])
+                        l2_dists_mean = np.sum(l2_dists)
+
+                    if self.l2_memory:
+                        curr_obs.update({
+                            'adversary{}'.format(self.curr_adversary): self.curr_pos})
+                        # we get rewarded for being far away for other agents
+                        import ipdb; ipdb.set_trace()
+                        adv_rew_dict = {'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]
+                                        + l2_dists_mean * self.l2_reward_coeff}
+                        curr_rew.update(adv_rew_dict)
+                    else:
+                        is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
+                        curr_obs.update({
+                            'adversary{}'.format(i): {"obs": self.curr_pos, "is_active": np.array([is_active[i]])}
+                            for i in range(self.adversary_range)})
+                        # we get rewarded for being far away for other agents
+                        adv_rew_dict = {'adversary{}'.format(i): adv_reward[i] + l2_dists_mean[i] *
+                                                                 self.l2_reward_coeff for i in range(self.adversary_range)}
+                        curr_rew.update(adv_rew_dict)
                 else:
                     curr_obs.update({
                         'adversary{}'.format(self.curr_adversary): self.curr_pos})
@@ -205,7 +247,7 @@ class GoalEnv(MultiAgentEnv, gym.Env):
 
         curr_obs = {'agent': self.curr_pos}
         if self.adversary_range > 0:
-            if self.l2_reward:
+            if self.l2_reward and not self.l2_memory:
                 is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
                 curr_obs.update({
                     'adversary{}'.format(i): {"obs": self.curr_pos, "is_active": np.array([is_active[i]])}
@@ -214,8 +256,12 @@ class GoalEnv(MultiAgentEnv, gym.Env):
                 curr_obs.update({
                     'adversary{}'.format(self.curr_adversary): self.curr_pos
                 })
+                if self.l2_memory:
+                    self.local_num_observed_l2_samples[self.curr_adversary] += 1
 
         self.image_array = []
+
+        print(self.global_l2_memory_array)
 
         return curr_obs
 

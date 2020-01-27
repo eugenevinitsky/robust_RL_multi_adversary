@@ -40,7 +40,7 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
         prev_rewards = collections.defaultdict(lambda: 0.)
         obs = env.reset()['agent']
         # we have an is_active key here
-        if env.l2_reward:
+        if env.l2_reward and not env.l2_memory:
             multi_obs = {'agent': obs}
             adv_dict = {'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([1])} for i in range(num_adversaries)}
             multi_obs.update(adv_dict)
