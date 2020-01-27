@@ -42,7 +42,7 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
         obs = env.reset()['agent']
         done = False
         while not done:
-            if env.kl_reward or env.l2_reward:
+            if env.kl_reward or (env.l2_reward and not env.l2_memory):
                 multi_obs = {'adversary{}'.format(i): {"obs": obs, "is_active": np.array([1])} for i in range(num_adversaries)}
             else:
                 multi_obs = {'adversary{}'.format(i): obs for i in range(num_adversaries)}
