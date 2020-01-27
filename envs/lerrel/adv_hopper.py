@@ -100,9 +100,9 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         # instantiate the l2 memory tracker
         if self.adversary_range > 0 and self.l2_memory:
             self.global_l2_memory_array = np.zeros(
-                (self.adversary_range, self.adv_action_space.low.shape[0], self.horizon))
+                (self.adversary_range, self.adv_action_space.low.shape[0], self.horizon + 1))
             self.local_l2_memory_array = np.zeros(
-                (self.adversary_range, self.adv_action_space.low.shape[0], self.horizon))
+                (self.adversary_range, self.adv_action_space.low.shape[0], self.horizon + 1))
             self.local_num_observed_l2_samples = np.zeros(self.adversary_range)
 
         # Do the initialization
@@ -215,7 +215,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         # you are allowed to observe the mass and friction coefficients
         if self.cheating:
             ob = np.concatenate((ob, [self.mass_coef, self.friction_coef]))
-        done = done or self.step_num > self.horizon
+        done = done or self.step_num >= self.horizon
 
         if self.concat_actions:
             self.update_observed_obs(np.concatenate((ob, hopper_action)))
@@ -253,7 +253,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     # we then subtract this value off from the linear function again. This creates a reward
                     # that peaks at the target value. We then scale it by (1 / max(1, self.step_num)) because
                     # if we are not actually able to hit the target, this reward can blow up.
-                    
+
                     adv_reward = [((float(self.step_num) / self.horizon) * self.reward_targets[
                        i] -1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
                        i] - self.total_reward)) * (1 / max(1, self.step_num)) for i in range(self.adversary_range)]
