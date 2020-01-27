@@ -218,9 +218,11 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                 if self.reward_range:
                     # we make this a positive reward that peaks at the reward target so that the adversary
                     # isn't trying to make the rollout end as fast as possible. It wants the rollout to continue.
-                    adv_reward = [(float(self.step_num) / self.horizon) * self.reward_targets[
+
+                    # we also rescale by horizon because this can BLOW UP
+                    adv_reward = [((float(self.step_num) / self.horizon) * self.reward_targets[
                        i] -1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
-                       i] - self.total_reward) for i in range(self.adversary_range)]
+                       i] - self.total_reward)) * (1 / max(1, self.step_num)) for i in range(self.adversary_range)]
                 else:
                     adv_reward = [-reward for _ in range(self.adversary_range)]
 

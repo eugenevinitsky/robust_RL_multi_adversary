@@ -252,62 +252,77 @@
 ## 1/26/20 tests. Tests for diverse hopper
 
 ## No adversaries
-ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
---train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 \
---num_adv_strengths 0 --advs_per_strength 0 --grid_search --use_s3 --env_name hopper \
---exp_title hop_0adv_concat1_bigbatch --num_cpus 10 --run_transfer_tests --multi_node" \
---start --stop --tmux --cluster-name=ev_pend_test1
-
-## 5 adversaries, goal scores of 4000 and 0
-ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
---train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
---exp_title hop_5adv_concat1_rew_l0_h4000 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
---low_reward 0 --high_reward 4000" \
---start --stop --tmux --cluster-name=ev_pend_test2
-
-## 5 adversaries, goal scores of 4500 and 2000
-ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
---train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
---exp_title hop_5adv_concat1_rew_l3000_h4000 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
---low_reward 2000 --high_reward 4500" \
---start --stop --tmux --cluster-name=ev_pend_test3
-
-## 5 adversaries, goal scores of 4500 and 3500
-ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
---train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
---exp_title hop_5adv_concat1_rew_l3500_h4000 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
---low_reward 3500 --high_reward 4500" \
---start --stop --tmux --cluster-name=ev_pend_test4
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+#--train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 \
+#--num_adv_strengths 0 --advs_per_strength 0 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_0adv_concat1_bigbatch --num_cpus 10 --run_transfer_tests --multi_node" \
+#--start --stop --tmux --cluster-name=ev_pend_test1
+#
+### 5 adversaries, goal scores of 4000 and 0
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+#--train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_5adv_concat1_rew_l0_h4000 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
+#--low_reward 0 --high_reward 4000" \
+#--start --stop --tmux --cluster-name=ev_pend_test2
+#
+### 5 adversaries, goal scores of 4500 and 2000
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+#--train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_5adv_concat1_rew_l3000_h4000 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
+#--low_reward 2000 --high_reward 4500" \
+#--start --stop --tmux --cluster-name=ev_pend_test3
+#
+### 5 adversaries, goal scores of 4500 and 3500
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+#--train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_5adv_concat1_rew_l3500_h4000 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
+#--low_reward 3500 --high_reward 4500" \
+#--start --stop --tmux --cluster-name=ev_pend_test4
 
 ## 5 adversaries, just the l2 difference reward with coeff 0.5
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+--num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat1_l2rew0p5 --num_cpus 10 --run_transfer_tests --multi_node --l2_reward --l2_reward_coeff 0.5" \
 --start --stop --tmux --cluster-name=ev_pend_test5
+
+## 5 adversaries, just the l2 difference reward with coeff 2.0
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+--train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+--num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+--exp_title hop_5adv_concat1_l2rew2p0 --num_cpus 10 --run_transfer_tests --multi_node --l2_reward --l2_reward_coeff 2.0" \
+--start --stop --tmux --cluster-name=ev_pend_test9
 
 ## 5 adversaries, just the l2 difference reward with coeff 5.0
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+--num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat1_l2rew5p0 --num_cpus 10 --run_transfer_tests --multi_node --l2_reward --l2_reward_coeff 5.0" \
 --start --stop --tmux --cluster-name=ev_pend_test6
 
-## 5 both l2 reward and reward goals
+### 5 both l2 reward and reward goals
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+#--train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_5adv_concat1_rew_l3000_h4000_l2rew0p5 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
+#--low_reward 2000 --high_reward 4500 --l2_reward" \
+#--start --stop --tmux --cluster-name=ev_pend_test7
+#
+### 9 with both l2 rew and reward goals but with comparisons only in tranche
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+#--train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 3 --advs_per_strength 3 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_6adv_concat1_rew_l3000_h4000_l2rew0p5_tranche --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
+#--low_reward 2000 --high_reward 4500 --l2_reward --l2_in_tranche" \
+#--start --stop --tmux --cluster-name=ev_pend_test8
+
+## 5 adversaries, goal scores of 3700 and 3300
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
 --num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
---exp_title hop_5adv_concat1_rew_l3000_h4000_l2rew0p5 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
---low_reward 2000 --high_reward 4500 --l2_reward" \
---start --stop --tmux --cluster-name=ev_pend_test7
-
-## 9 with both l2 rew and reward goals but with comparisons only in tranche
-ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
---train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 3 --advs_per_strength 3 --grid_search --use_s3 --env_name hopper \
---exp_title hop_6adv_concat1_rew_l3000_h4000_l2rew0p5_tranche --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
---low_reward 2000 --high_reward 4500 --l2_reward --l2_in_tranche" \
---start --stop --tmux --cluster-name=ev_pend_test8
+--exp_title hop_5adv_concat1_rew_l3300_h3700 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
+--low_reward 3300 --high_reward 3700" \
+--start --stop --tmux --cluster-name=ev_pend_test10
