@@ -156,7 +156,7 @@ def setup_exps(args):
         sys.exit('cheating should not be enabled without domain randomization' )
     if args.reward_range and args.num_adv_strengths * args.advs_per_strength <= 0:
         sys.exit('must specify number of strength levels, number of adversaries when using reward range')
-    if args.num_adv_strengths * args.advs_per_strength != args.num_adv_rews * args.advs_per_rew:
+    if (args.num_adv_strengths * args.advs_per_strength != args.num_adv_rews * args.advs_per_rew) and args.reward_range:
         sys.exit('Your number of adversaries per reward range must match the total number of adversaries')
 
     alg_run = args.algorithm
