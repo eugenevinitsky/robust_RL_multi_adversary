@@ -112,9 +112,14 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
     @property
     def adv_action_space(self):
-        """ 2D adversarial action. Maximum of self.adversary_strength in each dimension.
+        """ Simple action space that perturbs every element of agent's action space.
         """
-        return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(2,))
+        low = np.array(super(HopperEnv).action_space.low.tolist())
+        high = np.array(super(HopperEnv).action_space.high.tolist())
+        box = Box(low=-np.ones(low.shape), high= np.ones(high.shape), shape=None, dtype=np.float32)
+        return box
+
+        #return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(2,))
 
     @property
     def adv_observation_space(self):
@@ -170,7 +175,11 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
             if self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in actions.keys():
                 adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
-                self._adv_to_xfrc(adv_action)
+                #self._adv_to_xfrc(adv_action)
+                hopper_action = hopper_action + adv_action
+                # apply clipping to hopper action
+                hopper_action = np.clip(hopper_action, a_min=self.action_space.low, a_max=self.action_space.high)
+
         else:
             assert actions in self.action_space
             hopper_action = actions
