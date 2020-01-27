@@ -49,7 +49,7 @@ def setup_ma_config(config, create_env):
         ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
         adversary_config['model']['custom_action_dist'] = "logits_dist"
     # for both of these we need a graph that zeros out agents that weren't active
-    if config['env_config']['kl_reward'] or config['env_config']['l2_reward']:
+    if config['env_config']['kl_reward'] or (config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
         policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
         policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in
