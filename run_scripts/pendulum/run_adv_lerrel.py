@@ -118,6 +118,9 @@ def setup_exps(args):
     parser.add_argument('--reward_range', action='store_true', default=False,
                         help='If true, the adversaries try to get agents to goals evenly spaced between `low_reward`'
                              'and `high_reward')
+    parser.add_argument('--num_adv_rews', type=int, default=1, help='Number of adversary rews ranges if reward ranges is on')
+    parser.add_argument('--advs_per_rew', type=int, default=1,
+                        help='How many adversaries exist at a given reward level')
     parser.add_argument('--low_reward', type=float, default=0.0, help='The lower range that adversaries try'
                                                                       'to push you to')
     parser.add_argument('--high_reward', type=float, default=4000.0, help='The upper range that adversaries try'
@@ -153,6 +156,8 @@ def setup_exps(args):
         sys.exit('cheating should not be enabled without domain randomization' )
     if args.reward_range and args.num_adv_strengths * args.advs_per_strength <= 0:
         sys.exit('must specify number of strength levels, number of adversaries when using reward range')
+    if args.num_adv_strengths * args.advs_per_strength != args.num_adv_rews * args.advs_per_rew:
+        sys.exit('Your number of adversaries per reward range must match the total number of adversaries')
 
     alg_run = args.algorithm
 
@@ -206,6 +211,9 @@ def setup_exps(args):
     config['env_config']['advs_per_strength'] = args.advs_per_strength
     config['env_config']['adversary_strength'] = args.adv_strength
     config['env_config']['reward_range'] = args.reward_range
+    config['env_config']['num_adv_rews'] = args.num_adv_rews
+    config['env_config']['advs_per_rew'] = args.advs_per_rew
+
     config['env_config']['low_reward'] = args.low_reward
     config['env_config']['high_reward'] = args.high_reward
     config['env_config']['curriculum'] = args.curriculum
