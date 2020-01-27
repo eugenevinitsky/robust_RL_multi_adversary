@@ -44,6 +44,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.l2_reward = config['l2_reward']
         self.kl_reward = config['kl_reward']
         self.l2_in_tranche = config['l2_in_tranche']
+        self.l2_memory = config['l2_memory']
+        self.l2_memory_target_coeff = config['l2_memory_target_coeff']
         self.l2_reward_coeff = config['l2_reward_coeff']
         self.kl_reward_coeff = config['kl_reward_coeff']
 
@@ -69,10 +71,12 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
         # Every adversary at a strength level has different targets. This spurs them to
         # pursue different strategies
+        self.num_adv_rews = config['num_adv_rews']
+        self.advs_per_rew = config['advs_per_rew']
         self.reward_targets = np.linspace(start=self.low_reward, stop=self.high_reward,
-                                     num=self.advs_per_strength)
+                                     num=self.num_adv_rews)
         # repeat the bins so that we can index the adversaries easily
-        self.reward_targets = np.repeat(self.reward_targets, self.num_adv_strengths)
+        self.reward_targets = np.repeat(self.reward_targets, self.advs_per_rew)
 
         self.comp_adversaries = []
         for i in range(self.adversary_range):
@@ -92,6 +96,14 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         if self.concat_actions:
             self.obs_size += self.num_actions
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
+
+        # instantiate the l2 memory tracker
+        if self.adversary_range > 0 and self.l2_memory:
+            self.global_l2_memory_array = np.zeros(
+                (self.adversary_range, self.adv_action_space.low.shape[0], self.horizon + 1))
+            self.local_l2_memory_array = np.zeros(
+                (self.adversary_range, self.adv_action_space.low.shape[0], self.horizon + 1))
+            self.local_num_observed_l2_samples = np.zeros(self.adversary_range)
 
         # Do the initialization
         super(AdvMAHopper, self).__init__()
@@ -121,7 +133,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
     @property
     def adv_observation_space(self):
-        if self.kl_reward or self.l2_reward:
+        if self.kl_reward or (self.l2_reward and not self.l2_memory):
             dict_space = Dict({'obs': self.observation_space,
                                'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
             return dict_space
@@ -143,6 +155,15 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                 self.num_iters_above_goal_score = 0
                 self.adversary_range += 1
                 self.adversary_range = min(self.adversary_range, self.num_adv_strengths * self.advs_per_strength)
+
+    def get_observed_samples(self):
+        return self.local_l2_memory_array, self.local_num_observed_l2_samples
+
+    def update_global_action_mean(self, mean_array):
+        """Use polyak averaging to generate an estimate of the current mean actions at each time step"""
+        self.global_l2_memory_array = (1 - self.l2_memory_target_coeff) * self.global_l2_memory_array + self.l2_memory_target_coeff * mean_array
+        self.local_l2_memory_array = np.zeros(self.local_l2_memory_array.shape)
+        self.local_num_observed_l2_samples = np.zeros(self.adversary_range)
 
     def select_new_adversary(self):
         if self.adversary_range > 0:
@@ -174,6 +195,11 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         else:
             assert actions in self.action_space
             hopper_action = actions
+
+
+        # keep track of the action that was taken
+        if self.l2_memory and self.l2_reward and isinstance(actions, dict) and 'adversary{}'.format(self.curr_adversary) in actions.keys():
+            self.local_l2_memory_array[self.curr_adversary, :, self.step_num] += actions['adversary{}'.format(self.curr_adversary)]
         
         posbefore = self.sim.data.qpos[0]
         self.do_simulation(hopper_action, self.frame_skip)
@@ -189,7 +215,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         # you are allowed to observe the mass and friction coefficients
         if self.cheating:
             ob = np.concatenate((ob, [self.mass_coef, self.friction_coef]))
-        done = done or self.step_num > self.horizon
+        done = done or self.step_num >= self.horizon
 
         if self.concat_actions:
             self.update_observed_obs(np.concatenate((ob, hopper_action)))
@@ -205,7 +231,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             if self.adversary_range > 0 and self.curr_adversary >= 0:
                 # to do the kl or l2 reward we have to get actions from all the agents and so we need
                 # to pass them all obs
-                if self.kl_reward or self.l2_reward:
+                if self.kl_reward or (self.l2_reward and not self.l2_memory):
                     is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
                     obs_dict.update({
                         'adversary{}'.format(i): {"obs": self.observed_states, "is_active": np.array([is_active[i]])}
@@ -218,17 +244,27 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                 if self.reward_range:
                     # we make this a positive reward that peaks at the reward target so that the adversary
                     # isn't trying to make the rollout end as fast as possible. It wants the rollout to continue.
-                    adv_reward = [(float(self.step_num) / self.horizon) * self.reward_targets[
+
+                    # we also rescale by horizon because this can BLOW UP
+
+                    # an explainer because this is confusing. We are trying to get the agent to a reward target.
+                    # we treat the reward as evenly distributed per timestep, so at each time we take the abs difference
+                    # between a linear function of step_num from 0 to the target and the current total reward.
+                    # we then subtract this value off from the linear function again. This creates a reward
+                    # that peaks at the target value. We then scale it by (1 / max(1, self.step_num)) because
+                    # if we are not actually able to hit the target, this reward can blow up.
+
+                    adv_reward = [((float(self.step_num) / self.horizon) * self.reward_targets[
                        i] -1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
-                       i] - self.total_reward) for i in range(self.adversary_range)]
+                       i] - self.total_reward)) * (1 / max(1, self.step_num)) for i in range(self.adversary_range)]
                 else:
                     adv_reward = [-reward for _ in range(self.adversary_range)]
 
-                # to do the kl or l2 reward we have to get actions from all the agents
-                if self.kl_reward or self.l2_reward:
-                    if self.l2_reward and self.adversary_range > 1:
+                if self.l2_reward and self.adversary_range > 1:
+                    # to do the kl or l2 reward exactly we have to get actions from all the agents
+                    if self.l2_reward and not self.l2_memory:
                         action_list = [actions['adversary{}'.format(i)] for i in range(self.adversary_range)]
-                        # row index is the adversary, column index is the adversaries you're diffing against
+                        # only diff against agents that have the same reward goal
                         if self.l2_in_tranche:
                             l2_dists = np.array(
                                 [[np.linalg.norm(action_i - action_j) for action_j in
@@ -240,12 +276,32 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                                  for action_i in action_list])
                         # This matrix is symmetric so it shouldn't matter if we sum across rows or columns.
                         l2_dists_mean = np.sum(l2_dists, axis=-1)
+                    # here we approximate the l2 reward by diffing against the average action other agents took
+                    # at this timestep
+                    if self.l2_reward and self.l2_memory:
+                        action_list = [actions['adversary{}'.format(self.curr_adversary)]]
+                        if self.l2_in_tranche:
+                            l2_dists = np.array(
+                                [[np.linalg.norm(action_i - action_j) for action_j in
+                                  self.global_l2_memory_array[self.comp_adversaries[i][0]: self.comp_adversaries[i][1], :, self.step_num]]
+                                 for i, action_i in enumerate(action_list)])
+                        else:
+                            l2_dists = np.array(
+                                [[np.linalg.norm(action_i - action_j) for action_j in self.global_l2_memory_array[:, :, self.step_num]]
+                                 for action_i in action_list])
+                        l2_dists_mean = np.sum(l2_dists)
+
+                    if self.l2_memory:
+                        # we get rewarded for being far away for other agents
+                        adv_rew_dict = {'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]
+                                                                                   + l2_dists_mean * self.l2_reward_coeff}
+                    else:
                         # we get rewarded for being far away for other agents
                         adv_rew_dict = {'adversary{}'.format(i): adv_reward[i] + l2_dists_mean[i] *
-                                                                 self.l2_reward_coeff for i in range(self.adversary_range)}
-                        reward_dict.update(adv_rew_dict)
-                    elif self.kl_reward and self.adversary_range > 1:
-                        pass
+                                                                 self.l2_reward_coeff for i in
+                                        range(self.adversary_range)}
+                    reward_dict.update(adv_rew_dict)
+
 
                 else:
                     reward_dict.update({'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]})
@@ -268,7 +324,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
         curr_obs = {'agent': self.observed_states}
         if self.adversary_range > 0 and self.curr_adversary >= 0:
-            if self.kl_reward or self.l2_reward:
+            if self.kl_reward or (self.l2_reward and not self.l2_memory):
                 is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
                 curr_obs.update({
                     'adversary{}'.format(i): {"obs": self.observed_states, "is_active": np.array([is_active[i]])}
@@ -277,6 +333,10 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                 curr_obs.update({
                     'adversary{}'.format(self.curr_adversary): self.observed_states
                 })
+
+        # track how many times each adversary was used
+        if self.l2_memory:
+            self.local_num_observed_l2_samples[self.curr_adversary] += 1
 
         return curr_obs
 

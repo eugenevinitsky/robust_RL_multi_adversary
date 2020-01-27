@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 
+import numpy as np
 import psutil
 import pytz
 import ray
@@ -48,7 +49,7 @@ def setup_ma_config(config, create_env):
         ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
         adversary_config['model']['custom_action_dist'] = "logits_dist"
     # for both of these we need a graph that zeros out agents that weren't active
-    if config['env_config']['kl_reward'] or config['env_config']['l2_reward']:
+    if config['env_config']['kl_reward'] or (config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
         policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
         policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in
@@ -117,6 +118,9 @@ def setup_exps(args):
     parser.add_argument('--reward_range', action='store_true', default=False,
                         help='If true, the adversaries try to get agents to goals evenly spaced between `low_reward`'
                              'and `high_reward')
+    parser.add_argument('--num_adv_rews', type=int, default=1, help='Number of adversary rews ranges if reward ranges is on')
+    parser.add_argument('--advs_per_rew', type=int, default=1,
+                        help='How many adversaries exist at a given reward level')
     parser.add_argument('--low_reward', type=float, default=0.0, help='The lower range that adversaries try'
                                                                       'to push you to')
     parser.add_argument('--high_reward', type=float, default=4000.0, help='The upper range that adversaries try'
@@ -129,6 +133,14 @@ def setup_exps(args):
     parser.add_argument('--l2_in_tranche', action='store_true', default=False,
                         help='If this is true, you only compare l2 values for adversaries that have the same reward '
                              'goal as you ')
+    parser.add_argument('--l2_memory', action='store_true', default=False,
+                        help='If true we keep running mean statistics of the l2 score for each agent, allowing'
+                             'us to not generate actions for each agent. This is noisier and more incorrect,'
+                             'but WAY faster')
+    parser.add_argument('--l2_memory_target_coeff', type=float, default=0.05,
+                        help='The coefficient used to update the running mean if l2_memory is true. '
+                             '1 / this value sets an approximate time scale for updating. Keep it nice and low.')
+
     parser.add_argument('--kl_reward', action='store_true', default=False,
                         help='If true, each adversary gets a reward for being close to the adversaries in '
                              'KL space.')
@@ -144,6 +156,8 @@ def setup_exps(args):
         sys.exit('cheating should not be enabled without domain randomization' )
     if args.reward_range and args.num_adv_strengths * args.advs_per_strength <= 0:
         sys.exit('must specify number of strength levels, number of adversaries when using reward range')
+    if (args.num_adv_strengths * args.advs_per_strength != args.num_adv_rews * args.advs_per_rew) and args.reward_range:
+        sys.exit('Your number of adversaries per reward range must match the total number of adversaries')
 
     alg_run = args.algorithm
 
@@ -197,6 +211,9 @@ def setup_exps(args):
     config['env_config']['advs_per_strength'] = args.advs_per_strength
     config['env_config']['adversary_strength'] = args.adv_strength
     config['env_config']['reward_range'] = args.reward_range
+    config['env_config']['num_adv_rews'] = args.num_adv_rews
+    config['env_config']['advs_per_rew'] = args.advs_per_rew
+
     config['env_config']['low_reward'] = args.low_reward
     config['env_config']['high_reward'] = args.high_reward
     config['env_config']['curriculum'] = args.curriculum
@@ -211,6 +228,8 @@ def setup_exps(args):
     config['env_config']['l2_reward_coeff'] = args.l2_reward_coeff
     config['env_config']['kl_reward_coeff'] = args.kl_reward_coeff
     config['env_config']['l2_in_tranche'] = args.l2_in_tranche
+    config['env_config']['l2_memory'] = args.l2_memory
+    config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
 
     config['env_config']['run'] = alg_run
 
@@ -272,7 +291,7 @@ def on_train_result(info):
     """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
     result = info["result"]
 
-    if 'policy_reward_mean' in result.keys():
+    if 'policy_reward_mean' in result.keys() and result["config"]["env_config"]["curriculum"]:
         if 'agent' in result['policy_reward_mean'].keys():
             pendulum_reward = result['policy_reward_mean']['agent']
             trainer = info["trainer"]
@@ -280,6 +299,27 @@ def on_train_result(info):
             trainer.workers.foreach_worker(
                 lambda ev: ev.foreach_env(
                     lambda env: env.update_curriculum(pendulum_reward)))
+
+    if info["result"]["config"]["env_config"]["l2_memory"]:
+        trainer = info["trainer"]
+        outputs = trainer.workers.foreach_worker(
+            lambda ev: ev.foreach_env(
+                lambda env: env.get_observed_samples()))
+        result_vec = np.zeros(outputs[0][0][0].shape)
+        counts_vec = np.zeros(outputs[0][0][1].shape)
+        # compute the mean weighted by how much each action was seen. We don't need to reweight the mean_vec,
+        # it's already weighted in the env
+        for output in outputs:
+            mean_vec, counts = output[0]
+            result_vec += mean_vec
+            counts_vec += counts
+        mean_result_vec = np.zeros(result_vec.shape)
+        for i, row in enumerate(result_vec):
+            if counts_vec[i] > 0:
+                mean_result_vec[i] = row / counts_vec[i]
+        trainer.workers.foreach_worker(
+            lambda ev: ev.foreach_env(
+                lambda env: env.update_global_action_mean(mean_result_vec)))
 
 
 def on_episode_end(info):
