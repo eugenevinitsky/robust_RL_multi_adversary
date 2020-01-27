@@ -348,7 +348,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ## 5 adversaries, goal scores of 4000 and 0
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat1_rew_l0_h4000_r2 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
 --low_reward 0 --high_reward 4000" \
 --start --stop --tmux --cluster-name=ev_pend_test2
@@ -356,7 +356,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ## 5 adversaries, goal scores of 4500 and 2000
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat1_rew_l2000_h4500_r2 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
 --low_reward 2000 --high_reward 4500" \
 --start --stop --tmux --cluster-name=ev_pend_test3
@@ -364,7 +364,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ## 5 adversaries, goal scores of 4500 and 3500
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat1_rew_l3500_h4500_r2 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
 --low_reward 3500 --high_reward 4500" \
 --start --stop --tmux --cluster-name=ev_pend_test4
@@ -393,7 +393,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ### 5 both l2 reward and reward goals
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat1_rew_l3000_h4000_l2rew0p5_r2 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
 --low_reward 3000 --high_reward 4000 --l2_reward --l2_memory" \
 --start --stop --tmux --cluster-name=ev_pend_test8
@@ -401,7 +401,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ## 4 with both l2 rew and reward goals but with comparisons only in tranche
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 2 --advs_per_strength 2 --advs_per_rew 2 --advs_per_strength 2 --grid_search --use_s3 --env_name hopper \
+--num_adv_strengths 2 --advs_per_strength 2 --advs_per_rew 2 --num_adv_rews 2 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_4adv_concat1_rew_l3200_h3600_l2rew0p5_tranche_r2 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
 --low_reward 3200 --high_reward 3600 --l2_reward --l2_in_tranche --l2_memory" \
 --start --stop --tmux --cluster-name=ev_pend_test9
@@ -409,7 +409,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ## 9 with both l2 rew and reward goals but with comparisons only in tranche
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 3 --advs_per_strength 3 --advs_per_rew 3 --advs_per_strength 3 --grid_search --use_s3 --env_name hopper \
+--num_adv_strengths 3 --advs_per_strength 3 --advs_per_rew 3 --num_adv_rews 3 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_9adv_concat1_rew_l3000_h4000_l2rew0p5_tranche_r2 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
 --low_reward 3000 --high_reward 4000 --l2_reward --l2_in_tranche --l2_memory" \
 --start --stop --tmux --cluster-name=ev_pend_test10
@@ -417,7 +417,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ## 5 adversaries, goal scores of 3700 and 3300
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat1_rew_l3300_h3700_r2 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
 --low_reward 3300 --high_reward 3700" \
 --start --stop --tmux --cluster-name=ev_pend_test11
@@ -425,7 +425,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ## 5 adversaries, goal scores of 3700 and 3300 w/ memory
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat8_rew_l3300_h3700_r2 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
 --low_reward 3300 --high_reward 3700" \
 --start --stop --tmux --cluster-name=ev_pend_test13
@@ -433,7 +433,14 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 ## 5 adversaries, goal scores of 3700 and 3300 w/ memory
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat8_rew_l3100_h3900_r2 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
 --low_reward 3100 --high_reward 3900" \
 --start --stop --tmux --cluster-name=ev_pend_test14
+
+## 5 adversaries, just the l2 difference reward with coeff 0.5
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+--train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+--num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
+--exp_title hop_5adv_concat1_l2rew0p1_r2 --num_cpus 10 --run_transfer_tests --multi_node --l2_reward --l2_reward_coeff 0.1 --l2_memory" \
+--start --stop --tmux --cluster-name=ev_pend_test15
