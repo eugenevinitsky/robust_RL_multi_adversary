@@ -202,6 +202,18 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             plt.xlabel("Mass coef")
             plt.savefig(transfer_robustness)
             plt.close(fig)
+    
+    num_advs = rllib_config['env_config']['advs_per_strength'] * rllib_config['env_config']['num_adv_strengths']
+    if num_advs:
+        temp_output = [run_test.remote(test_name="adversary{}".format(adv_num),
+                    outdir=outdir, output_file_name=output_file_name,
+                    num_rollouts=num_rollouts,
+                    rllib_config=rllib_config, checkpoint=checkpoint, render=render, env_modifier=[], adv_num=adv_num) for adv_num in range(num_advs)]
+        temp_output = ray.get(temp_output)
+
+        with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "with_adv_mean_sweep.txt"),
+                'wb') as file:
+            np.save(file, np.array(temp_output))
 
 if __name__ == '__main__':
 
