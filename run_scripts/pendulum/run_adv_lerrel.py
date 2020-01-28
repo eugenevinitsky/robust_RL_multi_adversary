@@ -14,6 +14,7 @@ from ray.rllib.agents.ppo.ppo import PPOTrainer, DEFAULT_CONFIG as DEFAULT_PPO_C
 from ray.rllib.agents.sac.sac import DEFAULT_CONFIG as DEFAULT_SAC_CONFIG
 
 from ray.rllib.agents.ddpg.td3 import TD3_DEFAULT_CONFIG as DEFAULT_TD3_CONFIG
+from ray.rllib.agents.ddpg.ddpg_policy import DDPGTFPolicy
 
 from ray.rllib.models import ModelCatalog
 from ray import tune
@@ -45,18 +46,23 @@ def setup_ma_config(config, create_env):
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}}
-    if config['env_config']['kl_reward']:
-        ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
-        adversary_config['model']['custom_action_dist'] = "logits_dist"
-    # for both of these we need a graph that zeros out agents that weren't active
-    if config['env_config']['kl_reward'] or (config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
-        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
-        policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
-                                                env.adv_action_space, adversary_config) for i in
-                              range(num_adversaries)})
-    else:
-        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
-        policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
+    if config['env_config']['run'] == 'PPO':
+        if config['env_config']['kl_reward']:
+            ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
+            adversary_config['model']['custom_action_dist'] = "logits_dist"
+        # for both of these we need a graph that zeros out agents that weren't active
+        if config['env_config']['kl_reward'] or (config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
+            policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+            policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
+                                                    env.adv_action_space, adversary_config) for i in
+                                  range(num_adversaries)})
+        else:
+            policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+            policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
+                                                    env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    elif config['env_config']['run'] == 'TD3':
+        policy_graphs = {'agent': (DDPGTFPolicy, env.observation_space, env.action_space, {})}
+        policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     
     # TODO(@evinitsky) put this back
@@ -158,16 +164,21 @@ def setup_exps(args):
         sys.exit('must specify number of strength levels, number of adversaries when using reward range')
     if (args.num_adv_strengths * args.advs_per_strength != args.num_adv_rews * args.advs_per_rew) and args.reward_range:
         sys.exit('Your number of adversaries per reward range must match the total number of adversaries')
+    if args.grid_search and args.seed_search:
+        sys.exit('You can\'t both sweed seeds and grid search')
 
     alg_run = args.algorithm
 
     if args.algorithm == 'PPO':
         config = deepcopy(DEFAULT_PPO_CONFIG)
+        config['seed'] = 0
         config['train_batch_size'] = args.train_batch_size
         config['gamma'] = 0.995
         if args.grid_search:
             config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
             config['lr'] = tune.grid_search([5e-5, 5e-4])
+        elif args.seed_search:
+            config['seed'] = tune.grid_search([i for i in range(9)])
         else:
             if args.env_name == 'hopper':
                 config['lambda'] = 0.9
@@ -188,6 +199,13 @@ def setup_exps(args):
         # === Exploration ===
         config['learning_starts'] = 10000
         config['pure_exploration_steps'] = 10000
+        if args.grid_search:
+            config["actor_lr"] = tune.grid_search([1e-3, 1e-4])
+            config["critic_lr"] = tune.grid_search([1e-3, 1e-4])
+            config["tau"] = tune.grid_search([5e-3, 5e-4])
+
+        elif args.seed_search:
+            config['seed'] = tune.grid_search([i for i in range(9)])
         # === Evaluation ===
         config['evaluation_interval'] = 5
         config['evaluation_num_episodes'] = 10
@@ -200,7 +218,6 @@ def setup_exps(args):
     # Universal hyperparams
     config['num_workers'] = args.num_cpus
     config["batch_mode"] = "complete_episodes"
-    config['seed'] = 0
 
     # config['num_adversaries'] = args.num_adv
     # config['kl_diff_weight'] = args.kl_diff_weight
@@ -268,19 +285,27 @@ def setup_exps(args):
     def trial_str_creator(trial):
         return "{}_{}".format(trial.trainable_name, trial.experiment_tag)
 
-    if args.kl_reward or args.l2_reward:
+    if args.kl_reward or (args.l2_reward and not args.l2_memory):
         runner = CustomPPOTrainer
     else:
         runner = args.algorithm
+
+    stop_dict = {}
+    if args.algorithm == 'PPO':
+        stop_dict.update({
+            'training_iteration': args.num_iters
+        })
+    elif args.algorithm == 'TD3':
+        stop_dict.update({
+            'timesteps_total': args.num_iters * 20000
+        })
 
     exp_dict = {
         'name': args.exp_title,
         'run_or_experiment': runner,
         'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
-        'stop': {
-            'training_iteration': args.num_iters
-        },
+        'stop': stop_dict,
         'config': config,
         'num_samples': args.num_samples,
     }

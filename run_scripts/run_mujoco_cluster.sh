@@ -444,3 +444,13 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 --num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat1_l2rew0p1_r2 --num_cpus 10 --run_transfer_tests --multi_node --l2_reward --l2_reward_coeff 0.1 --l2_memory" \
 --start --stop --tmux --cluster-name=ev_pend_test15
+
+
+# 1/27 experiments round 2
+## 5 adversaries, goal scores of 3700 and 3300 w/ memory
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+--train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
+--num_adv_strengths 1 --advs_per_strength 2 --advs_per_rew 2 --num_adv_rews 2 --grid_search --use_s3 --env_name hopper \
+--exp_title hop_5adv_concat8_rew_l3100_h3900_l2memory_l20p1_tranche --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
+--low_reward 3200 --high_reward 3800 --l2_reward --l2_reward_coeff 0.1 --l2_in_tranche" \
+--start --stop --tmux --cluster-name=ev_pend_test14
