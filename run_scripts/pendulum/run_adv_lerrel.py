@@ -183,6 +183,7 @@ def setup_exps(args):
             if args.env_name == 'hopper':
                 config['lambda'] = 0.9
                 config['lr'] = 5e-4
+                config['vf_clip_param'] = 100.0
             else:
                 config['lambda'] = 0.9
                 config['lr'] = 5e-5
