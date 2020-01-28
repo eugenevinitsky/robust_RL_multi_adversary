@@ -31,6 +31,8 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
         adversary_str = 'adversary' + str(i)
         # each adversary grid is a map of agent action versus observation dimension
         adversary_grid_dict[adversary_str] = {'sampled_actions': np.zeros((num_samples, env.adv_action_space.shape[0]))}
+    agent_dict = {}
+    agent_dict['agent'] = {'sampled_actions': np.zeros((num_samples, env.action_space.shape[0]))}
 
     mapping_cache = {}  # in case policy_agent_mapping is stochastic
 
@@ -62,6 +64,8 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
                             policy_id=policy_id)
                         if agent_id != 'agent':
                             adversary_grid_dict[agent_id]['sampled_actions'][sample_idx] = a_action
+                        else:
+                            agent_dict['agent']['sampled_actions'][sample_idx] = a_action
                         action_dict[agent_id] = a_action
             new_dict = {}
             new_dict.update({'agent': action_dict['agent']})
@@ -94,6 +98,27 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
         fig = plt.figure()
         plt.hist2d(sampled_actions[:, 0], sampled_actions[:, 1])
         output_str = '{}/{}'.format(outdir, adversary + 'action_2dhistogram.png')
+        plt.xlabel('Action 1 magnitude')
+        plt.ylabel('Action 2 magnitude')
+        plt.title('Histograms of actions over {} sampled obs'.format(num_samples))
+        plt.savefig(output_str)
+        plt.close(fig)
+
+    for agent, agent_dict in agent_dict.items():
+        sampled_actions = agent_dict['sampled_actions']
+        for action_idx in range(sampled_actions.shape[-1]):
+            fig = plt.figure()
+            plt.hist(sampled_actions[:, action_idx])
+            output_str = '{}/{}'.format(outdir, agent + 'action_{}_histogram.png'.format(action_idx))
+            plt.xlabel('Action magnitude')
+            plt.ylabel('Frequency')
+            plt.title('Histograms of actions over {} sampled obs'.format(num_samples))
+            plt.savefig(output_str)
+            plt.close(fig)
+
+        fig = plt.figure()
+        plt.hist2d(sampled_actions[:, 0], sampled_actions[:, 1])
+        output_str = '{}/{}'.format(outdir, agent + 'action_2dhistogram.png')
         plt.xlabel('Action 1 magnitude')
         plt.ylabel('Action 2 magnitude')
         plt.title('Histograms of actions over {} sampled obs'.format(num_samples))

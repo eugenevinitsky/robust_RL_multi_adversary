@@ -112,8 +112,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         obs_space = self.observation_space
         if self.concat_actions:
             action_space = self.action_space
-            low = np.tile(np.concatenate((obs_space.low, action_space.low)), self.num_concat_states)
-            high = np.tile(np.concatenate((obs_space.high, action_space.high)), self.num_concat_states)
+            low = np.tile(np.concatenate((obs_space.low, action_space.low * -1000)), self.num_concat_states)
+            high = np.tile(np.concatenate((obs_space.high, action_space.high * 1000)), self.num_concat_states)
         else:
             low = np.tile(obs_space.low, self.num_concat_states)
             high = np.tile(obs_space.high, self.num_concat_states)
@@ -196,15 +196,16 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
     def step(self, actions):
         self.step_num += 1
         if isinstance(actions, dict):
-            hopper_action = actions['agent']
+            # the hopper action before any adversary modifies it
+            obs_hopper_action = actions['agent']
 
             if self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in actions.keys():
                 if self.adv_all_actions:
                     adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
                     # self._adv_to_xfrc(adv_action)
-                    hopper_action = hopper_action + adv_action
+                    obs_hopper_action = obs_hopper_action + adv_action
                     # apply clipping to hopper action
-                    hopper_action = np.clip(hopper_action, a_min=self.action_space.low, a_max=self.action_space.high)
+                    hopper_action = np.clip(obs_hopper_action, a_min=self.action_space.low, a_max=self.action_space.high)
                 else:
                     adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
                     self._adv_to_xfrc(adv_action)
@@ -237,7 +238,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         done = done or self.step_num >= self.horizon
 
         if self.concat_actions:
-            self.update_observed_obs(np.concatenate((ob, hopper_action)))
+            self.update_observed_obs(np.concatenate((ob, obs_hopper_action)))
         else:
             self.update_observed_obs(ob)
 
