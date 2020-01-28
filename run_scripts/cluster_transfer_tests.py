@@ -38,7 +38,7 @@ p1 = subprocess.Popen(os.path.expanduser("~/adversarial_sim2real/run_scripts/s3_
 p1.wait()
 
 for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/s3_test")):
-    if "checkpoint_{}".format(args.checkpoint_num) in dirpath and 'test' not in dirpath:
+    if "checkpoint_{}".format(args.checkpoint_num) in dirpath and args.exp_title in dirpath:
         # grab the experiment name
         folder = os.path.dirname(dirpath)
         tune_name = folder.split("/")[-1]
