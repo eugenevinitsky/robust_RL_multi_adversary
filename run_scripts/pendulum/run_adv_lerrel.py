@@ -154,6 +154,9 @@ def setup_exps(args):
                         help='Scaling on the kl_reward')
     parser.add_argument('--no_end_if_fall', action='store_true', default=False,
                         help='If true, the env continues even after a fall ')
+    parser.add_argument('--adv_all_actions', action='store_true', default=False,
+                        help='If true we apply perturbations to the actions instead of to Lerrels parametrization')
+
     args = parser.parse_args(args)
 
     if args.alternate_training and args.advs_per_strength > 1:
@@ -180,7 +183,7 @@ def setup_exps(args):
             config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
             config['lr'] = tune.grid_search([5e-5, 5e-4])
         elif args.seed_search:
-            config['seed'] = tune.grid_search([i for i in range(9)])
+            config['seed'] = tune.grid_search([i for i in range(6)])
         else:
             if args.env_name == 'hopper':
                 config['lambda'] = 0.9
@@ -203,9 +206,9 @@ def setup_exps(args):
         config['learning_starts'] = 10000
         config['pure_exploration_steps'] = 10000
         if args.grid_search:
-            config["actor_lr"] = tune.grid_search([1e-3, 1e-4])
-            config["critic_lr"] = tune.grid_search([1e-3, 1e-4])
-            config["tau"] = tune.grid_search([5e-3, 5e-4])
+            config["actor_lr"] = tune.grid_search([1e-3, 1e-4, 1e-5])
+            config["critic_lr"] = tune.grid_search([1e-3, 1e-4, 1e-5])
+            config["tau"] = tune.grid_search([5e-3, 5e-4, 5e-5])
 
         elif args.seed_search:
             config['seed'] = tune.grid_search([i for i in range(9)])
@@ -251,6 +254,7 @@ def setup_exps(args):
     config['env_config']['l2_memory'] = args.l2_memory
     config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
     config['env_config']['no_end_if_fall'] = args.no_end_if_fall
+    config['env_config']['adv_all_actions'] = args.adv_all_actions
 
     config['env_config']['run'] = alg_run
 
@@ -301,14 +305,15 @@ def setup_exps(args):
         })
     elif args.algorithm == 'TD3':
         stop_dict.update({
-            'timesteps_total': args.num_iters * 20000
+            'timesteps_total': args.num_iters * 10000
         })
 
     exp_dict = {
         'name': args.exp_title,
         'run_or_experiment': runner,
         'trial_name_creator': trial_str_creator,
-        'checkpoint_freq': args.checkpoint_freq,
+        # 'checkpoint_freq': args.checkpoint_freq,
+        'checkpoint_at_end': True,
         'stop': stop_dict,
         'config': config,
         'num_samples': args.num_samples,
@@ -429,13 +434,14 @@ if __name__ == "__main__":
                 if exc.errno != errno.EEXIST:
                     raise
         for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
-            if "checkpoint_{}".format(args.num_iters) in dirpath:
+            # if "checkpoint_{}".format(args.num_iters) in dirpath:
+            if "checkpoint" in dirpath:
                 # grab the experiment name
                 folder = os.path.dirname(dirpath)
                 tune_name = folder.split("/")[-1]
                 outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
-                config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
+                config, checkpoint_path = get_config_from_path(folder, dirpath.split('_')[-1])
 
                 # TODO(@ev) gross find somewhere else to put this
 

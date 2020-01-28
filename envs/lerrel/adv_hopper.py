@@ -48,7 +48,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.l2_memory_target_coeff = config['l2_memory_target_coeff']
         self.l2_reward_coeff = config['l2_reward_coeff']
         self.kl_reward_coeff = config['kl_reward_coeff']
-        self.end_if_fall = config['end_if_fall']
+        self.no_end_if_fall = config['no_end_if_fall']
+        self.adv_all_actions = config['adv_all_actions']
 
         # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
         # then we are double counting
@@ -98,14 +99,6 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             self.obs_size += self.num_actions
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
 
-        # instantiate the l2 memory tracker
-        if self.adversary_range > 0 and self.l2_memory:
-            self.global_l2_memory_array = np.zeros(
-                (self.adversary_range, self.adv_action_space.low.shape[0], self.horizon + 1))
-            self.local_l2_memory_array = np.zeros(
-                (self.adversary_range, self.adv_action_space.low.shape[0], self.horizon + 1))
-            self.local_num_observed_l2_samples = np.zeros(self.adversary_range)
-
         # Do the initialization
         super(AdvMAHopper, self).__init__()
         self._adv_f_bname = 'foot'
@@ -126,11 +119,26 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             high = np.tile(obs_space.high, self.num_concat_states)
         self.observation_space = Box(low=low, high=high, dtype=np.float32)
 
+        # instantiate the l2 memory tracker
+        if self.adversary_range > 0 and self.l2_memory:
+            self.global_l2_memory_array = np.zeros(
+                (self.adversary_range, self.adv_action_space.low.shape[0], self.horizon + 1))
+            self.local_l2_memory_array = np.zeros(
+                (self.adversary_range, self.adv_action_space.low.shape[0], self.horizon + 1))
+            self.local_num_observed_l2_samples = np.zeros(self.adversary_range)
+
     @property
     def adv_action_space(self):
         """ 2D adversarial action. Maximum of self.adversary_strength in each dimension.
         """
-        return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(2,))
+        if self.adv_all_actions:
+            low = np.array(self.action_space.low.tolist())
+            high = np.array(self.action_space.high.tolist())
+            box = Box(low=-np.ones(low.shape) * self.adversary_strength, high=np.ones(high.shape) * self.adversary_strength,
+                      shape=None, dtype=np.float32)
+            return box
+        else:
+            return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(2,))
 
     @property
     def adv_observation_space(self):
@@ -191,8 +199,15 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             hopper_action = actions['agent']
 
             if self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in actions.keys():
-                adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
-                self._adv_to_xfrc(adv_action)
+                if self.adv_all_actions:
+                    adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
+                    # self._adv_to_xfrc(adv_action)
+                    hopper_action = hopper_action + adv_action
+                    # apply clipping to hopper action
+                    hopper_action = np.clip(hopper_action, a_min=self.action_space.low, a_max=self.action_space.high)
+                else:
+                    adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
+                    self._adv_to_xfrc(adv_action)
         else:
             assert actions in self.action_space
             hopper_action = actions
