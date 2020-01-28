@@ -182,6 +182,8 @@ def setup_exps(args):
         if args.grid_search:
             config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
             config['lr'] = tune.grid_search([5e-5, 5e-4])
+            config['vf_clip_param'] = 100.0
+
         elif args.seed_search:
             config['seed'] = tune.grid_search([i for i in range(6)])
         else:
@@ -208,7 +210,7 @@ def setup_exps(args):
         if args.grid_search:
             config["actor_lr"] = tune.grid_search([1e-3, 1e-4, 1e-5])
             config["critic_lr"] = tune.grid_search([1e-3, 1e-4, 1e-5])
-            config["tau"] = tune.grid_search([5e-3, 5e-4, 5e-5])
+            config["tau"] = tune.grid_search([5e-3, 5e-4])
 
         elif args.seed_search:
             config['seed'] = tune.grid_search([i for i in range(9)])
