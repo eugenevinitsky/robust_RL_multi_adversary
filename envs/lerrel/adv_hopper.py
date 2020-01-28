@@ -111,7 +111,10 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         bnames = self.model.body_names
         self._adv_bindex = bnames.index(
             self._adv_f_bname)  # Index of the body on which the adversary force will be applied
-
+        dr_mass_bname = 'torso'
+        self.dr_bindex = bnames.index(dr_mass_bname)
+        self.original_friction = np.array(self.model.geom_friction)
+        self.original_mass = self.model.body_mass[self.dr_bindex]
         obs_space = self.observation_space
         if self.concat_actions:
             action_space = self.action_space
@@ -171,11 +174,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.friction_coef = np.random.choice(hopper_friction_sweep)
         self.mass_coef = np.random.choice(hopper_mass_sweep)
 
-        mass_bname = 'torso'
-        bnames = self.model.body_names
-        bindex = bnames.index(mass_bname)
-        self.model.body_mass[bindex] = (self.model.body_mass[bindex] * self.mass_coef)
-        self.model.geom_friction[:] = (self.model.geom_friction * self.friction_coef)[:]
+        self.model.body_mass[self.dr_bindex] = (self.original_mass * self.mass_coef)
+        self.model.geom_friction[:] = (self.original_friction * self.friction_coef)[:]
 
     def update_observed_obs(self, new_obs):
         """Add in the new observations and overwrite the stale ones"""
