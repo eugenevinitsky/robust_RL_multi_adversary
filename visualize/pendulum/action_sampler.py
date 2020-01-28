@@ -90,6 +90,16 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
             plt.savefig(output_str)
             plt.close(fig)
 
+
+        fig = plt.figure()
+        plt.hist2d(sampled_actions[:, 0], sampled_actions[:, 1])
+        output_str = '{}/{}'.format(outdir, adversary + 'action_2dhistogram.png')
+        plt.xlabel('Action 1 magnitude')
+        plt.ylabel('Action 2 magnitude')
+        plt.title('Histograms of actions over {} sampled obs'.format(num_samples))
+        plt.savefig(output_str)
+        plt.close(fig)
+
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
     parser = replay_parser(parser)

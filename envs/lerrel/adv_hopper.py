@@ -255,7 +255,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     # if we are not actually able to hit the target, this reward can blow up.
 
                     adv_reward = [((float(self.step_num) / self.horizon) * self.reward_targets[
-                       i] -1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
+                       i] - 1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
                        i] - self.total_reward)) * (1 / max(1, self.step_num)) for i in range(self.adversary_range)]
                 else:
                     adv_reward = [-reward for _ in range(self.adversary_range)]
