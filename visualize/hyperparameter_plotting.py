@@ -20,18 +20,18 @@ def plot_total_transfer_scores(output_path, exp_name, exp_path, base_exp=None, s
     exp_total_scores = {}
     exp_total_steps = {}
     for file_name in exp_data:
-        base_score, means, _, step_means, _, _ = exp_data[file_name]
+        base_score, base_steps, means, _, step_means, _, _ = exp_data[file_name]
         if base_exp:
             means = means - base_data[max_base_data][0]
         total_transfer_score = np.mean(means)
         exp_total_scores[file_name] = {'base_score': base_score, 'mean_scores': total_transfer_score}
 
         total_transfer_steps = np.mean(step_means)
-        exp_total_steps[file_name] = {'base_score': base_score, 'mean_scores': total_transfer_steps}
+        exp_total_steps[file_name] = {'base_score': base_steps, 'mean_scores': total_transfer_steps}
 
     save_barchart(exp_total_scores, output_path, exp_path, exp_name, show)
 
-    save_barchart(exp_total_steps, output_path , exp_path, exp_name + 'steps', show)
+    save_barchart(exp_total_steps, output_path, exp_path, exp_name + 'steps', show)
 
 def autolabel(ax, rects, vals):
     """
