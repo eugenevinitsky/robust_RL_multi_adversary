@@ -91,7 +91,7 @@ def reset_env(env):
 
 @ray.remote(memory=1500 * 1024 * 1024)
 def run_test(test_name, outdir, output_file_name, num_rollouts,
-             rllib_config, checkpoint, env_modifier, render):
+             rllib_config, checkpoint, env_modifier, render, adv_num=None):
     """Run an individual transfer test
 
     Parameters
@@ -142,7 +142,7 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     elif len(env_modifier) > 0:
         setattr(env, env_modifier[0], env_modifier[1])
     rewards, step_num = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
-                                 state_init, action_init, num_rollouts, render)
+                                 state_init, action_init, num_rollouts, render, adv_num)
 
     with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, test_name),
               'wb') as file:
