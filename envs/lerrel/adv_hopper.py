@@ -56,7 +56,6 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
         # index we use to track how many iterations we have maintained above the goal score
         self.num_iters_above_goal_score = 0
-
         # This tracks how many adversaries are turned on
         if self.curriculum:
             self.adversary_range = 0
@@ -116,7 +115,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         """
         low = np.array(self.action_space.low.tolist())
         high = np.array(self.action_space.high.tolist())
-        box = Box(low=-np.ones(low.shape), high= np.ones(high.shape), shape=None, dtype=np.float32)
+        box = Box(low=-np.ones(low.shape) * self.adversary_strength, high= np.ones(high.shape) * self.adversary_strength, shape=None, dtype=np.float32)
         return box
 
         #return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(2,))
