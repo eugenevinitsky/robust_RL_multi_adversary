@@ -152,6 +152,8 @@ def setup_exps(args):
                              'KL space.')
     parser.add_argument('--kl_reward_coeff',  type=float, default=1.0,
                         help='Scaling on the kl_reward')
+    parser.add_argument('--no_end_if_fall', action='store_true', default=False,
+                        help='If true, the env continues even after a fall ')
     args = parser.parse_args(args)
 
     if args.alternate_training and args.advs_per_strength > 1:
@@ -247,6 +249,7 @@ def setup_exps(args):
     config['env_config']['l2_in_tranche'] = args.l2_in_tranche
     config['env_config']['l2_memory'] = args.l2_memory
     config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
+    config['env_config']['no_end_if_fall'] = args.no_end_if_fall
 
     config['env_config']['run'] = alg_run
 

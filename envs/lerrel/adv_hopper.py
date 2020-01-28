@@ -48,6 +48,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.l2_memory_target_coeff = config['l2_memory_target_coeff']
         self.l2_reward_coeff = config['l2_reward_coeff']
         self.kl_reward_coeff = config['kl_reward_coeff']
+        self.end_if_fall = config['end_if_fall']
 
         # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
         # then we are double counting
@@ -209,8 +210,11 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         reward += alive_bonus
         reward -= 1e-3 * np.square(hopper_action).sum()
         s = self.state_vector()
-        done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and
-                    (height > .7) and (abs(ang) < .2))
+        if self.no_end_if_fall:
+            done = False
+        else:
+            done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and
+                        (height > .7) and (abs(ang) < .2))
         ob = self._get_obs()
         # you are allowed to observe the mass and friction coefficients
         if self.cheating:
