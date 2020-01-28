@@ -94,7 +94,7 @@ def instantiate_rollout(rllib_config, checkpoint):
     return env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init
 
 
-def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init, num_rollouts, render):
+def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init, num_rollouts, render, adv_num=None):
 
     rewards = []
     step_nums = []
@@ -113,7 +113,10 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
         step_num = 0
         while not done:
             step_num += 1
-            multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
+            if adv_num is not None:
+                multi_obs = {'agent': obs['agent'], 'adversary{}'.format(adv_num): obs['agent']}
+            else:
+                multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
             action_dict = {}
             for agent_id, a_obs in multi_obs.items():
                 if a_obs is not None:
@@ -148,11 +151,7 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
             action = action if multiagent else action[_DUMMY_AGENT_ID]
 
             # we turn the adversaries off so you only send in the pendulum keys
-            new_dict = {}
-            new_dict.update({'agent': action['agent']})
-            next_obs, reward, done, info = env.step(new_dict)
-            new_dict.update({'agent': action['agent']})
-            # next_obs, reward, done, info = env.step(action)
+            next_obs, reward, done, info = env.step(action)
             if render:
                 env.render()
             if isinstance(done, dict):
