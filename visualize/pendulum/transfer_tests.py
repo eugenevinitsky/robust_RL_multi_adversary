@@ -91,7 +91,7 @@ def reset_env(env):
 
 @ray.remote(memory=1500 * 1024 * 1024)
 def run_test(test_name, outdir, output_file_name, num_rollouts,
-             rllib_config, checkpoint, env_modifier, render):
+             rllib_config, checkpoint, env_modifier, render, adv_num=None):
     """Run an individual transfer test
 
     Parameters
@@ -142,7 +142,7 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     elif len(env_modifier) > 0:
         setattr(env, env_modifier[0], env_modifier[1])
     rewards, step_num = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
-                                 state_init, action_init, num_rollouts, render)
+                                 state_init, action_init, num_rollouts, render, adv_num)
 
     with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, test_name),
               'wb') as file:
@@ -202,6 +202,18 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             plt.xlabel("Mass coef")
             plt.savefig(transfer_robustness)
             plt.close(fig)
+    
+    num_advs = rllib_config['env_config']['advs_per_strength'] * rllib_config['env_config']['num_adv_strengths']
+    if num_advs:
+        temp_output = [run_test.remote(test_name="adversary{}".format(adv_num),
+                    outdir=outdir, output_file_name=output_file_name,
+                    num_rollouts=num_rollouts,
+                    rllib_config=rllib_config, checkpoint=checkpoint, render=render, env_modifier=[], adv_num=adv_num) for adv_num in range(num_advs)]
+        temp_output = ray.get(temp_output)
+
+        with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "with_adv_mean_sweep.txt"),
+                'wb') as file:
+            np.save(file, np.array(temp_output))
 
 if __name__ == '__main__':
 
