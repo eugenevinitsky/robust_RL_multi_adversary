@@ -94,13 +94,17 @@ def instantiate_rollout(rllib_config, checkpoint):
     return env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init
 
 
-def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init, num_rollouts, render):
+def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init, num_rollouts, render, adversary=-1):
 
     rewards = []
     step_nums = []
+    final_obs = []
 
     # actually do the rollout
     for r_itr in range(num_rollouts):
+        running_velocity = 0
+        if adversary >= 0:
+            env.curr_adversary = adversary
         mapping_cache = {}  # in case policy_agent_mapping is stochastic
         agent_states = DefaultMapping(
             lambda agent_id: state_init[mapping_cache[agent_id]])
@@ -150,8 +154,13 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
             # we turn the adversaries off so you only send in the pendulum keys
             new_dict = {}
             new_dict.update({'agent': action['agent']})
+            if adversary >= 0:
+                new_dict.update({'adversary{}'.format(adversary): action['adversary{}'.format(adversary)]})
             next_obs, reward, done, info = env.step(new_dict)
             new_dict.update({'agent': action['agent']})
+            if adversary >= 0:
+                new_dict.update({'adversary{}'.format(adversary): action['adversary{}'.format(adversary)]})
+
             # next_obs, reward, done, info = env.step(action)
             if render:
                 env.render()
@@ -165,13 +174,19 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
 
             # we only want the robot reward, not the adversary reward
             reward_total += info['agent']['agent_reward']
+            running_velocity += obs['agent'][5:7]
             obs = next_obs
         print("Episode reward", reward_total)
 
         rewards.append(reward_total)
         step_nums.append(step_num)
+        #final_obs.append(running_velocity/step_num)
+        final_obs.append(obs['agent'][5:7])
 
     env.close()
 
     print('the average reward is ', np.mean(rewards))
+    if adversary >= 0:
+        return rewards, step_num, final_obs
+
     return rewards, step_num
