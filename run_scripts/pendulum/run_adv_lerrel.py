@@ -45,7 +45,7 @@ def setup_ma_config(config, create_env):
     if num_adversaries == 0:
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}}
+    adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}, "entropy_coeff": config['env_config']['entropy_coeff']}
     if config['env_config']['run'] == 'PPO':
         if config['env_config']['kl_reward']:
             ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
@@ -156,6 +156,8 @@ def setup_exps(args):
                         help='If true, the env continues even after a fall ')
     parser.add_argument('--adv_all_actions', action='store_true', default=False,
                         help='If true we apply perturbations to the actions instead of to Lerrels parametrization')
+    parser.add_argument('--entropy_coeff', type=float, default=0.0,
+                        help='If you want to penalize entropy, set this to a negative value')
 
     args = parser.parse_args(args)
 
@@ -257,6 +259,7 @@ def setup_exps(args):
     config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
     config['env_config']['no_end_if_fall'] = args.no_end_if_fall
     config['env_config']['adv_all_actions'] = args.adv_all_actions
+    config['env_config']['entropy_coeff'] = args.entropy_coeff
 
     config['env_config']['run'] = alg_run
 
