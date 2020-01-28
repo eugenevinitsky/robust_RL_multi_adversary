@@ -63,16 +63,15 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/s3_test")):
         run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=lerrel_run_list)
         sample_actions(config, checkpoint_path, 10000, output_path)
 
-        if args.use_s3:
-            # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
-            for i in range(4):
-                try:
-                    p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                     "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(
-                                                                         args.date,
-                                                                         args.exp_title,
-                                                                         tune_name)).split(
-                        ' '))
-                    p1.wait(50)
-                except Exception as e:
-                    print('This is the error ', e)
+        # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
+        for i in range(4):
+            try:
+                p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+                                                                 "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(
+                                                                     args.date,
+                                                                     args.exp_title,
+                                                                     tune_name)).split(
+                    ' '))
+                p1.wait(50)
+            except Exception as e:
+                print('This is the error ', e)
