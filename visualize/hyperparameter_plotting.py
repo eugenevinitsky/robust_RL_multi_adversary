@@ -53,7 +53,9 @@ def save_barchart(total_scores, output_path, exp_path, file_name, show):
             width = 0.35
             ax.bar(np.arange(len(total_scores)) - width / 2, list(base_score.values()), width, label='base score', align='center')
             ax.bar(np.arange(len(total_scores)) + width / 2, list(means.values()), width, label='transfer means', align='center')
-            plt.title('Base score vs. transfer mean, {}'.format(file_name))
+            plt.title('Base score vs. transfer mean, {}, top_score: {}, {}'.format(file_name,
+                                                                             np.max(list(means.values())),
+                                                                             list([key[:6] for key in total_scores.keys()])[np.argmax(list(means.values()))]))
         else:
             bar_plot = ax.bar(range(len(total_scores)), list(total_scores.values()), yerr=np.std(list(total_scores.values())),align='center')
         plt.xticks(range(len(total_scores)), list([key[:6] for key in total_scores.keys()]))

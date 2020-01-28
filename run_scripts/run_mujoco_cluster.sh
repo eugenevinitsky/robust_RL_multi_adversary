@@ -438,7 +438,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 --low_reward 3100 --high_reward 3900" \
 --start --stop --tmux --cluster-name=ev_pend_test14
 
-## 5 adversaries, just the l2 difference reward with coeff 0.5
+## 5 adversaries, just the l2 difference reward with coeff 0.5 and memory
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
 --num_adv_strengths 1 --advs_per_strength 5 --grid_search --use_s3 --env_name hopper \
