@@ -1,5 +1,6 @@
 import gym
 from envs.goal_env import GoalEnv
+from envs.linear_env import LinearEnv
 from envs.inverted_pendulum_env import MAPendulumEnv, PendulumEnv
 from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from gym.envs.mujoco.inverted_pendulum import InvertedPendulumEnv
