@@ -310,7 +310,7 @@ if __name__ == "__main__":
                 ray.shutdown()
                 ray.init()
 
-                visualize_adversaries(config, checkpoint_path, 100, output_path)
+                # visualize_adversaries(config, checkpoint_path, 100, output_path)
 
                 if args.use_s3:
                     for i in range(4):
