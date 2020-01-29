@@ -34,10 +34,12 @@ def main():
 
     ray.init(num_cpus=args.num_cpus)
 
+
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = instantiate_rollout(rllib_config,
                                                                                                          checkpoint)
     num_adversaries = env.num_adv_strengths * env.advs_per_strength
     obs_per_adv = {}
+
     for i in range(num_adversaries):
         rewards, step_num, final_obs = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                     state_init, action_init, args.num_rollouts, args.render, adversary=i)
