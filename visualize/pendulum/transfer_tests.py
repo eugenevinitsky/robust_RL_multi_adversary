@@ -246,7 +246,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         
         with open('{}/{}_{}'.format(outdir, output_file_name, "adv_steps.png"),
                 'wb') as file:
-            steps = np.array(temp_output)[:,1]
+            steps = np.array(temp_output)[:,2]
             adv_names = ["adversary{}" for adv_num in range(num_advs)]
             fig = plt.figure()
             plt.bar(np.arange(num_advs), steps)
