@@ -761,3 +761,10 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 --exp_title hop_0adv_concat1_seed --num_cpus 10 --run_transfer_tests --multi_node \
 --seed_search --lr 0.0005 --lambda_val 1.0" \
 --start --stop --tmux --cluster-name=ev_pend_test6
+
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+--train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
+--exp_title hop_5adv_concat1_rew_l1000_h3500_str0p25_all --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
+--low_reward 1000 --high_reward 3500 --adv_strength 0.25 --adv_all_actions" \
+--start --stop --tmux --cluster-name=ev_pend_test7

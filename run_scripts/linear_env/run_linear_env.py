@@ -81,6 +81,7 @@ def setup_exps(args):
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
     parser.add_argument('--horizon', type=int, default=40)
+    parser.add_argument('--rollout_length', type=int, default=5, help='How many steps we take before being reset')
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO')
     parser.add_argument('--dim', type=int, default=2, help='Dimension of the matrices')
     parser.add_argument('--scaling', type=float, default=-0.2, help='Eigenvalues of the A matrix')
@@ -126,6 +127,9 @@ def setup_exps(args):
     if args.scaling + args.dim * args.adv_strength > args.agent_strength:
         sys.exit('The adversary can always make the env unstable')
 
+    if args.scaling + args.dim * args.adv_strength < 0:
+        sys.exit('The adversary cannot make the env unstable')
+
     alg_run = args.algorithm
 
     if args.algorithm == 'PPO':
@@ -152,6 +156,7 @@ def setup_exps(args):
     config['seed'] = 0
 
     config['env_config']['horizon'] = args.horizon
+    config['env_config']['rollout_length'] = args.rollout_length
     config['env_config']['num_adv_strengths'] = args.num_adv_strengths
     config['env_config']['advs_per_strength'] = args.advs_per_strength
     config['env_config']['num_adv_rews'] = args.num_adv_rews
