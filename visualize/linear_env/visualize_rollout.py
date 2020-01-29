@@ -1,12 +1,12 @@
 import argparse
 import collections
-from datetime import datetime
 import errno
 import logging
 import os
 
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
-import pytz
 import ray
 from ray.rllib.evaluation.episode import _flatten_action
 
@@ -15,25 +15,15 @@ from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 
 
-def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir):
-    output_file_path = os.path.join(outdir, output_file_name)
-    if not os.path.exists(os.path.dirname(output_file_path)):
-        try:
-            os.makedirs(os.path.dirname(output_file_path))
-        except OSError as exc:
-            if exc.errno != errno.EEXIST:
-                raise
-
+def run_rollout(rllib_config, checkpoint, num_rollouts, show_image):
     rllib_config['num_envs_per_worker'] = 1
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
         instantiate_rollout(rllib_config, checkpoint)
+    if show_image:
+        env.show_image = True
 
     mapping_cache = {}  # in case policy_agent_mapping is stochastic
 
-    # set the adversary range to zero so that we get domain randomization
-    env.adversary_range = 0
-
-    rew_list = []
     sample_idx = 0
     while sample_idx < num_rollouts:
         prev_actions = DefaultMapping(
@@ -69,35 +59,26 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                 prev_rewards[agent_id] = r
             rew += reward['agent']
         print('the reward of rollout {} was {}'.format(sample_idx, rew))
-        rew_list.append(rew)
         sample_idx += 1
 
-    with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "mean_sweep"),
-              'wb') as file:
-        np.save(file, np.array(rew_list))
-
 def main():
-    date = datetime.now(tz=pytz.utc)
-    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
-    output_path = os.path.expanduser('~/transfer_results/linear_env')
-
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--output_file_name', type=str, default='transfer_out',
-                        help='The file name we use to save our results')
-    parser.add_argument('--output_dir', type=str, default=output_path,
-                        help='')
-
     parser = replay_parser(parser)
+    parser.add_argument('--output_dir', type=str, default='transfer_results/linear_env',
+                        help='Directory to output the files into')
     args = parser.parse_args()
-    rllib_config, checkpoint = get_config(args)
 
     # configure logging and device
     logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s',
                         datefmt="%Y-%m-%d %H:%M:%S")
 
+    rllib_config, checkpoint = get_config(args)
+    if 'run' not in rllib_config['env_config']:
+        rllib_config['env_config'].update({'run': 'PPO'})
+
     ray.init(num_cpus=args.num_cpus)
 
-    run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name,
-                       os.path.join(args.output_dir, date))
+    run_rollout(rllib_config, checkpoint, args.num_rollouts, True)
+
 if __name__ == '__main__':
     main()

@@ -1,6 +1,4 @@
-"""Generate a cluster plot of where the different adversaries start the agent"""
-
-"""Sample a bunch of observations from the observation space, plot the adversary action histogram for those runs"""
+"""Sample a bunch of observations from the observation space, plot their eigenvalues"""
 
 import argparse
 import collections
@@ -74,10 +72,10 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
     colors = cm.rainbow(np.linspace(0, 1, num_adversaries))
     fig = plt.figure(figsize=(8, 8))
     ax = fig.gca()
-    circle1 = plt.Circle((0, 0), env.radius, color='b', label='goal')
+    circle1 = plt.Circle((0, 0), env.radius * env.adversary_strength, color='b', label='equilibrium point')
     ax.add_artist(circle1)
-    ax.set_xlim([-6, 6])
-    ax.set_ylim([-6, 6])
+    ax.set_xlim([-1 * env.dim * env.adversary_strength, 1 * env.dim * env.adversary_strength])
+    ax.set_ylim([-1 * env.dim * env.adversary_strength, 1 * env.dim * env.adversary_strength])
     i = 0
     handle_list = []
     for adversary, adv_dict in adversary_grid_dict.items():
@@ -88,8 +86,8 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
             for eig in eigenvals:
                 real_vals.append(np.real(eig))
                 img_vals.append(np.imag(eig))
-        handle_list.append(plt.scatter(real_vals, img_vals, color=colors[i], label=adversary))
-        plt.title('Scatter of actions over {} sampled obs'.format(num_samples))
+        handle_list.append(plt.scatter(real_vals, img_vals, color=colors[i], label=adversary, s=12))
+        plt.title('Scatter of eigenvalues over adversaries')
         i += 1
     output_str = '{}/{}'.format(outdir, 'action_histogram.png')
     # legends = ['goal'] + ['adversary{}'.format(i) for i in range(len(adversary_grid_dict))]
@@ -102,7 +100,7 @@ def main():
     parser = argparse.ArgumentParser('Parse configuration file')
     parser = replay_parser(parser)
     parser.add_argument('--num_samples', type=int, default=100, help='How many observations to sample')
-    parser.add_argument('--output_dir', type=str, default=os.path.expanduser('~/transfer_results/goal_env'),
+    parser.add_argument('--output_dir', type=str, default=os.path.expanduser('~/transfer_results/linear_env'),
                         help='Directory to output the files into')
     args = parser.parse_args()
 
