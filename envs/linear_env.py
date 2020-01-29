@@ -44,8 +44,6 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.num_concat_states = config["num_concat_states"]
 
         self.adversary_strength = config["adversary_strength"]
-        if self.adversary_strength * self.dim > (np.abs(self.scaling) + self.agent_strength):
-            sys.exit('The adversary can always construct an unstable system. Decrease the adversary strength')
         # This sets how many adversaries exist at each strength level
         self.num_adv_strengths = config["num_adv_strengths"]
         # This sets how many adversaries exist per strength level
@@ -155,7 +153,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.update_observed_obs(np.concatenate((self.curr_pos, action_dict['agent'])))
 
         curr_obs = {'agent': self.observed_states}
-        base_rew = np.linalg.norm(self.curr_pos)
+        base_rew = -np.linalg.norm(self.curr_pos)
         self.total_rew += base_rew
         curr_rew = {'agent': base_rew}
 
@@ -166,7 +164,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
                 if self.reward_range:
                     # we don't want to give the adversaries an incentive to end the rollout early
                     # so we make a positively shaped reward that peaks at self.reward_targets[i]
-                    adv_reward = [-self.reward_targets[i] - np.abs(self.reward_targets[i] - self.total_rew) for i in range(self.adversary_range)]
+                    adv_reward = [self.reward_targets[i] - np.abs(self.reward_targets[i] - self.total_rew) for i in range(self.adversary_range)]
                 else:
                     adv_reward = [-self.total_rew for _ in range(self.adversary_range)]
 
@@ -263,8 +261,6 @@ class LinearEnv(MultiAgentEnv, gym.Env):
                     self.local_num_observed_l2_samples[self.curr_adversary] += 1
 
         self.image_array = []
-
-        print(self.global_l2_memory_array)
 
         return curr_obs
 
