@@ -140,7 +140,7 @@ class GoalEnv(MultiAgentEnv, gym.Env):
         self.curr_pos = np.clip(self.curr_pos, self.observation_space.low, self.observation_space.high)
 
         done = np.linalg.norm(self.curr_pos - self.goal_pos) < self.radius
-        if self.step_num > self.horizon:
+        if self.step_num == self.horizon:
             done = True
 
         curr_obs = {'agent': self.curr_pos}

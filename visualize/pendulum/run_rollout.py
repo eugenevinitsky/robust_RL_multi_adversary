@@ -18,6 +18,7 @@ from envs.lerrel.adv_hopper import AdvMAHopper
 from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.lerrel.adv_cheetah import AdvMAHalfCheetahEnv
 from envs.goal_env import GoalEnv
+from envs.linear_env import LinearEnv
 
 from utils.pendulum_env_creator import pendulum_env_creator, lerrel_pendulum_env_creator, make_create_env
 
@@ -59,6 +60,9 @@ def instantiate_rollout(rllib_config, checkpoint):
     elif rllib_config['env'] == "GoalEnv":
         env_name = "GoalEnv"
         create_env_fn = make_create_env(GoalEnv)
+    elif rllib_config['env'] == "LinearEnv":
+        env_name = "LinearEnv"
+        create_env_fn = make_create_env(LinearEnv)
 
     register_env(env_name, create_env_fn)
 

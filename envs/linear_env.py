@@ -142,6 +142,9 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             if self.l2_memory and self.l2_reward:
                 self.action_list = [action_dict['adversary{}'.format(self.curr_adversary)]]
                 self.local_l2_memory_array[self.curr_adversary] += action_dict['adversary{}'.format(self.curr_adversary)]
+        elif self.step_num == 0 and self.adversary_range == 0:
+            self.perturbation_matrix = np.random.uniform(low=-self.adversary_strength, high=self.adversary_strength,
+                                                         size=self.adv_action_space.low.shape[0]).reshape((self.dim, self.dim))
 
 
         self.curr_pos = (self.A + self.perturbation_matrix) @ self.curr_pos + self.B @ action_dict['agent']
@@ -262,6 +265,9 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
         self.image_array = []
 
+        if self.show_image:
+            self.render()
+
         return curr_obs
 
     def select_new_adversary(self):
@@ -274,8 +280,8 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         # fig = Figure()
         # canvas = FigureCanvas(fig)
         ax = fig.gca()
-        ax.set_xlim([-self.range, self.range])
-        ax.set_ylim([-self.range, self.range])
+        ax.set_xlim([-4, 4])
+        ax.set_ylim([-4, 4])
 
         # draw the agent
         circle1 = plt.Circle((self.curr_pos[0], self.curr_pos[1]), self.radius, color='r')
