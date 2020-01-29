@@ -39,8 +39,6 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         prev_actions = DefaultMapping(
             lambda agent_id: action_init[mapping_cache[agent_id]])
         prev_rewards = collections.defaultdict(lambda: 0.)
-        if env.adversary_range > 0:
-            env.curr_adversary = np.random.randint(low=0, high=env.adversary_range)
         print('on rollout {}'.format(sample_idx))
         obs = env.reset()
         action_dict = {}
@@ -71,10 +69,11 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         rew_list.append(rew)
         sample_idx += 1
 
-    with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "mean_sweep"),
+    with open('{}/{}_{}_rew'.format(outdir, output_file_name, "mean_sweep"),
               'wb') as file:
         np.save(file, np.array(rew_list))
 
+    # compute the base score just on the env alone without randomization
     rew_list = []
     sample_idx = 0
     while sample_idx < num_rollouts:
@@ -115,9 +114,57 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         rew_list.append(rew)
         sample_idx += 1
 
-    with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "base_sweep"),
+    with open('{}/{}_{}_rew'.format(outdir, output_file_name, "base_sweep"),
               'wb') as file:
         np.save(file, np.array(rew_list))
+
+    # turn on the perturbations we are going to compute adversary scores
+    env.should_perturb = True
+    env.adversary_range = env.num_adv_strengths * env.advs_per_strength
+    rew_list = []
+    sample_idx = 0
+    for i in range(env.adversary_range):
+        while sample_idx < num_rollouts:
+            prev_actions = DefaultMapping(
+                lambda agent_id: action_init[mapping_cache[agent_id]])
+            prev_rewards = collections.defaultdict(lambda: 0.)
+
+            env.curr_adversary = i
+            print('on rollout {}'.format(sample_idx))
+            obs = env.reset()
+
+            action_dict = {}
+            # we have an is_active key here
+            # multi_obs = {'agent': obs}
+            done = {}
+            rew = 0
+            done['__all__'] = False
+            while not done['__all__']:
+                for agent_id, a_obs in obs.items():
+                    if a_obs is not None:
+                        policy_id = mapping_cache.setdefault(
+                            agent_id, policy_agent_mapping(agent_id))
+                        p_use_lstm = use_lstm[policy_id]
+                        if not p_use_lstm:
+                            flat_obs = _flatten_action(a_obs)
+                            a_action = agent.compute_action(
+                                flat_obs,
+                                prev_action=prev_actions[agent_id],
+                                prev_reward=prev_rewards[agent_id],
+                                policy_id=policy_id)
+                        prev_actions[agent_id] = a_action
+                        action_dict[agent_id] = a_action
+                obs, reward, done, info = env.step(action_dict)
+                for agent_id, r in reward.items():
+                    prev_rewards[agent_id] = r
+                rew += reward['agent']
+            rew_list.append(rew)
+            sample_idx += 1
+
+        with open('{}/{}_{}_rew'.format(outdir, output_file_name, "adversary{}_sweep".format(i)),
+                  'wb') as file:
+            np.save(file, np.array(rew_list))
+
 
 def main():
     date = datetime.now(tz=pytz.utc)
