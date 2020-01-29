@@ -170,7 +170,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
         curr_obs = {'agent': self.observed_states}
         # LQR cost with Q and R being the identity
-        base_rew = -(np.linalg.norm(self.curr_pos) ** 2) - (np.linalg.norm(action_dict['agent']) ** 2)
+        base_rew = -(np.linalg.norm(self.curr_pos)) - (np.linalg.norm(action_dict['agent']))
         self.total_rew += base_rew
         curr_rew = {'agent': base_rew}
 
