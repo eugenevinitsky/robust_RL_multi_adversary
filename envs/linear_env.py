@@ -71,7 +71,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         print('reward targets are', self.reward_targets)
 
         # agent starting position
-        self.start_pos = np.array([2, 2])
+        self.start_pos = np.ones(self.dim) * 2
         self.curr_pos = self.start_pos
 
         self.horizon = config["horizon"]
