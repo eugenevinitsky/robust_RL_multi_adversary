@@ -169,7 +169,7 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
         arm_choice = action_dict['agent']
         base_rew = np.random.normal(loc=self.means[arm_choice], scale=self.std_devs[arm_choice])
         if self.regret:
-            base_rew = max(self.means) - base_rew
+            base_rew = base_rew - max(self.means)
         done = self.step_num > self.horizon
 
         if self.concat_actions:
