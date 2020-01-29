@@ -85,8 +85,8 @@ def setup_exps(args):
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO')
     parser.add_argument('--dim', type=int, default=2, help='Dimension of the matrices')
     parser.add_argument('--scaling', type=float, default=-0.2, help='Eigenvalues of the A matrix')
-    parser.add_argument('--agent_strength', type=float, default=0.8)
-    parser.add_argument('--adv_strength', type=float, default=0.3, help='Strength of active adversaries in the env')
+    parser.add_argument('--agent_strength', type=float, default=0.5)
+    parser.add_argument('--adv_strength', type=float, default=0.5, help='Strength of active adversaries in the env')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
                                                                          'Multiply this by `advs_per_strength` to get the total number of adversaries'
                                                                          'Default - retrain lerrel, single agent')
@@ -124,10 +124,12 @@ def setup_exps(args):
         sys.exit('must specify number of strength levels, number of adversaries when using reward range')
     if (args.num_adv_strengths * args.advs_per_strength != args.num_adv_rews * args.advs_per_rew) and args.reward_range:
         sys.exit('Your number of adversaries per reward range must match the total number of adversaries')
-    if args.scaling + args.dim * args.adv_strength > args.agent_strength:
+
+    # warning, scaling should always be negative, all the strengths should be positive
+    if np.abs(args.scaling + np.abs(args.dim * args.adv_strength) - np.abs(args.agent_strength)) > 1:
         sys.exit('The adversary can always make the env unstable')
 
-    if args.scaling + args.dim * args.adv_strength < 0:
+    if np.abs(args.scaling - np.abs(args.dim * args.adv_strength)) < 1:
         sys.exit('The adversary cannot make the env unstable')
 
     alg_run = args.algorithm
