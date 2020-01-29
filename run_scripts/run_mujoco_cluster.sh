@@ -738,13 +738,21 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 --low_reward 1000 --high_reward 3500 --adv_strength 0.25 --adv_all_actions --seed_search --lr 0.0005 --lambda_val 0.5" \
 --start --stop --tmux --cluster-name=ev_pend_test2
 
+# seed search for the best 0.25 param
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+--train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --use_s3 --env_name hopper \
+--exp_title hop_5adv_concat8_rew_l1000_h3500_str0p25_all_seed_lv0p9 --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
+--low_reward 1000 --high_reward 3500 --adv_strength 0.25 --adv_all_actions --seed_search --lr 0.0005 --lambda_val 0.9" \
+--start --stop --tmux --cluster-name=ev_pend_test3
+
 # just a search for the 0.05
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
 --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat8_rew_l1000_h3500_str0p05_all --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
 --low_reward 1000 --high_reward 3500 --adv_strength 0.05 --adv_all_actions" \
---start --stop --tmux --cluster-name=ev_pend_test3
+--start --stop --tmux --cluster-name=ev_pend_test4
 
 # just a search for the 0.25 on the higher reward range
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
@@ -752,7 +760,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat8_rew_l2000_h3500_str0p05_all --num_cpus 10 --run_transfer_tests --multi_node --reward_range \
 --low_reward 2000 --high_reward 3500 --adv_strength 0.25 --adv_all_actions" \
---start --stop --tmux --cluster-name=ev_pend_test4
+--start --stop --tmux --cluster-name=ev_pend_test5
 
 # 0 adv seed search
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
@@ -760,4 +768,4 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 --num_adv_strengths 0 --advs_per_strength 0 --advs_per_rew 0 --num_adv_rews 0 --use_s3 --env_name hopper \
 --exp_title hop_0adv_concat1_seed --num_cpus 10 --run_transfer_tests --multi_node \
 --seed_search --lr 0.0005 --lambda_val 1.0" \
---start --stop --tmux --cluster-name=ev_pend_test5
+--start --stop --tmux --cluster-name=ev_pend_test6
