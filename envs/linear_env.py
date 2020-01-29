@@ -71,7 +71,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         print('reward targets are', self.reward_targets)
 
         # agent starting position
-        self.start_pos = np.array([1, 1])
+        self.start_pos = np.array([2, 2])
         self.curr_pos = self.start_pos
 
         self.horizon = config["horizon"]
@@ -160,7 +160,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.total_rew += base_rew
         curr_rew = {'agent': base_rew}
 
-        if self.adversary_range > 0:
+        if self.adversary_range > 0 and self.curr_adversary > 0:
 
             # the adversaries get observations on the final steps and on the first step
             if done:
