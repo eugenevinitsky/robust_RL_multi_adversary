@@ -17,6 +17,7 @@ from ray.rllib.evaluation.episode import _flatten_action
 from visualize.pendulum.run_rollout import instantiate_rollout, DefaultMapping
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
+from matplotlib.patches import Ellipse
 
 
 def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
@@ -34,19 +35,24 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
     mapping_cache = {}  # in case policy_agent_mapping is stochastic
 
     sample_idx = 0
+    num_arms = env.num_arms
     while sample_idx < num_samples:
         prev_actions = DefaultMapping(
             lambda agent_id: action_init[mapping_cache[agent_id]])
         prev_rewards = collections.defaultdict(lambda: 0.)
         obs = env.reset()['agent']
+        if rllib_config['env'] == 'MultiarmBandit':
+            adv_obs = np.array([0.0])
+        else:
+            adv_obs = obs
         # we have an is_active key here
         if env.l2_reward and not env.l2_memory:
             multi_obs = {'agent': obs}
-            adv_dict = {'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([1])} for i in range(num_adversaries)}
+            adv_dict = {'adversary{}'.format(i): {'obs': adv_obs, 'is_active': np.array([1])} for i in range(num_adversaries)}
             multi_obs.update(adv_dict)
         else:
             multi_obs = {'agent': obs}
-            adv_dict = {'adversary{}'.format(i): obs for i in range(num_adversaries)}
+            adv_dict = {'adversary{}'.format(i): adv_obs for i in range(num_adversaries)}
             multi_obs.update(adv_dict)
         action_dict = {}
         for agent_id, a_obs in multi_obs.items():
@@ -76,29 +82,56 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
             if exc.errno != errno.EEXIST:
                 raise
 
-    # Plot the histogram of the actions
-    colors = cm.rainbow(np.linspace(0, 1, num_adversaries))
-    fig = plt.figure(figsize=(8, 8))
-    ax = fig.gca()
-    circle1 = plt.Circle((env.goal_pos[0], env.goal_pos[1]), env.radius, color='b', label='goal')
-    ax.add_artist(circle1)
-    ax.set_xlim([-6, 6])
-    ax.set_ylim([-6, 6])
-    i = 0
-    handle_list = []
-    for adversary, adv_dict in adversary_grid_dict.items():
-        sampled_actions = adv_dict['sampled_actions']
-        sampled_actions_x = [action[0] for action in sampled_actions]
-        sampled_actions_y = [action[1] for action in sampled_actions]
-        handle_list.append(plt.scatter(sampled_actions_x, sampled_actions_y, color=colors[i], label=adversary))
-        plt.title('Scatter of actions over {} sampled obs'.format(num_samples))
-        i += 1
-    output_str = '{}/{}'.format(outdir, 'action_histogram.png')
-    # legends = ['goal'] + ['adversary{}'.format(i) for i in range(len(adversary_grid_dict))]
-    plt.legend(handles=[circle1] + handle_list)
-    # plt.legend(legends)
-    plt.savefig(output_str)
-    plt.close(fig)
+    if env.num_arms == 1:
+        # Plot the histogram of the actions
+        colors = cm.rainbow(np.linspace(0, 1, num_adversaries))
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.gca()
+        ax.set_xlim([-1, 1])
+        ax.set_ylim([0, 1])
+        i = 0
+        handle_list = []
+        for adversary, adv_dict in adversary_grid_dict.items():
+            sampled_actions = adv_dict['sampled_actions']
+            sampled_actions_x = [action[0] for action in sampled_actions]
+            sampled_actions_y = [action[1] for action in sampled_actions]
+            handle_list.append(plt.scatter(sampled_actions_x, sampled_actions_y, color=colors[i], label=adversary))
+            plt.title('Scatter of actions over {} sampled obs'.format(num_samples))
+            i += 1
+        output_str = '{}/{}'.format(outdir, 'action_histogram.png')
+        # legends = ['goal'] + ['adversary{}'.format(i) for i in range(len(adversary_grid_dict))]
+        # plt.legend(legends)
+        plt.savefig(output_str)
+        plt.close(fig)
+    elif env.num_arms == 2:
+        # Plot the histogram of the actions
+        colors = cm.rainbow(np.linspace(0, 1, num_adversaries))
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.gca()
+        ax.set_xlim([-1, 1])
+        ax.set_ylim([-1, 1])
+        i = 0
+        handle_list = []
+        for adversary, adv_dict in adversary_grid_dict.items():
+            sampled_actions = adv_dict['sampled_actions']
+            import ipdb; ipdb.set_trace()
+            sampled_actions_x = [action[0] for action in sampled_actions]
+            sampled_actions_y = [action[1] for action in sampled_actions]
+            for action in sampled_actions:
+                spread = Ellipse((action[0], action[1]), action[2], action[3])
+                ax.add_artist(spread)
+                spread.set_alpha(0.1)
+                spread.set_facecolor(colors[i])
+            ax.set_xlabel("Arm 1")
+            ax.set_xlabel("Arm 2")
+            handle_list.append(plt.scatter(sampled_actions_x, sampled_actions_y, color=colors[i], label=adversary))
+            plt.title('Scatter of actions over {} sampled obs'.format(num_samples))
+            i += 1
+        output_str = '{}/{}'.format(outdir, 'action_histogram.png')
+        # legends = ['goal'] + ['adversary{}'.format(i) for i in range(len(adversary_grid_dict))]
+        # plt.legend(legends)
+        plt.savefig(output_str)
+        plt.close(fig)
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')

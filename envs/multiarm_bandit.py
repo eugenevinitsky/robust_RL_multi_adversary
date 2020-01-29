@@ -76,6 +76,8 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
         self.horizon = config["horizon"]
         self.step_num = 0
 
+        self.transfer = None
+
         self.means = []
         self.std_devs = []
 
@@ -155,6 +157,10 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
                 if self.l2_memory and self.l2_reward:
                     self.action_list = [action_dict['adversary{}'.format(self.curr_adversary)]]
                     self.local_l2_memory_array[self.curr_adversary] += action_dict['adversary{}'.format(self.curr_adversary)]
+            elif self.transfer:
+                # breaking an abstration barrier here but yolo
+                self.means = transfer[0]
+                self.std_devs = transfer[1]
             else:
                 self.means = np.random.uniform(low=self.min_mean_reward, high=self.max_mean_reward, size=self.num_arms)
                 self.std_devs = np.random.uniform(low=self.min_std, high=self.max_std, size=self.num_arms)

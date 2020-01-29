@@ -19,7 +19,8 @@ from ray.tune.registry import register_env
 from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
 from algorithms.custom_kl_distribution import LogitsDist
 from envs.multiarm_bandit import MultiarmBandit
-# from visualize.MultiarmBandit.visualize_adversaries import visualize_adversaries
+from visualize.goal_env.visualize_adversaries import visualize_adversaries
+from visualize.pendulum.transfer_tests import run_transfer_tests, bandit_run_list
 # from visualize.pendulum.visualize_adversaries import visualize_adversaries
 from utils.pendulum_env_creator import make_create_env
 from utils.parsers import init_parser, ray_parser, ma_env_parser
@@ -312,7 +313,8 @@ if __name__ == "__main__":
                 ray.shutdown()
                 ray.init()
 
-                # visualize_adversaries(config, checkpoint_path, 100, output_path)
+                run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=bandit_run_list)
+                visualize_adversaries(config, checkpoint_path, 100, output_path)
 
                 if args.use_s3:
                     for i in range(4):

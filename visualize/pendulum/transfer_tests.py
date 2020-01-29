@@ -73,10 +73,6 @@ cheetah_run_list = [
 
 bandit_run_list = [
     ['base', []],
-    ['clustered', []],
-    ['spread', []],
-    ['clustered_wide', []],
-    ['spread_wide', []]
 ]
 
 grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
