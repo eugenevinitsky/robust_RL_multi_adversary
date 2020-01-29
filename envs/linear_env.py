@@ -134,7 +134,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(int(self.dim ** 2), ))
 
     def step(self, action_dict):
-        if self.step_num == 0 and self.adversary_range > 0 and self.curr_adversary > 0:
+        if self.step_num == 0 and self.adversary_range > 0:
             self.perturbation_matrix = action_dict['adversary{}'.format(self.curr_adversary)].reshape((self.dim, self.dim))
             # store this since the adversary won't get a reward until the last step
             if self.l2_reward and not self.l2_memory:
@@ -250,7 +250,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.update_observed_obs(np.concatenate((self.curr_pos, [0.0] * self.dim)))
 
         curr_obs = {'agent': self.observed_states}
-        if self.adversary_range > 0 and self.curr_adversary > 0:
+        if self.adversary_range > 0:
             if self.l2_reward and not self.l2_memory:
                 is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
                 curr_obs.update({
