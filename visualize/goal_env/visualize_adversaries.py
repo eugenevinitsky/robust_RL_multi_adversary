@@ -114,7 +114,6 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
         handle_list = []
         for adversary, adv_dict in adversary_grid_dict.items():
             sampled_actions = adv_dict['sampled_actions']
-            import ipdb; ipdb.set_trace()
             sampled_actions_x = [action[0] for action in sampled_actions]
             sampled_actions_y = [action[1] for action in sampled_actions]
             for action in sampled_actions:
