@@ -18,7 +18,7 @@ from ray.tune.registry import register_env
 
 from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
 from algorithms.custom_kl_distribution import LogitsDist
-from envs.goal_env import GoalEnv
+from envs.linear_env import LinearEnv
 from visualize.goal_env.visualize_adversaries import visualize_adversaries
 # from visualize.pendulum.visualize_adversaries import visualize_adversaries
 from utils.pendulum_env_creator import make_create_env
@@ -82,10 +82,12 @@ def setup_exps(args):
     parser = init_parser()
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
-    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?',
-                        choices=['pendulum', 'hopper', 'cheetah'])
-    parser.add_argument('--horizon', type=int, default=100)
+    parser.add_argument('--horizon', type=int, default=20)
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO')
+    parser.add_argument('--dim', type=int, default=2, help='Dimension of the matrices')
+    parser.add_argument('--scaling', type=float, default=-0.2, help='Eigenvalues of the A matrix')
+    parser.add_argument('--agent_strength', type=float, default=0.2)
+    parser.add_argument('--adv_strength', type=float, default=0.05, help='Strength of active adversaries in the env')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
                                                                          'Multiply this by `advs_per_strength` to get the total number of adversaries'
                                                                          'Default - retrain lerrel, single agent')
@@ -94,7 +96,7 @@ def setup_exps(args):
     parser.add_argument('--reward_range', action='store_true', default=False,
                         help='If true, the adversaries try to get agents to goals evenly spaced between `low_reward`'
                              'and `high_reward')
-    parser.add_argument('--low_reward', type=float, default=-60.0, help='The lower range that adversaries try'
+    parser.add_argument('--low_reward', type=float, default=-20.0, help='The lower range that adversaries try'
                                                                       'to push you to')
     parser.add_argument('--high_reward', type=float, default=-1.0, help='The upper range that adversaries try'
                                                                           'to push you to')
@@ -112,12 +114,6 @@ def setup_exps(args):
                              'but WAY fast')
     parser.add_argument('--l2_memory_target_coeff', type=float, default=0.05,
                         help='The coefficient used to update the running mean if l2_memory is true')
-    # Unused right now
-    parser.add_argument('--kl_reward', action='store_true', default=False,
-                        help='If true, each adversary gets a reward for being close to the adversaries in '
-                             'KL space.')
-    parser.add_argument('--kl_reward_coeff', type=float, default=1.0,
-                        help='Scaling on the kl_reward')
     args = parser.parse_args(args)
 
     if args.reward_range and args.num_adv_strengths * args.advs_per_strength <= 0:
@@ -141,7 +137,7 @@ def setup_exps(args):
         config['num_sgd_iter'] = 10
         config['observation_filter'] = 'NoFilter'
 
-    if config['observation_filter'] == 'MeanStdFilter' and args.l2_reward:
+    if config['observation_filter'] == 'MeanStdFilter' and (args.l2_reward and not args.l2_memory):
         sys.exit('Mean std filter MUST be off if using the l2 reward')
 
     # Universal hyperparams
@@ -151,17 +147,17 @@ def setup_exps(args):
     config['env_config']['horizon'] = args.horizon
     config['env_config']['num_adv_strengths'] = args.num_adv_strengths
     config['env_config']['advs_per_strength'] = args.advs_per_strength
+    config['env_config']['adversary_strength'] = args.adv_strength
+    config['env_config']['agent_strength'] = args.agent_strength
+    config['env_config']['scaling'] = args.scaling
+    config['env_config']['dim'] = args.dim
     config['env_config']['reward_range'] = args.reward_range
     config['env_config']['low_reward'] = args.low_reward
     config['env_config']['high_reward'] = args.high_reward
     config['env_config']['l2_reward'] = args.l2_reward
-    config['env_config']['kl_reward'] = args.kl_reward
-    config['env_config']['l2_reward_coeff'] = args.l2_reward_coeff
-    config['env_config']['kl_reward_coeff'] = args.kl_reward_coeff
     config['env_config']['l2_in_tranche'] = args.l2_in_tranche
     config['env_config']['l2_memory'] = args.l2_memory
     config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
-
 
     config['env_config']['run'] = alg_run
 
@@ -174,8 +170,8 @@ def setup_exps(args):
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 64
 
-    env_name = "GoalEnv"
-    create_env_fn = make_create_env(GoalEnv)
+    env_name = "LinearEnv"
+    create_env_fn = make_create_env(LinearEnv)
 
     config['env'] = env_name
     register_env(env_name, create_env_fn)
@@ -203,7 +199,7 @@ def setup_exps(args):
         'name': args.exp_title,
         'run_or_experiment': runner,
         'trial_name_creator': trial_str_creator,
-        'checkpoint_freq': args.checkpoint_freq,
+        'checkpoint_at_end': True,
         'stop': {
             'training_iteration': args.num_iters
         },
@@ -244,17 +240,6 @@ def on_episode_end(info):
     # store info about how many adversaries there are
     for env in info["env"].envs:
         env.select_new_adversary()
-        # episode = info["episode"]
-        # episode.custom_metrics["num_active_advs"] = env.adversary_range
-        # episode.custom_metrics["action_space"] = env.adv_action_space.low.shape[0]
-        # if env.l2_memory:
-        #     # this sucks but custom metrics only supports single values
-        #     for adv_index in range(env.local_l2_memory_array.shape[0]):
-        #         episode.custom_metrics["num_observed_episodes_{}".format(adv_index)] = env.local_num_observed_l2_samples[adv_index]
-        #         for action_index in range(env.local_l2_memory_array.shape[1]):
-        #             episode.custom_metrics["adv_actions_{}_{}".format(adv_index, action_index)] = \
-        #                 env.local_l2_memory_array[adv_index, action_index] * env.local_num_observed_l2_samples[adv_index]
-
 
 if __name__ == "__main__":
 
@@ -262,7 +247,7 @@ if __name__ == "__main__":
 
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
-    s3_string = 's3://sim2real/goal_env/' \
+    s3_string = 's3://sim2real/linear/' \
                 + date + '/' + args.exp_title
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
@@ -277,38 +262,39 @@ if __name__ == "__main__":
     run_tune(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
 
     # Now we add code to loop through the results and create scores of the results
-    if args.run_transfer_tests:
-        output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/goal_env'), date),
-                                   args.exp_title)
-        if not os.path.exists(output_path):
-            try:
-                os.makedirs(output_path)
-            except OSError as exc:
-                if exc.errno != errno.EEXIST:
-                    raise
-        for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
-            if "checkpoint_{}".format(args.num_iters) in dirpath:
-                # grab the experiment name
-                folder = os.path.dirname(dirpath)
-                tune_name = folder.split("/")[-1]
-                outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
-                config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
-
-                ray.shutdown()
-                ray.init()
-
-                visualize_adversaries(config, checkpoint_path, 100, output_path)
-
-                if args.use_s3:
-                    for i in range(4):
-                        try:
-                            p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                             "s3://sim2real/transfer_results/goal_env/{}/{}/{}".format(
-                                                                                 date,
-                                                                                 args.exp_title,
-                                                                                 tune_name)).split(
-                                ' '))
-                            p1.wait(50)
-                        except Exception as e:
-                            print('This is the error ', e)
+    # TODO(@evinitsky) put this back
+    # if args.run_transfer_tests:
+    #     output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/goal_env'), date),
+    #                                args.exp_title)
+    #     if not os.path.exists(output_path):
+    #         try:
+    #             os.makedirs(output_path)
+    #         except OSError as exc:
+    #             if exc.errno != errno.EEXIST:
+    #                 raise
+    #     for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
+    #         if "checkpoint_{}" in dirpath:
+    #             # grab the experiment name
+    #             folder = os.path.dirname(dirpath)
+    #             tune_name = folder.split("/")[-1]
+    #             outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    #             script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
+    #             config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
+    #
+    #             ray.shutdown()
+    #             ray.init()
+    #
+    #             # visualize_adversaries(config, checkpoint_path, 100, output_path)
+    #
+    #             if args.use_s3:
+    #                 for i in range(4):
+    #                     try:
+    #                         p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+    #                                                                          "s3://sim2real/transfer_results/linear_env/{}/{}/{}".format(
+    #                                                                              date,
+    #                                                                              args.exp_title,
+    #                                                                              tune_name)).split(
+    #                             ' '))
+    #                         p1.wait(50)
+    #                     except Exception as e:
+    #                         print('This is the error ', e)

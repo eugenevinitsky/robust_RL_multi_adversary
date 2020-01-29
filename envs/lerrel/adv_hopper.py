@@ -82,9 +82,9 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
         self.comp_adversaries = []
         for i in range(self.adversary_range):
-            curr_tranche = int(i / self.num_adv_strengths)
-            low_range = max(curr_tranche * self.num_adv_strengths, i - self.num_adv_strengths)
-            high_range = min((curr_tranche + 1) * self.num_adv_strengths, i + self.num_adv_strengths)
+            curr_tranche = int(i / self.advs_per_rew)
+            low_range = max(curr_tranche * self.advs_per_rew, i - self.advs_per_rew)
+            high_range = min((curr_tranche + 1) * self.advs_per_rew, i + self.advs_per_rew)
             self.comp_adversaries.append([low_range, high_range])
 
         # used to track the previously observed states to induce a memory
@@ -203,6 +203,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             if self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in actions.keys():
                 if self.adv_all_actions:
                     adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
+
                     # self._adv_to_xfrc(adv_action)
                     hopper_action += adv_action
                     # apply clipping to hopper action
@@ -275,7 +276,6 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     # we then subtract this value off from the linear function again. This creates a reward
                     # that peaks at the target value. We then scale it by (1 / max(1, self.step_num)) because
                     # if we are not actually able to hit the target, this reward can blow up.
-
                     adv_reward = [((float(self.step_num) / self.horizon) * self.reward_targets[
                        i] - 1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
                        i] - self.total_reward)) * (1 / max(1, self.step_num)) for i in range(self.adversary_range)]
