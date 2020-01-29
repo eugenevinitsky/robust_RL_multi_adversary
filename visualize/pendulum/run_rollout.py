@@ -154,6 +154,9 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
 
+            if adv_num is not None:
+                action = {'agent': action['agent'], 'adversary0': action['adversary{}'.format(adv_num)]}
+            
             # we turn the adversaries off so you only send in the pendulum keys
             next_obs, reward, done, info = env.step(action)
             if render:
