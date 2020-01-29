@@ -211,6 +211,17 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             plt.savefig(transfer_robustness)
             plt.close(fig)
     
+    elif 'Bandit' in rllib_config['env']:
+        means = np.array(temp_output)[1:, 0]
+        with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"), 'wb') as transfer_robustness:
+            fig = plt.figure()
+            plt.bar([x[0] for x in bandit_run_list], means)
+            plt.title("Bandit performance tests")
+            plt.xticks(ticks=np.arange(len(mass_list)), labels=["{:0.2f}".format(x) for x in mass_list])
+            plt.xlabel("Bandit test name")
+            plt.savefig(transfer_robustness)
+            plt.close(fig)
+    
     num_advs = rllib_config['env_config']['advs_per_strength'] * rllib_config['env_config']['num_adv_strengths']
     if num_advs:
         temp_output = [run_test.remote(test_name="adversary{}".format(adv_num),
