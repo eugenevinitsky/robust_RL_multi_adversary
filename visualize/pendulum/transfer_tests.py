@@ -193,6 +193,16 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         output_name = output_file_name + 'steps'
         save_heatmap(step_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'cheetah')
 
+    # TODO(kparvate) change this for ant
+    if 'Cheetah' == rllib_config['env']:
+        reward_means = np.array(temp_output)[1:, 0].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
+        output_name = output_file_name + 'rew'
+        save_heatmap(reward_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'cheetah')
+
+        step_means = np.array(temp_output)[1:, 2].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
+        output_name = output_file_name + 'steps'
+        save_heatmap(step_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'cheetah')
+
     elif 'Pendulum' in rllib_config['env']:
         means = np.array(temp_output)[1:, 0]
         with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"), 'wb') as transfer_robustness:

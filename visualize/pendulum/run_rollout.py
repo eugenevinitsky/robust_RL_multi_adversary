@@ -17,6 +17,8 @@ except ImportError:
 from envs.lerrel.adv_hopper import AdvMAHopper
 from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.lerrel.adv_cheetah import AdvMAHalfCheetahEnv
+from envs.lerrel.adv_ant import AdvMAAnt
+
 from envs.goal_env import GoalEnv
 from envs.linear_env import LinearEnv
 
@@ -55,8 +57,11 @@ def instantiate_rollout(rllib_config, checkpoint):
         env_name = "MALerrelHopperEnv"
         create_env_fn = make_create_env(AdvMAHopper)
     elif rllib_config['env'] == "MALerrelCheetahEnv":
-        env_name = "MALerrelHopperEnv"
+        env_name = "MALerrelCheetahEnv"
         create_env_fn = make_create_env(AdvMAHalfCheetahEnv)
+    elif rllib_config['env'] == "MALerrelAntEnv":
+        env_name = "MALerrelAntEnv"
+        create_env_fn = make_create_env(AdvMAAntEnv)
     elif rllib_config['env'] == "GoalEnv":
         env_name = "GoalEnv"
         create_env_fn = make_create_env(GoalEnv)
