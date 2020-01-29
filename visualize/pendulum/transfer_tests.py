@@ -221,7 +221,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                 plt.close(fig)
     
     num_advs = rllib_config['env_config']['advs_per_strength'] * rllib_config['env_config']['num_adv_strengths']
-    adv_names = ["adversary{}" for adv_num in range(num_advs)]
+    adv_names = ["adversary{}".format(adv_num) for adv_num in range(num_advs)]
     if num_advs:
         temp_output = [run_test.remote(test_name="adversary{}".format(adv_num),
                     outdir=outdir, output_file_name=output_file_name,
@@ -236,11 +236,10 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         with open('{}/{}_{}'.format(outdir, output_file_name, "adv_scores.png"),
                 'wb') as file:
             means = np.array(temp_output)[:,0]
-            
             fig = plt.figure()
-            plt.bar(np.arange(num_advs), adv_names)
+            plt.bar(np.arange(num_advs), means)
             plt.title("Scores under each adversary")
-            plt.xticks(ticks=np.arange(num_advs), labels=adv_names)
+            plt.xticks(np.arange(num_advs), adv_names)
             plt.xlabel("Adv name")
             plt.savefig(file)
             plt.close(fig)
@@ -252,7 +251,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             fig = plt.figure()
             plt.bar(np.arange(num_advs), steps)
             plt.title("Steps under each adversary")
-            plt.xticks(ticks=np.arange(num_advs), labels=adv_names)
+            plt.xticks(np.arange(num_advs), adv_names)
             plt.xlabel("Adv name")
             plt.savefig(file)
             plt.close(fig)
