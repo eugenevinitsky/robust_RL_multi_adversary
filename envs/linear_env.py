@@ -32,8 +32,8 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.scaling = config['scaling']
         self.agent_strength = np.abs(config['agent_strength'])
         # we create an env that's stable but close to the RHP
-        self.A = np.ones(self.dim) * (- np.abs(self.scaling))
-        self.B = np.ones(self.dim)
+        self.A = np.identity(self.dim) * (- np.abs(self.scaling))
+        self.B = np.identity(self.dim)
         self.perturbation_matrix = np.zeros(self.dim)
 
         # this is just for visualizing the position

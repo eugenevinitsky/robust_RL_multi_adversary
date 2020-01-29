@@ -70,15 +70,14 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
 
     # Plot the histogram of the actions
     colors = cm.rainbow(np.linspace(0, 1, num_adversaries))
-    fig = plt.figure(figsize=(8, 8))
-    ax = fig.gca()
-    circle1 = plt.Circle((0, 0), env.radius * env.adversary_strength, color='b', label='equilibrium point')
-    ax.add_artist(circle1)
-    ax.set_xlim([-1 * env.dim * env.adversary_strength, 1 * env.dim * env.adversary_strength])
-    ax.set_ylim([-1 * env.dim * env.adversary_strength, 1 * env.dim * env.adversary_strength])
-    i = 0
-    handle_list = []
+
     for adversary, adv_dict in adversary_grid_dict.items():
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.gca()
+        ax.set_xlim([-1 * env.dim * env.adversary_strength, 1 * env.dim * env.adversary_strength])
+        ax.set_ylim([-1 * env.dim * env.adversary_strength, 1 * env.dim * env.adversary_strength])
+        i = 0
+        handle_list = []
         real_vals = []
         img_vals = []
         for matrix in adv_dict['sampled_actions']:
@@ -87,14 +86,14 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
                 real_vals.append(np.real(eig))
                 img_vals.append(np.imag(eig))
         handle_list.append(plt.scatter(real_vals, img_vals, color=colors[i], label=adversary, s=12))
-        plt.title('Scatter of eigenvalues over adversaries')
+        plt.title('Scatter of eigenvalues for {}'.format(adversary))
         i += 1
-    output_str = '{}/{}'.format(outdir, 'action_histogram.png')
-    # legends = ['goal'] + ['adversary{}'.format(i) for i in range(len(adversary_grid_dict))]
-    plt.legend(handles=[circle1] + handle_list)
-    # plt.legend(legends)
-    plt.savefig(output_str)
-    plt.close(fig)
+        output_str = '{}/{}'.format(outdir, '{}_action_histogram.png'.format(adversary))
+        # legends = ['goal'] + ['adversary{}'.format(i) for i in range(len(adversary_grid_dict))]
+        plt.legend(handles=handle_list)
+        # plt.legend(legends)
+        plt.savefig(output_str)
+        plt.close(fig)
 
     # now create a bar chart of the eigenvalue magnitude
     fig = plt.figure(figsize=(8, 8))
