@@ -48,6 +48,9 @@ if __name__ == '__main__':
             elif config['env'] == "MALerrelCheetahEnv":
                 from visualize.pendulum.transfer_tests import cheetah_run_list
                 lerrel_run_list = cheetah_run_list
+            elif config['env'] == "MultiarmBandit":
+                from visualize.pendulum.transfer_tests import bandit_run_list
+                lerrel_run_list = bandit_run_list
 
             ray.shutdown()
             ray.init()

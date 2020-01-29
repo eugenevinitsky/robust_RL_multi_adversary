@@ -71,6 +71,14 @@ cheetah_run_list = [
     ['base', []]
 ]
 
+bandit_run_list = [
+    ['base', []],
+    ['clustered', []],
+    ['spread', []],
+    ['clustered_wide', []],
+    ['spread_wide', []]
+]
+
 grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
 for mass, fric in np.vstack((grid[0].ravel(), grid[1].ravel())).T:
     hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
@@ -211,7 +219,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                     rllib_config=rllib_config, checkpoint=checkpoint, render=render, env_modifier=[], adv_num=adv_num) for adv_num in range(num_advs)]
         temp_output = ray.get(temp_output)
 
-        with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "with_adv_mean_sweep.txt"),
+        with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "with_adv_mean_sweep"),
                 'wb') as file:
             np.save(file, np.array(temp_output))
 
@@ -239,6 +247,9 @@ if __name__ == '__main__':
         lerrel_run_list = hopper_run_list
     elif rllib_config['env'] == "MALerrelCheetahEnv":
         lerrel_run_list = cheetah_run_list
+    elif rllib_config['env'] == "MultiarmBandit":
+        from visualize.pendulum.transfer_tests import bandit_run_list
+        lerrel_run_list = bandit_run_list
 
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
