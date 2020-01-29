@@ -289,8 +289,6 @@ if __name__ == "__main__":
 
     run_tune(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
     
-    import ipdb; ipdb.set_trace()
-    
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/bandit'), date),
