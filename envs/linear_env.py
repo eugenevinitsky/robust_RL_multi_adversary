@@ -125,7 +125,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
     @property
     def action_space(self):
-        return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(self.dim, ))
+        return Box(low=-self.agent_strength, high=self.agent_strength, shape=(self.dim, ))
 
     @property
     def adv_observation_space(self):
@@ -133,7 +133,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
     @property
     def adv_action_space(self):
-        return Box(low=-self.range, high=self.range, shape=(int(self.dim ** 2), ))
+        return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(int(self.dim ** 2), ))
 
     def step(self, action_dict):
         if self.step_num == 0 and self.adversary_range > 0:
@@ -246,7 +246,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.total_rew = 0
         self.curr_pos = self.start_pos
 
-        self.update_observed_obs(np.concatenate((self.curr_pos, [0.0] * 3)))
+        self.update_observed_obs(np.concatenate((self.curr_pos, [0.0] * self.dim)))
 
         curr_obs = {'agent': self.observed_states}
         if self.adversary_range > 0:

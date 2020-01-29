@@ -17,7 +17,6 @@ from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
 from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
-from algorithms.custom_kl_distribution import LogitsDist
 from envs.linear_env import LinearEnv
 from visualize.goal_env.visualize_adversaries import visualize_adversaries
 # from visualize.pendulum.visualize_adversaries import visualize_adversaries
@@ -37,11 +36,9 @@ def setup_ma_config(config, create_env):
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}}
-    if config['env_config']['kl_reward']:
-        ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
-        adversary_config['model']['custom_action_dist'] = "logits_dist"
+
     # for both of these we need a graph that zeros out agents that weren't active
-    if config['env_config']['kl_reward'] or (config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
+    if (config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
         policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
         policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in
@@ -93,9 +90,14 @@ def setup_exps(args):
                                                                          'Default - retrain lerrel, single agent')
     parser.add_argument('--advs_per_strength', type=int, default=1,
                         help='How many adversaries exist at each strength level')
+    parser.add_argument('--num_concat_states', type=int, default=1,
+                        help='This number sets how many previous states we concatenate into the observations')
     parser.add_argument('--reward_range', action='store_true', default=False,
                         help='If true, the adversaries try to get agents to goals evenly spaced between `low_reward`'
                              'and `high_reward')
+    parser.add_argument('--num_adv_rews', type=int, default=1, help='Number of adversary rews ranges if reward ranges is on')
+    parser.add_argument('--advs_per_rew', type=int, default=1,
+                        help='How many adversaries exist at a given reward level')
     parser.add_argument('--low_reward', type=float, default=-20.0, help='The lower range that adversaries try'
                                                                       'to push you to')
     parser.add_argument('--high_reward', type=float, default=-1.0, help='The upper range that adversaries try'
@@ -118,6 +120,8 @@ def setup_exps(args):
 
     if args.reward_range and args.num_adv_strengths * args.advs_per_strength <= 0:
         sys.exit('must specify number of strength levels, number of adversaries when using reward range')
+    if (args.num_adv_strengths * args.advs_per_strength != args.num_adv_rews * args.advs_per_rew) and args.reward_range:
+        sys.exit('Your number of adversaries per reward range must match the total number of adversaries')
 
     alg_run = args.algorithm
 
@@ -147,14 +151,18 @@ def setup_exps(args):
     config['env_config']['horizon'] = args.horizon
     config['env_config']['num_adv_strengths'] = args.num_adv_strengths
     config['env_config']['advs_per_strength'] = args.advs_per_strength
+    config['env_config']['num_adv_rews'] = args.num_adv_rews
+    config['env_config']['advs_per_rew'] = args.advs_per_rew
     config['env_config']['adversary_strength'] = args.adv_strength
     config['env_config']['agent_strength'] = args.agent_strength
+    config['env_config']['num_concat_states'] = args.num_concat_states
     config['env_config']['scaling'] = args.scaling
     config['env_config']['dim'] = args.dim
     config['env_config']['reward_range'] = args.reward_range
     config['env_config']['low_reward'] = args.low_reward
     config['env_config']['high_reward'] = args.high_reward
     config['env_config']['l2_reward'] = args.l2_reward
+    config['env_config']['l2_reward_coeff'] = args.l2_reward_coeff
     config['env_config']['l2_in_tranche'] = args.l2_in_tranche
     config['env_config']['l2_memory'] = args.l2_memory
     config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
@@ -190,7 +198,7 @@ def setup_exps(args):
     def trial_str_creator(trial):
         return "{}_{}".format(trial.trainable_name, trial.experiment_tag)
 
-    if (args.kl_reward) or (args.l2_reward and not args.l2_memory):
+    if (args.l2_reward and not args.l2_memory):
         runner = CustomPPOTrainer
     else:
         runner = args.algorithm
