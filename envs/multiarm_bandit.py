@@ -70,7 +70,7 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
         self.reward_targets = np.linspace(start=self.low_reward, stop=self.high_reward,
                                           num=self.num_adv_strengths)
         # repeat the bins so that we can index the adversaries easily
-        self.reward_targets = np.repeat(self.reward_targets, self.num_adv_strengths)
+        self.reward_targets = np.repeat(self.reward_targets, self.advs_per_strength)
         print('reward targets are', self.reward_targets)
 
         self.horizon = config["horizon"]
