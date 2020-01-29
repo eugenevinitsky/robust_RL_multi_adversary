@@ -50,6 +50,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.kl_reward_coeff = config['kl_reward_coeff']
         self.no_end_if_fall = config['no_end_if_fall']
         self.adv_all_actions = config['adv_all_actions']
+        self.clip_actions = config['clip_actions']
 
         # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
         # then we are double counting
@@ -207,7 +208,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     # self._adv_to_xfrc(adv_action)
                     hopper_action += adv_action
                     # apply clipping to hopper action
-                    # hopper_action = np.clip(obs_hopper_action, a_min=self.action_space.low, a_max=self.action_space.high)
+                    if self.clip_actions:
+                        hopper_action = np.clip(obs_hopper_action, a_min=self.action_space.low, a_max=self.action_space.high)
                 else:
                     adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
                     self._adv_to_xfrc(adv_action)
@@ -356,9 +358,9 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     'adversary{}'.format(self.curr_adversary): self.observed_states
                 })
 
-        # track how many times each adversary was used
-        if self.l2_memory:
-            self.local_num_observed_l2_samples[self.curr_adversary] += 1
+            # track how many times each adversary was used
+            if self.l2_memory:
+                self.local_num_observed_l2_samples[self.curr_adversary] += 1
 
         return curr_obs
 

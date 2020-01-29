@@ -68,7 +68,6 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             for agent_id, r in reward.items():
                 prev_rewards[agent_id] = r
             rew += reward['agent']
-        print('the reward of rollout {} was {}'.format(sample_idx, rew))
         rew_list.append(rew)
         sample_idx += 1
 
