@@ -83,11 +83,11 @@ for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).
 # for x in np.linspace(1, 15.0, 15):
 #     lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
 
-def reset_env(env):
+def reset_env(env, num_active_adv=0):
     """Undo parameters that need to be off"""
     if hasattr(env, 'domain_randomization'):
         env.domain_randomization = False
-    env.adversary_range = 0
+    env.adversary_range = num_active_adv
 
 @ray.remote(memory=1500 * 1024 * 1024)
 def run_test(test_name, outdir, output_file_name, num_rollouts,
@@ -134,7 +134,8 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     )
 
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = instantiate_rollout(rllib_config, checkpoint)
-    reset_env(env)
+    if adv_num:
+        reset_env(env, 1)
     # high = np.array([1.0, 90.0, env.max_cart_vel, env.max_pole_vel])
     # env.observation_space = spaces.Box(low=-1 * high, high=high, dtype=env.observation_space.dtype)
     if callable(env_modifier):
@@ -204,6 +205,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             plt.close(fig)
     
     num_advs = rllib_config['env_config']['advs_per_strength'] * rllib_config['env_config']['num_adv_strengths']
+    adv_names = ["adversary{}".format(adv_num) for adv_num in range(num_advs)]
     if num_advs:
         temp_output = [run_test.remote(test_name="adversary{}".format(adv_num),
                     outdir=outdir, output_file_name=output_file_name,
@@ -211,9 +213,32 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                     rllib_config=rllib_config, checkpoint=checkpoint, render=render, env_modifier=[], adv_num=adv_num) for adv_num in range(num_advs)]
         temp_output = ray.get(temp_output)
 
-        with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "with_adv_mean_sweep.txt"),
+        with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "with_adv_mean_sweep"),
                 'wb') as file:
-            np.save(file, np.array(temp_output))
+            np.savetxt(file, np.array(temp_output))
+
+        with open('{}/{}_{}'.format(outdir, output_file_name, "adv_scores.png"),
+                'wb') as file:
+            means = np.array(temp_output)[:,0]
+            fig = plt.figure()
+            plt.bar(np.arange(num_advs), means)
+            plt.title("Scores under each adversary")
+            plt.xticks(np.arange(num_advs), adv_names)
+            plt.xlabel("Adv name")
+            plt.savefig(file)
+            plt.close(fig)
+        
+        with open('{}/{}_{}'.format(outdir, output_file_name, "adv_steps.png"),
+                'wb') as file:
+            steps = np.array(temp_output)[:,2]
+            adv_names = ["adversary{}" for adv_num in range(num_advs)]
+            fig = plt.figure()
+            plt.bar(np.arange(num_advs), steps)
+            plt.title("Steps under each adversary")
+            plt.xticks(np.arange(num_advs), adv_names)
+            plt.xlabel("Adv name")
+            plt.savefig(file)
+            plt.close(fig)
 
 if __name__ == '__main__':
 
