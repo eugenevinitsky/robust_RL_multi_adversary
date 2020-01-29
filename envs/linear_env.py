@@ -75,6 +75,8 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.curr_pos = self.start_pos
 
         self.horizon = config["horizon"]
+        self.rollout_length = config["rollout_length"]
+
         self.step_num = 0
 
         self.adversary_range = self.num_adv_strengths * self.advs_per_strength
@@ -101,6 +103,9 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
         # track past states
         self.observed_states = np.zeros(self.observation_space.low.shape[0])
+
+        # flag we can use to turn perturbation off
+        self.should_perturb = True
 
     def update_observed_obs(self, new_obs):
         """Add in the new observations and overwrite the stale ones"""
@@ -134,6 +139,11 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(int(self.dim ** 2), ))
 
     def step(self, action_dict):
+
+        # the rollout gets reset periodically to prevent the reward from going off to infinity
+        if self.step_num % self.rollout_length == 0:
+            self.curr_pos = self.start_pos
+
         if self.step_num == 0 and self.adversary_range > 0:
             self.perturbation_matrix = action_dict['adversary{}'.format(self.curr_adversary)].reshape((self.dim, self.dim))
             # store this since the adversary won't get a reward until the last step
@@ -146,7 +156,10 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             self.perturbation_matrix = np.random.uniform(low=-self.adversary_strength, high=self.adversary_strength,
                                                          size=self.adv_action_space.low.shape[0]).reshape((self.dim, self.dim))
 
+        if not self.should_perturb:
+            self.perturbation_matrix = np.zeros((self.dim, self.dim))
 
+        # dynamics update
         self.curr_pos = (self.A + self.perturbation_matrix) @ self.curr_pos + self.B @ action_dict['agent']
 
         done = False
@@ -156,7 +169,8 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.update_observed_obs(np.concatenate((self.curr_pos, action_dict['agent'])))
 
         curr_obs = {'agent': self.observed_states}
-        base_rew = -np.linalg.norm(self.curr_pos)
+        # LQR cost with Q and R being the identity
+        base_rew = -(np.linalg.norm(self.curr_pos) ** 2) - (np.linalg.norm(action_dict['agent']) ** 2)
         self.total_rew += base_rew
         curr_rew = {'agent': base_rew}
 
