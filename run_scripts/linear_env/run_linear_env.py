@@ -18,8 +18,9 @@ from ray.tune.registry import register_env
 
 from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
 from envs.linear_env import LinearEnv
-from visualize.goal_env.visualize_adversaries import visualize_adversaries
-# from visualize.pendulum.visualize_adversaries import visualize_adversaries
+from visualize.linear_env.visualize_adversaries import visualize_adversaries
+from visualize.linear_env.transfer_test import run_transfer_tests
+
 from utils.pendulum_env_creator import make_create_env
 from utils.parsers import init_parser, ray_parser, ma_env_parser
 from utils.rllib_utils import get_config_from_path
@@ -79,7 +80,7 @@ def setup_exps(args):
     parser = init_parser()
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
-    parser.add_argument('--horizon', type=int, default=20)
+    parser.add_argument('--horizon', type=int, default=40)
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO')
     parser.add_argument('--dim', type=int, default=2, help='Dimension of the matrices')
     parser.add_argument('--scaling', type=float, default=-0.2, help='Eigenvalues of the A matrix')
@@ -98,7 +99,7 @@ def setup_exps(args):
     parser.add_argument('--num_adv_rews', type=int, default=1, help='Number of adversary rews ranges if reward ranges is on')
     parser.add_argument('--advs_per_rew', type=int, default=1,
                         help='How many adversaries exist at a given reward level')
-    parser.add_argument('--low_reward', type=float, default=-20.0, help='The lower range that adversaries try'
+    parser.add_argument('--low_reward', type=float, default=-100.0, help='The lower range that adversaries try'
                                                                       'to push you to')
     parser.add_argument('--high_reward', type=float, default=-1.0, help='The upper range that adversaries try'
                                                                           'to push you to')
@@ -133,7 +134,7 @@ def setup_exps(args):
         config['gamma'] = 0.95
         if args.grid_search:
             config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
-            config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
+            config['lr'] = tune.grid_search([5e-4, 5e-3, 5e-2])
         else:
             config['lambda'] = 0.97
             config['lr'] = 5e-4
@@ -273,38 +274,39 @@ if __name__ == "__main__":
 
     # Now we add code to loop through the results and create scores of the results
     # TODO(@evinitsky) put this back
-    # if args.run_transfer_tests:
-    #     output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/goal_env'), date),
-    #                                args.exp_title)
-    #     if not os.path.exists(output_path):
-    #         try:
-    #             os.makedirs(output_path)
-    #         except OSError as exc:
-    #             if exc.errno != errno.EEXIST:
-    #                 raise
-    #     for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
-    #         if "checkpoint_{}" in dirpath:
-    #             # grab the experiment name
-    #             folder = os.path.dirname(dirpath)
-    #             tune_name = folder.split("/")[-1]
-    #             outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    #             script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
-    #             config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
-    #
-    #             ray.shutdown()
-    #             ray.init()
-    #
-    #             # visualize_adversaries(config, checkpoint_path, 100, output_path)
-    #
-    #             if args.use_s3:
-    #                 for i in range(4):
-    #                     try:
-    #                         p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-    #                                                                          "s3://sim2real/transfer_results/linear_env/{}/{}/{}".format(
-    #                                                                              date,
-    #                                                                              args.exp_title,
-    #                                                                              tune_name)).split(
-    #                             ' '))
-    #                         p1.wait(50)
-    #                     except Exception as e:
-    #                         print('This is the error ', e)
+    if args.run_transfer_tests:
+        output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/linear_env'), date),
+                                   args.exp_title)
+        if not os.path.exists(output_path):
+            try:
+                os.makedirs(output_path)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:
+                    raise
+
+        for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
+            if "checkpoint" in dirpath:
+                # grab the experiment name
+                folder = os.path.dirname(dirpath)
+                tune_name = folder.split("/")[-1]
+                outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
+
+                ray.shutdown()
+                ray.init()
+
+                run_transfer_tests(config, checkpoint_path, 1000, args.exp_title, output_path)
+                visualize_adversaries(config, checkpoint_path, 100, output_path)
+
+                if args.use_s3:
+                    for i in range(4):
+                        try:
+                            p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+                                                                             "s3://sim2real/transfer_results/linear_env/{}/{}/{}".format(
+                                                                                 date,
+                                                                                 args.exp_title,
+                                                                                 tune_name)).split(
+                                ' '))
+                            p1.wait(50)
+                        except Exception as e:
+                            print('This is the error ', e)

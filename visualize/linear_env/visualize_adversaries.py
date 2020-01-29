@@ -96,6 +96,23 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
     plt.savefig(output_str)
     plt.close(fig)
 
+    # now create a bar chart of the eigenvalue magnitude
+    fig = plt.figure(figsize=(8, 8))
+    indices = np.arange(len(adversary_grid_dict))
+    magnitudes = []
+    for adversary, adv_dict in adversary_grid_dict.items():
+        magnitude = []
+        for matrix in adv_dict['sampled_actions']:
+            eigenvals = np.linalg.eigvals(matrix.reshape((env.dim, env.dim)))
+            for eig in eigenvals:
+                magnitude.append(np.linalg.norm(eig))
+        magnitudes.append([adversary, np.mean(magnitude)])
+    output_str = '{}/{}'.format(outdir, 'action_bar_plot.png')
+    plt.bar(indices, [val[1] for val in magnitudes])
+    plt.xticks(indices, [val[0] for val in magnitudes])
+    plt.savefig(output_str)
+    plt.close(fig)
+
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
     parser = replay_parser(parser)

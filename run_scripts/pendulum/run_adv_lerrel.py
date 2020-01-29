@@ -158,6 +158,13 @@ def setup_exps(args):
                         help='If true we apply perturbations to the actions instead of to Lerrels parametrization')
     parser.add_argument('--entropy_coeff', type=float, default=0.0,
                         help='If you want to penalize entropy, set this to a negative value')
+    parser.add_argument('--clip_actions', action='store_true', default=False,
+                        help='If true, the sum of the adversary and agent actions is clipped')
+
+    parser.add_argument('--lambda_val', type=float, default=0.9,
+                        help='PPO lambda value')
+    parser.add_argument('--lr', type=float, default=5e-4,
+                        help='PPO lambda value')
 
     args = parser.parse_args(args)
 
@@ -181,18 +188,19 @@ def setup_exps(args):
         config['seed'] = 0
         config['train_batch_size'] = args.train_batch_size
         config['gamma'] = 0.995
+        config['vf_clip_param'] = 100.0
         if args.grid_search:
             config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
             config['lr'] = tune.grid_search([5e-5, 5e-4])
-            config['vf_clip_param'] = 100.0
 
         elif args.seed_search:
             config['seed'] = tune.grid_search([i for i in range(6)])
+            config['lr'] = args.lr
+            config['lambda'] = args.lambda_val
         else:
             if args.env_name == 'hopper':
                 config['lambda'] = 0.9
                 config['lr'] = 5e-4
-                config['vf_clip_param'] = 100.0
             else:
                 config['lambda'] = 0.9
                 config['lr'] = 5e-5
@@ -260,6 +268,7 @@ def setup_exps(args):
     config['env_config']['no_end_if_fall'] = args.no_end_if_fall
     config['env_config']['adv_all_actions'] = args.adv_all_actions
     config['env_config']['entropy_coeff'] = args.entropy_coeff
+    config['env_config']['clip_actions'] = args.clip_actions
 
     config['env_config']['run'] = alg_run
 
