@@ -138,7 +138,7 @@ def setup_exps(args):
         config['gamma'] = 0.95
         if args.grid_search:
             config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
-            config['lr'] = tune.grid_search([5e-4, 5e-3, 5e-2])
+            config['lr'] = tune.grid_search([5e-4, 5e-3])
         else:
             config['lambda'] = 0.97
             config['lr'] = 5e-4
