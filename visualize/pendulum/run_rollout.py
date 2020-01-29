@@ -174,14 +174,14 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
 
             # we only want the robot reward, not the adversary reward
             reward_total += info['agent']['agent_reward']
-            running_velocity += obs['agent'][5:7]
+            #running_velocity += obs['agent'][5:7]
             obs = next_obs
         print("Episode reward", reward_total)
 
         rewards.append(reward_total)
         step_nums.append(step_num)
         #final_obs.append(running_velocity/step_num)
-        final_obs.append(obs['agent'][5:7])
+        final_obs.append(env.sim.data.qpos[:2])
 
     env.close()
 

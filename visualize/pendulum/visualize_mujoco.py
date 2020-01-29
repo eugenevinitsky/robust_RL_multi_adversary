@@ -52,12 +52,14 @@ def main():
         plt.scatter(x, y, color=colors.pop())
 
     plt.legend(obs_per_adv.keys())
-    plt.title('Average velocities for {} Adversaries in Hopper'.format(num_adversaries,env))
+    plt.xlabel('Position')
+    plt.ylabel('Height')
+    plt.title('Final positions for {} Adversaries in Hopper'.format(num_adversaries,env))
     exp_title = args.result_dir.split('/')
 
     Path('{}/mujoco/{}/{}'.format(args.output_dir, exp_title[-4], exp_title[-2])).mkdir(parents=True, exist_ok=True)
 
-    plt.savefig('{}/mujoco/{}/{}/{}'.format(args.output_dir, exp_title[-4], exp_title[-2], exp_title[-1] + 'final_velocity'))
+    plt.savefig('{}/mujoco/{}/{}/{}'.format(args.output_dir, exp_title[-4], exp_title[-2], exp_title[-1] + 'final_pos'))
 
 if __name__ == '__main__':
     main()

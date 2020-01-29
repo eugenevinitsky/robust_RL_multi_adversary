@@ -47,13 +47,17 @@ def save_barchart(total_scores, output_path, exp_path, file_name, show):
         output_path = exp_path
     with open('{}/{}_{}.png'.format(output_path, file_name, "transfer_heatmap"),'wb') as heatmap:
         fig, ax = plt.subplots(figsize=(18,4))
+        total_scores = {key.split('Multi')[-1]: val for key, val in total_scores.items()}
         if isinstance(total_scores, dict):
             means = {key: val['mean_scores'] for key, val in total_scores.items()}
             base_score = {key: val['base_score'] for key, val in total_scores.items()}
             width = 0.35
             ax.bar(np.arange(len(total_scores)) - width / 2, list(base_score.values()), width, label='base score', align='center')
             ax.bar(np.arange(len(total_scores)) + width / 2, list(means.values()), width, label='transfer means', align='center')
-            plt.title('Base score vs. transfer mean, {}'.format(file_name))
+            max_base = np.argmax(list(base_score.values()))
+            plt.title('Base score vs. transfer mean, {}, top_score: {}, {}'.format(file_name,
+                                                                             list(means.values())[max_base],
+                                                                             list([key[:6] for key in total_scores.keys()])[max_base]))
         else:
             bar_plot = ax.bar(range(len(total_scores)), list(total_scores.values()), yerr=np.std(list(total_scores.values())),align='center')
         plt.xticks(range(len(total_scores)), list([key[:6] for key in total_scores.keys()]))
