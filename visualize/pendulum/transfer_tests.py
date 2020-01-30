@@ -73,6 +73,8 @@ cheetah_run_list = [
 
 bandit_run_list = [
     ['base', []],
+    ['hard', [(0.4, 0.6), (1.0, 1.0)]],
+    ['easy', [(0.0, 1.0), (.1, .1)]]
 ]
 
 grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
@@ -145,7 +147,7 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     if callable(env_modifier):
         env_modifier(env)
     elif len(env_modifier) > 0:
-        setattr(env, env_modifier[0], env_modifier[1])
+        env.transfer = env_modifier
     rewards, step_num = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                  state_init, action_init, num_rollouts, render, adv_num)
 
@@ -208,17 +210,17 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             plt.savefig(transfer_robustness)
             plt.close(fig)
     
-    elif 'Bandit' in rllib_config['env']:
-        means = np.array(temp_output)[1:, 0]
-        if len(means) > 0:
-            with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"), 'wb') as transfer_robustness:
-                fig = plt.figure()
-                plt.bar([x[0] for x in bandit_run_list], means)
-                plt.title("Bandit performance tests")
-                plt.xticks(ticks=np.arange(len(mass_list)), labels=["{:0.2f}".format(x) for x in mass_list])
-                plt.xlabel("Bandit test name")
-                plt.savefig(transfer_robustness)
-                plt.close(fig)
+    # elif 'Bandit' in rllib_config['env']:
+    #     means = np.array(temp_output)[1:, 0]
+    #     if len(means) > 0:
+    #         with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"), 'wb') as transfer_robustness:
+    #             fig = plt.figure()
+    #             plt.bar(means)
+    #             plt.title("Bandit performance tests")
+    #             plt.xticks(ticks=np.arange(len(mass_list)), labels=["{:0.2f}".format(x) for x in mass_list])
+    #             plt.xlabel("Bandit test name")
+    #             plt.savefig(transfer_robustness)
+    #             plt.close(fig)
     
     num_advs = rllib_config['env_config']['advs_per_strength'] * rllib_config['env_config']['num_adv_strengths']
     adv_names = ["adversary{}".format(adv_num) for adv_num in range(num_advs)]

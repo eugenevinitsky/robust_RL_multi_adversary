@@ -147,7 +147,13 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
 
     def step(self, action_dict):
         if self.step_num == 0:
-            if self.adversary_range > 0:
+            if self.transfer:
+                # breaking an abstration barrier here but yolo
+                self.means = self.transfer[0]
+                self.std_devs = self.transfer[1]
+                print("means:", self.means)
+                print("std_devs:", self.std_devs)
+            elif self.adversary_range > 0:
                 self.means = action_dict['adversary{}'.format(self.curr_adversary)][:self.num_arms]
                 self.std_devs = action_dict['adversary{}'.format(self.curr_adversary)][self.num_arms:]
                 assert len(self.means) == len(self.std_devs)
@@ -157,10 +163,6 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
                 if self.l2_memory and self.l2_reward:
                     self.action_list = [action_dict['adversary{}'.format(self.curr_adversary)]]
                     self.local_l2_memory_array[self.curr_adversary] += action_dict['adversary{}'.format(self.curr_adversary)]
-            elif self.transfer:
-                # breaking an abstration barrier here but yolo
-                self.means = transfer[0]
-                self.std_devs = transfer[1]
             else:
                 self.means = np.random.uniform(low=self.min_mean_reward, high=self.max_mean_reward, size=self.num_arms)
                 self.std_devs = np.random.uniform(low=self.min_std, high=self.max_std, size=self.num_arms)

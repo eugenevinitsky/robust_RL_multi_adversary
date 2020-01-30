@@ -117,7 +117,7 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
             sampled_actions_x = [action[0] for action in sampled_actions]
             sampled_actions_y = [action[1] for action in sampled_actions]
             for action in sampled_actions:
-                spread = Ellipse((action[0], action[1]), action[2], action[3])
+                spread = Ellipse((action[0], action[1]), action[2]*2, action[3]*2)
                 ax.add_artist(spread)
                 spread.set_alpha(0.1)
                 spread.set_facecolor(colors[i])
