@@ -151,8 +151,8 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
             if self.transfer:
                 # breaking an abstration barrier here but yolo
                 test_num = self.rollout_num
-                self.means = self.transfer[test_num][0]
-                self.std_devs = self.transfer[test_num][1]
+                self.means = self.transfer[test_num % len(self.transfer)][0]
+                self.std_devs = self.transfer[test_num % len(self.transfer)][1]
                 print("means:", self.means)
                 print("std_devs:", self.std_devs)
                 self.rollout_num += 1
