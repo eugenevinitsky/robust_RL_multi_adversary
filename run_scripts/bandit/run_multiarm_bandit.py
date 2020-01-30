@@ -293,7 +293,7 @@ if __name__ == "__main__":
     
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
-        assert num_adversaries == 2, "Transfer tests only apply for 2 arm case"
+        assert args.num_arms == 2, "Transfer tests only apply for 2 arm case"
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/bandit'), date),
                                    args.exp_title)
         if not os.path.exists(output_path):
