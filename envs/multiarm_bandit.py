@@ -149,10 +149,14 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
     def step(self, action_dict):
         if self.step_num == 0:
             if self.transfer:
-                # breaking an abstration barrier here but yolo
-                test_num = self.rollout_num
-                self.means = self.transfer[test_num % len(self.transfer)][0]
-                self.std_devs = self.transfer[test_num % len(self.transfer)][1]
+                if type(self.transfer) is int:
+                    prng = RandomState(self.rollout_num)
+                    self.means = prng.uniform(-1, 1, self.num_arms)
+                    self.std_devs = prng.uniform(0.1, 1, self.num_arms)
+                else:
+                    # breaking an abstration barrier here but yolo
+                    self.means = self.transfer[0]
+                    self.std_devs = self.transfer[1]
                 print("means:", self.means)
                 print("std_devs:", self.std_devs)
                 self.rollout_num += 1
