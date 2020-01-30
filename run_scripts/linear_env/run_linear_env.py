@@ -112,6 +112,9 @@ def setup_exps(args):
                              'but WAY fast')
     parser.add_argument('--l2_memory_target_coeff', type=float, default=0.05,
                         help='The coefficient used to update the running mean if l2_memory is true')
+    parser.add_argument('--action_cost_coeff', type=float, default=20.0,
+                        help='Scaling on the norm of the actions to penalize the agent for taking large actions')
+
     args = parser.parse_args(args)
 
     if args.reward_range and args.num_adv_strengths * args.advs_per_strength <= 0:
@@ -170,6 +173,7 @@ def setup_exps(args):
     config['env_config']['l2_in_tranche'] = args.l2_in_tranche
     config['env_config']['l2_memory'] = args.l2_memory
     config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
+    config['env_config']['action_cost_coeff'] = args.action_cost_coeff
 
     config['env_config']['run'] = alg_run
 

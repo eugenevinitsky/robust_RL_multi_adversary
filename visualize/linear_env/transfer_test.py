@@ -44,7 +44,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         obs = env.reset()
         # here we set the A matrix manually to have eigenvalues that could be outside the unit circle
         # with uniform probability.
-        eigv_range = np.abs(env.dim * env.adversary_strength)
+        eigv_range = np.abs(env.adversary_strength * env.dim)
         dim = env.dim
         # to make life easy, we sample on the real line and not the complex plane
         eigs = np.random.uniform(low=-eigv_range, high=eigv_range, size=dim)
@@ -75,6 +75,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                     prev_actions[agent_id] = a_action
                     action_dict[agent_id] = a_action
             obs, reward, done, info = env.step(action_dict)
+
             for agent_id, r in reward.items():
                 prev_rewards[agent_id] = r
             rew += reward['agent']
