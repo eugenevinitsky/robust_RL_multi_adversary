@@ -288,9 +288,12 @@ if __name__ == "__main__":
         ray.init()
 
     run_tune(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
+    num_adversaries = args.num_adv_strengths * args.advs_per_strength
+
     
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
+        assert num_adversaries == 2, "Transfer tests only apply for 2 arm case"
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/bandit'), date),
                                    args.exp_title)
         if not os.path.exists(output_path):
