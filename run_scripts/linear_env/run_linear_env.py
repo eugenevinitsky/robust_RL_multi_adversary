@@ -39,16 +39,10 @@ def setup_ma_config(config, create_env):
     adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}}
 
     # for both of these we need a graph that zeros out agents that weren't active
-    if (config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
-        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
-        policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
-                                                env.adv_action_space, adversary_config) for i in
-                              range(num_adversaries)})
-    else:
-        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
-        policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
-                                                env.adv_action_space, adversary_config) for i in
-                              range(num_adversaries)})
+    policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+    policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
+                                            env.adv_action_space, adversary_config) for i in
+                          range(num_adversaries)})
 
     # TODO(@evinitsky) put this back
     # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
