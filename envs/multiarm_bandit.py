@@ -34,6 +34,7 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
         self.min_std = 0.1
         self.max_std = 1
         self.num_arms = config["num_arms"]
+        self.rollout_num = 0
 
         # This sets how many adversaries exist at each strength level
         self.num_adv_strengths = config["num_adv_strengths"] # num reward ranges
@@ -149,10 +150,12 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
         if self.step_num == 0:
             if self.transfer:
                 # breaking an abstration barrier here but yolo
-                self.means = self.transfer[0]
-                self.std_devs = self.transfer[1]
+                test_num = self.rollout_num
+                self.means = self.transfer[test_num][0]
+                self.std_devs = self.transfer[test_num][1]
                 print("means:", self.means)
                 print("std_devs:", self.std_devs)
+                self.rollout_num += 1
             elif self.adversary_range > 0:
                 self.means = action_dict['adversary{}'.format(self.curr_adversary)][:self.num_arms]
                 self.std_devs = action_dict['adversary{}'.format(self.curr_adversary)][self.num_arms:]
