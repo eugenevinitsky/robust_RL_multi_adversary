@@ -14,9 +14,10 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
     titles = []
     plt.figure(figsize=(10, 5))
 
+
     for (dirpath, dirnames, filenames) in os.walk(exp_path):
         for run in filenames:
-            if "mean_sweep_rew.txt" in run:
+            if "mean_sweep_rew" in run:
                 titles.append(dirpath.split("/")[-1][0:5])
                 results.append(np.mean(np.load(os.path.join(dirpath, run))))
 
