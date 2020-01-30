@@ -41,7 +41,6 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         prev_actions = DefaultMapping(
             lambda agent_id: action_init[mapping_cache[agent_id]])
         prev_rewards = collections.defaultdict(lambda: 0.)
-        print('on rollout {}'.format(sample_idx))
         obs = env.reset()
         # here we set the A matrix manually to have eigenvalues that could be outside the unit circle
         # with uniform probability.
@@ -86,8 +85,10 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
               'wb') as file:
         np.save(file, np.array(rew_list))
 
-    # compute the base score just on the env alone without randomization
+    # compute the base score just on the env alone without randomization. Make sure to put the
+    # A matrix back to what it should be
     env.A = original_A
+    env.should_perturb = False
     rew_list = []
     sample_idx = 0
     while sample_idx < num_rollouts:
@@ -99,7 +100,6 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         print('on rollout {}'.format(sample_idx))
         obs = env.reset()
         # turn off the perturbations to get a base score
-        env.should_perturb = False
         action_dict = {}
         # we have an is_active key here
         # multi_obs = {'agent': obs}
