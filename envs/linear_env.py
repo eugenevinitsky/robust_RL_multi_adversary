@@ -174,7 +174,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.total_rew += base_rew
         curr_rew = {'agent': base_rew}
 
-        if self.adversary_range > 0 and self.curr_adversary > 0:
+        if self.adversary_range > 0 and self.curr_adversary >= 0:
 
             # the adversaries get observations on the final steps and on the first step
             if done:
