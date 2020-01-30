@@ -475,9 +475,8 @@ if __name__ == "__main__":
                     from visualize.pendulum.transfer_tests import cheetah_run_list
                     lerrel_run_list = cheetah_run_list
                 elif config['env'] == "MALerrelAntEnv":
-                    # TODO(@kparvate) this needs to change
-                    from visualize.pendulum.transfer_tests import cheetah_run_list
-                    lerrel_run_list = cheetah_run_list
+                    from visualize.pendulum.transfer_tests import ant_run_list
+                    lerrel_run_list = ant_run_list
 
                 ray.shutdown()
                 ray.init()

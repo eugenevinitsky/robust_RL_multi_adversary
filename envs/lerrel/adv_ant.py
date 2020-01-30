@@ -2,8 +2,6 @@ from gym.envs.mujoco.ant import AntEnv
 from gym.spaces import Box, Dict
 import numpy as np
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
-from visualize.plot_heatmap import hopper_friction_sweep, hopper_mass_sweep
-
 
 class AdvMAAnt(AntEnv, MultiAgentEnv):
     def __init__(self, config):
@@ -98,7 +96,8 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
 
         # Do the initialization
-        super(AdvMAHopper, self).__init__()
+        super(AdvMAAnt, self).__init__()
+        import ipdb; ipdb.set_trace()
         self._adv_f_bname = 'foot'
         bnames = self.model.body_names
         self._adv_bindex = bnames.index(
@@ -193,7 +192,7 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
     def step(self, actions):
         self.step_num += 1
         if isinstance(actions, dict):
-            # the hopper action before any adversary modifies it
+            # the action before any adversary modifies it
             obs_ant_action = actions['agent']
             ant_action = actions['agent']
 
@@ -203,7 +202,7 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
 
                 # self._adv_to_xfrc(adv_action)
                 ant_action += adv_action
-                # apply clipping to hopper action
+                # apply clipping to action
                 if self.clip_actions:
                     ant_action = np.clip(obs_ant_action, a_min=self.action_space.low,
                                             a_max=self.action_space.high)
@@ -368,6 +367,6 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
         return curr_obs
 
 
-def hopper_env_creator(env_config):
-    env = AdvMAHopper(env_config)
+def ant_env_creator(env_config):
+    env = AdvMAAnt(env_config)
     return env

@@ -42,6 +42,16 @@ def make_set_mass_and_fric(friction_coef, mass_coef, mass_body='pole'):
         env.model.body_mass[bindex] = (env.model.body_mass[bindex] * mass_coef)
         env.model.geom_friction[:] = (env.model.geom_friction * friction_coef)[:]
     return set_mass
+
+def make_ant_transfer_test(friction_coefs, mass_body='pole'):
+    def modify_env(env):
+        import ipdb; ipdb.set_trace()
+        mass_bname = 'torso'
+        bnames = env.model.body_names
+        bindex = bnames.index(mass_bname)
+        env.model.body_mass[bindex] = (env.model.body_mass[bindex] * mass_coef)
+        env.model.geom_friction[:] = (env.model.geom_friction * friction_coef)[:]
+    return modify_env
     
 
 # test name, is_env_config, config_value, params_name, params_value
@@ -70,6 +80,12 @@ hopper_run_list = [
 cheetah_run_list = [
     ['base', []]
 ]
+
+ant_run_list = [
+    ['base', []]
+]
+
+# TODO @evinitsky add call make_ant_transfer_test w/ appropriate transfer parameters and append to ant_run_list
 
 grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
 for mass, fric in np.vstack((grid[0].ravel(), grid[1].ravel())).T:
@@ -273,6 +289,8 @@ if __name__ == '__main__':
     elif rllib_config['env'] == "MALerrelHopperEnv":
         lerrel_run_list = hopper_run_list
     elif rllib_config['env'] == "MALerrelCheetahEnv":
+        lerrel_run_list = cheetah_run_list
+    elif rllib_config['env'] == "MALerrelAntEnv":
         lerrel_run_list = cheetah_run_list
 
     if 'run' not in rllib_config['env_config']:
