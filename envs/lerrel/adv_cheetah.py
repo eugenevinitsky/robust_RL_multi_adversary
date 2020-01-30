@@ -27,6 +27,10 @@ class AdvMAHalfCheetahEnv(HalfCheetahEnv, MultiAgentEnv):
         # This is whether we concatenate the agent action into the observation
         self.concat_actions = config["concat_actions"]
 
+        self.adv_all_actions = config['adv_all_actions']
+        self.clip_actions = config['clip_actions']
+
+
         # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
         # then we are double counting
         self.strengths = np.linspace(start=0, stop=1,
@@ -75,7 +79,14 @@ class AdvMAHalfCheetahEnv(HalfCheetahEnv, MultiAgentEnv):
     def adv_action_space(self):
         """ 2D adversarial action. Maximum of self.adversary_strength in each dimension.
         """
-        return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(4,))
+        if self.adv_all_actions:
+            low = np.array(self.action_space.low.tolist())
+            high = np.array(self.action_space.high.tolist())
+            box = Box(low=-np.ones(low.shape) * self.adversary_strength, high=np.ones(high.shape) * self.adversary_strength,
+                      shape=None, dtype=np.float32)
+            return box
+        else:
+            return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(4,))
 
     @property
     def adv_observation_space(self):
@@ -115,11 +126,23 @@ class AdvMAHalfCheetahEnv(HalfCheetahEnv, MultiAgentEnv):
     def step(self, actions):
         self.step_num += 1
         if isinstance(actions, dict):
+            obs_cheetah_action = actions['agent']
             cheetah_action = actions['agent']
 
             if self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in actions.keys():
-                adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
-                self._adv_to_xfrc(adv_action)
+                if self.adv_all_actions:
+                    adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
+
+                    # self._adv_to_xfrc(adv_action)
+                    cheetah_action += adv_action
+                    # apply clipping to hopper action
+                    if self.clip_actions:
+                        cheetah_action = np.clip(obs_cheetah_action, a_min=self.action_space.low, a_max=self.action_space.high)
+                else:
+
+                    adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
+                    self._adv_to_xfrc(adv_action)
+
         else:
             assert actions in self.action_space
             cheetah_action = actions
