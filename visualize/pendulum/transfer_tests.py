@@ -74,7 +74,9 @@ pendulum_run_list = [
 
 #hopper geoms: floor, torso, thigh, leg, foot
 hopper_run_list = [
-    ['base', []],
+    ['base', []]
+]
+hopper_test_list=[
     ['friction_hard_torsolegmax_floorthighfootmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [1, 3])],
     ['friction_hard_floorthighmax_torsolegfootmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [0, 2])],
     ['friction_hard_footlegmax_floortorsothighmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [3, 4])],
@@ -83,10 +85,10 @@ hopper_run_list = [
     ['friction_hard_floorthighlegmax_torsofootmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [0, 3, 2])],
     ['friction_hard_floorfootmax_torsothighlegmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [4, 0])],
     ['friction_hard_thighlegmax_floortorsofootmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [2, 3])],
-
 ]
 num_hopper_custom_tests = len(hopper_run_list)
 
+#cheetah geoms: ('floor', 'torso', 'head', 'bthigh', 'bshin', 'bfoot', 'fthigh', 'fshin', 'ffoot')
 cheetah_run_list = [
     ['base', []]
 ]
@@ -271,6 +273,7 @@ if __name__ == '__main__':
                         help='The file name we use to save our results')
     parser.add_argument('--output_dir', type=str, default=output_path,
                         help='')
+    parser.add_argument('--run_holdout',  action='store_true', default=False, help='If true, run holdout tests')
 
     parser = replay_parser(parser)
     args = parser.parse_args()
@@ -281,7 +284,10 @@ if __name__ == '__main__':
     if rllib_config['env'] == "MALerrelPendulumEnv":
         lerrel_run_list = pendulum_run_list
     elif rllib_config['env'] == "MALerrelHopperEnv":
-        lerrel_run_list = hopper_run_list
+        if args.run_holdout:
+            lerrel_run_list = hopper_test_list
+        else:
+            lerrel_run_list = hopper_run_list
     elif rllib_config['env'] == "MALerrelCheetahEnv":
         lerrel_run_list = cheetah_run_list
 
