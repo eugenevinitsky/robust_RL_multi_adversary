@@ -136,7 +136,7 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
 
 
     for adversary, adv_dict in adversary_grid_dict.items():
-        colors = cm.rainbow(np.linspace(0, 1, num_adversaries * num_arms))
+        colors = cm.brg(np.linspace(0, 1, num_arms))
         fig = plt.figure(figsize=(8, 8))
         ax = fig.gca()
         ax.set_xlim([-3, 3])
