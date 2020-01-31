@@ -18,9 +18,12 @@ def load_data(results_path):
     all_file_names = {}
     for (dirpath, dirnames, filenames) in os.walk(results_path):
         for run in filenames:
-            if "sweep_rew.txt" in run:
+            if "sweep_rew.txt" in run and not "adv_mean_sweep_rew" in run:
                 tag = dirpath.split("/")[-1]
-                run_results = np.load(os.path.join(dirpath, run))
+                try:
+                    run_results = np.load(os.path.join(dirpath, run))
+                except:
+                    run_results = np.loadtxt(os.path.join(dirpath, run))
 
                 base_score = run_results[0, 0]
                 base_steps = run_results[0, 2]

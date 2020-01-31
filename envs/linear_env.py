@@ -35,6 +35,8 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.A = np.identity(self.dim) * (- np.abs(self.scaling))
         self.B = np.identity(self.dim)
         self.perturbation_matrix = np.zeros(self.dim)
+        # this is how much cost we put on actions. Backwards compatibility, remove the get later.
+        self.action_cost_coeff = config['action_cost_coeff']
 
         # this is just for visualizing the position
         self.show_image = False
@@ -170,11 +172,11 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
         curr_obs = {'agent': self.observed_states}
         # LQR cost with Q and R being the identity
-        base_rew = -(np.linalg.norm(self.curr_pos)) - (np.linalg.norm(action_dict['agent']))
+        base_rew = -(np.linalg.norm(self.curr_pos)) - self.action_cost_coeff * (np.linalg.norm(action_dict['agent']))
         self.total_rew += base_rew
         curr_rew = {'agent': base_rew}
 
-        if self.adversary_range > 0 and self.curr_adversary > 0:
+        if self.adversary_range > 0 and self.curr_adversary >= 0:
 
             # the adversaries get observations on the final steps and on the first step
             if done:
