@@ -24,6 +24,8 @@ if sys.platform == 'darwin':
     except:
         pass
 
+PSEUDORANDOM_TRANSFER = 'pseudorandom'
+
 class MultiarmBandit(MultiAgentEnv, gym.Env):
 
     def __init__(self, config):
@@ -149,17 +151,17 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
     def step(self, action_dict):
         if self.step_num == 0:
             if self.transfer:
-                if type(self.transfer) is int:
-                    prng = RandomState(self.rollout_num)
+                prng = np.random.RandomState(self.rollout_num)
+                if self.transfer == PSEUDORANDOM_TRANSFER:
                     self.means = prng.uniform(-1, 1, self.num_arms)
                     self.std_devs = prng.uniform(0.1, 1, self.num_arms)
                 else:
                     # breaking an abstration barrier here but yolo
                     self.means = self.transfer[0]
                     self.std_devs = self.transfer[1]
-                print("means:", self.means)
-                print("std_devs:", self.std_devs)
+
                 self.rollout_num += 1
+                random_arm_order = prng.permutation(self.num_arms)
             elif self.adversary_range > 0:
                 self.means = action_dict['adversary{}'.format(self.curr_adversary)][:self.num_arms]
                 self.std_devs = action_dict['adversary{}'.format(self.curr_adversary)][self.num_arms:]
@@ -170,10 +172,15 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
                 if self.l2_memory and self.l2_reward:
                     self.action_list = [action_dict['adversary{}'.format(self.curr_adversary)]]
                     self.local_l2_memory_array[self.curr_adversary] += action_dict['adversary{}'.format(self.curr_adversary)]
+                    
+                random_arm_order = np.random.permutation(self.num_arms)
             else:
                 self.means = np.random.uniform(low=self.min_mean_reward, high=self.max_mean_reward, size=self.num_arms)
                 self.std_devs = np.random.uniform(low=self.min_std, high=self.max_std, size=self.num_arms)
+                random_arm_order = np.random.permutation(self.num_arms)
 
+            self.means = self.means[random_arm_order]
+            self.std_devs = self.std_devs[random_arm_order]
 
         arm_choice = action_dict['agent']
         base_rew = np.random.normal(loc=self.means[arm_choice], scale=self.std_devs[arm_choice])

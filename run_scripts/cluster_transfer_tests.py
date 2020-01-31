@@ -57,11 +57,7 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/s3_test")):
             from visualize.pendulum.transfer_tests import cheetah_run_list
 
             lerrel_run_list = cheetah_run_list
-        elif config['env'] == "MultiarmBandit":
-            from visualize.pendulum.transfer_tests import bandit_run_list
-
-            lerrel_run_list = bandit_run_list
-
+            
         ray.shutdown()
         ray.init()
         run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=lerrel_run_list)

@@ -19,6 +19,8 @@ from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from matplotlib.patches import Ellipse
 
+from scipy.stats import norm
+
 
 def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
     env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
@@ -127,6 +129,29 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
             plt.title('Scatter of actions over {} sampled obs'.format(num_samples))
             i += 1
         output_str = '{}/{}'.format(outdir, 'action_histogram.png')
+        # legends = ['goal'] + ['adversary{}'.format(i) for i in range(len(adversary_grid_dict))]
+        # plt.legend(legends)
+        plt.savefig(output_str)
+        plt.close(fig)
+
+
+    for adversary, adv_dict in adversary_grid_dict.items():
+        colors = cm.rainbow(np.linspace(0, 1, num_adversaries * num_arms))
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.gca()
+        ax.set_xlim([-3, 3])
+        ax.set_ylim([0, 5])
+        x = np.arange(-2, 2, 0.001)
+        i = 0
+        handle_list = []
+        sampled_actions = adv_dict['sampled_actions']
+        for arm in range(num_arms):
+            for action in sampled_actions:
+                arm_spread = norm.pdf(x, action[arm], action[num_arms + arm])
+                ax.fill_between(x, arm_spread, alpha=0.02, color=colors[i])
+            i += 1
+        plt.title('Arm distributions over {} sampled obs'.format(num_samples))
+        output_str = '{}/{}_{}'.format(outdir, adversary, 'arm_distribution.png')
         # legends = ['goal'] + ['adversary{}'.format(i) for i in range(len(adversary_grid_dict))]
         # plt.legend(legends)
         plt.savefig(output_str)

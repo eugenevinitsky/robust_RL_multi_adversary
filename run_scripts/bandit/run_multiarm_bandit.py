@@ -20,7 +20,7 @@ from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
 from algorithms.custom_kl_distribution import LogitsDist
 from envs.multiarm_bandit import MultiarmBandit
 from visualize.goal_env.visualize_adversaries import visualize_adversaries
-from visualize.pendulum.transfer_tests import run_transfer_tests, bandit_run_list
+from visualize.pendulum.transfer_tests import run_transfer_tests, make_bandit_transfer_list
 # from visualize.pendulum.visualize_adversaries import visualize_adversaries
 from utils.pendulum_env_creator import make_create_env
 from utils.parsers import init_parser, ray_parser, ma_env_parser
@@ -85,7 +85,7 @@ def setup_exps(args):
     parser = ma_env_parser(parser)
     parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?',
                         choices=['pendulum', 'hopper', 'cheetah'])
-    parser.add_argument('--horizon', type=int, default=20)
+    parser.add_argument('--horizon', type=int, default=10)
     parser.add_argument('--num_arms', type=int, default=3)
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
@@ -139,7 +139,6 @@ def setup_exps(args):
         config['train_batch_size'] = args.train_batch_size
         config['gamma'] = 0.95
         if args.grid_search:
-            config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
             config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
         else:
             config['lambda'] = 0.97
@@ -157,7 +156,7 @@ def setup_exps(args):
     config['num_workers'] = args.num_cpus
     config['seed'] = 0
 
-    config['env_config']['horizon'] = args.horizon
+    config['env_config']['horizon'] = args.horizon * args.num_arms
     config['env_config']['num_arms'] = args.num_arms
     config['env_config']['num_adv_strengths'] = args.num_adv_strengths
     config['env_config']['advs_per_strength'] = args.advs_per_strength
@@ -313,7 +312,7 @@ if __name__ == "__main__":
                 ray.shutdown()
                 ray.init()
 
-                run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=bandit_run_list)
+                run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=make_bandit_transfer_list(args.num_arms))
                 visualize_adversaries(config, checkpoint_path, 100, output_path)
 
                 if args.use_s3:
