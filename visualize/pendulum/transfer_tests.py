@@ -93,10 +93,9 @@ cheetah_run_list = [
     ['base', []]
 ]
 
-
 hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
-#for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
-#    hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
+for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
+    hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
 cheetah_grid = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep)
 for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).T:
     cheetah_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
