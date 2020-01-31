@@ -57,13 +57,23 @@ def make_bandit_transfer_list(num_arms):
         ['pseudorandom_base', set_pseudorandom_transfer]
     ]
     if num_arms == 2:
-        run_list.append(['hard', make_bandit_transfer_example(means=np.array([0.4, 0.6]), stds=np.array([1.0, 1.0]))])
-        run_list.append(['easy', make_bandit_transfer_example(means=np.array([0.0, 1.0]), stds=np.array([0.1, 0.1]))])
+        run_list.append(['hard', make_bandit_transfer_example(means=np.array([-0.1, 0.1]), stds=np.array([1.0, 1.0]))])
+        run_list.append(['easy', make_bandit_transfer_example(means=np.array([-1.0, 1.0]), stds=np.array([0.1, 0.1]))])
+        run_list.append(['polar', make_bandit_transfer_example(means=np.array([-1.0, 1.0]), stds=np.array([1.0, 1.0]))])
+        run_list.append(['0.3, max_std', make_bandit_transfer_example(means=np.array([-0.3, 0.3]), stds=np.array([1.0, 1.0]))])
+        run_list.append(['0.3, lopsided', make_bandit_transfer_example(means=np.array([-0.3, 0.3]), stds=np.array([0.3, 0.3]))])
+        run_list.append(['out of distribution high', make_bandit_transfer_example(means=np.array([1.5, 2.5]), stds=np.array([1.0, 1.0]))])
+        run_list.append(['out of distribution low', make_bandit_transfer_example(means=np.array([-1.5, -2.5]), stds=np.array([1.0, 1.0]))])
     elif num_arms == 5:
         run_list.append(['spread_high_std', make_bandit_transfer_example(means=np.array([-1.0, -0.5, 0.0, 0.5, 1.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0]))])
         run_list.append(['cluster_high_std', make_bandit_transfer_example(means=np.array([-0.2, -0.1, 0.0, 0.1, 0.2]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0]))])
         run_list.append(['one_good_boi', make_bandit_transfer_example(means=np.array([0.0, 0.0, 0.0, 0.0, 1.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 0.1]))])
         run_list.append(['needle_in_haystack', make_bandit_transfer_example(means=np.array([-0.5, -0.5, -0.5, -0.5, 1.0]), stds=np.array([0.1, 0.1, 0.1, 0.1, 0.1]))])
+    elif num_arms == 10:
+        run_list.append(['spread_high_std', make_bandit_transfer_example(means=np.array([-1.0, -0.75, -0.5, -0.25, -0.1, 0.1, 0.25, 0.5, 0.75, 1.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))])
+        run_list.append(['cluster_high_std', make_bandit_transfer_example(means=np.array([-0.4, -0.3, -0.2, -0.1, -0.5, 0.5, 0.1, 0.2, 0.3, 0.4]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0]))])
+        run_list.append(['one_good_boi', make_bandit_transfer_example(means=np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.1]))])
+        run_list.append(['needle_in_haystack', make_bandit_transfer_example(means=np.array([-0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 1.0]), stds=np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]))])
     return run_list
 
 # test name, is_env_config, config_value, params_name, params_value
