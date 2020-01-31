@@ -121,6 +121,8 @@ def setup_exps(args):
                         help='If true we concatenate prior actions into the state. This helps a lot for prediction.')
     parser.add_argument('--domain_randomization', action='store_true', default=False,
                         help='If true we use vanilla domain randomization over the transfer task.')
+    parser.add_argument('--extreme_domain_randomization', action='store_true', default=False,
+                        help='If true we use domain randomization across different joints/links as well')
     parser.add_argument('--cheating', action='store_true', default=False,
                         help='Enabled with domain randomization, will provide the learner with the transfer params.')
     parser.add_argument('--reward_range', action='store_true', default=False,
@@ -259,6 +261,7 @@ def setup_exps(args):
     config['env_config']['concat_actions'] = args.concat_actions
     config['env_config']['num_concat_states'] = args.num_concat_states
     config['env_config']['domain_randomization'] = args.domain_randomization
+    config['env_config']['extreme_domain_randomization'] = args.extreme_domain_randomization
     config['env_config']['cheating'] = args.cheating
     config['env_config']['l2_reward'] = args.l2_reward
     config['env_config']['kl_reward'] = args.kl_reward
@@ -385,6 +388,8 @@ def on_episode_end(info):
         env.select_new_adversary()
         if hasattr(env, 'domain_randomization') and env.domain_randomization:
             env.randomize_domain()
+        elif hasattr(env, 'extreme_domain_randomization') and env.extreme_domain_randomization:
+            env.extreme_randomize_domain()
         episode = info["episode"]
         episode.custom_metrics["num_active_advs"] = env.adversary_range
 

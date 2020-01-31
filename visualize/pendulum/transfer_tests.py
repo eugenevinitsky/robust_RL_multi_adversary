@@ -73,7 +73,6 @@ pendulum_run_list = [
 ]
 
 #hopper geoms: floor, torso, thigh, leg, foot
-#t
 hopper_run_list = [
     ['base', []],
     ['friction_hard_torsolegmax_floorthighfootmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [1, 3])],
