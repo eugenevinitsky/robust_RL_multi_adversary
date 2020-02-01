@@ -191,11 +191,18 @@ def setup_exps(args):
         config = deepcopy(DEFAULT_PPO_CONFIG)
         config['seed'] = 0
         config['train_batch_size'] = args.train_batch_size
-        config['gamma'] = 0.995
+        if args.env_name == 'cheetah':
+            config['gamma'] = 0.99
+        else:
+            config['gamma'] = 0.995
         config['vf_clip_param'] = 100.0
         if args.grid_search:
-            config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
-            config['lr'] = tune.grid_search([5e-5, 5e-4])
+            if args.env_name == 'cheetah':
+                config['lambda'] = tune.grid_search([0.9, 0.95, 1.0])
+                config ['lr'] = tune.grid_search([3e-5, 3e-4])
+            else:
+                config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
+                config['lr'] = tune.grid_search([5e-5, 5e-4])
 
         elif args.seed_search:
             config['seed'] = tune.grid_search([i for i in range(6)])
@@ -458,7 +465,7 @@ if __name__ == "__main__":
             except OSError as exc:
                 if exc.errno != errno.EEXIST:
                     raise
-        for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
+        for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results/hc_test")):
             # if "checkpoint_{}".format(args.num_iters) in dirpath:
             if "checkpoint" in dirpath:
                 # grab the experiment name
@@ -469,7 +476,6 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, dirpath.split('_')[-1])
 
                 # TODO(@ev) gross find somewhere else to put this
-
                 if config['env'] == "MALerrelPendulumEnv":
                     from visualize.pendulum.transfer_tests import pendulum_run_list
                     lerrel_run_list = pendulum_run_list
