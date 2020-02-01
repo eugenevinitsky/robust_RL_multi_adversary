@@ -192,14 +192,14 @@ def setup_exps(args):
         config['seed'] = 0
         config['train_batch_size'] = args.train_batch_size
         if args.env_name == 'cheetah':
-            config['gamma'] = 0.99
+            config['gamma'] = tune.grid_search([0.99, 0.995])
         else:
             config['gamma'] = 0.995
         config['vf_clip_param'] = 100.0
         if args.grid_search:
             if args.env_name == 'cheetah':
                 config['lambda'] = tune.grid_search([0.9, 0.95, 1.0])
-                config ['lr'] = tune.grid_search([3e-5, 3e-4])
+                config ['lr'] = tune.grid_search([1e-5, 1e-4, 1e-3])
             else:
                 config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
                 config['lr'] = tune.grid_search([5e-5, 5e-4])
