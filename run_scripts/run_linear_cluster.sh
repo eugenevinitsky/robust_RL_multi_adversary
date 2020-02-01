@@ -253,3 +253,23 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 --grid_search --use_s3 --dim 8 --multi_node --num_concat_states 25 --horizon 25 --scaling -0.8 --adv_strength 0.05 --agent_strength 0.4" \
 --start --stop --tmux --cluster-name=ev_lin_test10
 
+# 8d with low reward of -600 and lower action cost coeff
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
+--num_iters 500 --train_batch_size 60000 --num_cpus 4 --advs_per_strength 5 --low_reward -600 --action_cost_coeff 5.0 \
+--num_adv_strengths 1 --reward_range --advs_per_rew 1 --num_adv_rews 5 --exp_title linear_5adv_d8_conc25_h25_low600_coeff_5r2 --run_transfer_tests \
+--grid_search --use_s3 --dim 8 --multi_node --num_concat_states 25 --horizon 25 --scaling -0.8 --adv_strength 0.05 --agent_strength 0.4" \
+--start --stop --tmux --cluster-name=ev_lin_test11
+
+# 8d with low reward of -400 and lower action cost coeff
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
+--num_iters 500 --train_batch_size 60000 --num_cpus 4 --advs_per_strength 5 --low_reward -400 --action_cost_coeff 5.0 \
+--num_adv_strengths 1 --reward_range --advs_per_rew 1 --num_adv_rews 5 --exp_title linear_5adv_d8_conc25_h25_low400_coeff_5r2 --run_transfer_tests \
+--grid_search --use_s3 --dim 8 --multi_node --num_concat_states 25 --horizon 25 --scaling -0.8 --adv_strength 0.05 --agent_strength 0.4" \
+--start --stop --tmux --cluster-name=ev_lin_test13
+
+# 8d dr experiments and lower action cost coeff
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
+--num_iters 500 --train_batch_size 60000 --num_cpus 4 --advs_per_strength 0 --action_cost_coeff 5.0 \
+--num_adv_strengths 0 --advs_per_rew 0 --num_adv_rews 0 --exp_title linear_dr_d8_conc25_h25_coeff5_r2 --run_transfer_tests \
+--grid_search --use_s3 --dim 8 --multi_node --num_concat_states 25 --horizon 25 --scaling -0.8 --adv_strength 0.05 --agent_strength 0.4" \
+--start --stop --tmux --cluster-name=ev_lin_test12
