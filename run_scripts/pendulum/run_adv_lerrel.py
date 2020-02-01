@@ -191,15 +191,17 @@ def setup_exps(args):
         config = deepcopy(DEFAULT_PPO_CONFIG)
         config['seed'] = 0
         config['train_batch_size'] = args.train_batch_size
+        config['gamma'] = 0.995
         if args.env_name == 'cheetah':
-            config['gamma'] = tune.grid_search([0.99, 0.995])
-        else:
-            config['gamma'] = 0.995
+            config['kl_coeff'] = 1.0
+            config['clip_param'] = 0.2
+            config['grad_clip'] = 0.5
         config['vf_clip_param'] = 100.0
         if args.grid_search:
             if args.env_name == 'cheetah':
                 config['lambda'] = tune.grid_search([0.9, 0.95, 1.0])
-                config ['lr'] = tune.grid_search([1e-5, 1e-4, 5e-4])
+                config ['lr'] = tune.grid_search([5e-5, 1e-4, 5e-4])
+                config['gamma'] = tune.grid_search([0.99, 0.995])
             else:
                 config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
                 config['lr'] = tune.grid_search([5e-5, 5e-4])
