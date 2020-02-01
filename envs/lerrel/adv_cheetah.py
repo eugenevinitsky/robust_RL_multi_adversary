@@ -221,7 +221,7 @@ class AdvMAHalfCheetahEnv(HalfCheetahEnv, MultiAgentEnv):
 
                     # self._adv_to_xfrc(adv_action)
                     cheetah_action += adv_action
-                    # apply clipping to hopper action
+                    # apply clipping to cheetah action
                     if self.clip_actions:
                         cheetah_action = np.clip(obs_cheetah_action, a_min=self.action_space.low, a_max=self.action_space.high)
                 else:
@@ -375,6 +375,6 @@ class AdvMAHalfCheetahEnv(HalfCheetahEnv, MultiAgentEnv):
 
         return curr_obs
 
-def hopper_env_creator(env_config):
+def cheetah_env_creator(env_config):
     env = AdvMAHalfCheetahEnv(env_config)
     return env
