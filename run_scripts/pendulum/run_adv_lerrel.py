@@ -469,7 +469,8 @@ if __name__ == "__main__":
                     raise
         for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
             # if "checkpoint_{}".format(args.num_iters) in dirpath:
-            if "checkpoint" in dirpath:
+            if "checkpoint" in dirpath and dirpath.split('/')[-3] == args.exp_title:
+
                 # grab the experiment name
                 folder = os.path.dirname(dirpath)
                 tune_name = folder.split("/")[-1]
