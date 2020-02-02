@@ -64,7 +64,7 @@ def instantiate_rollout(rllib_config, checkpoint):
         env_name = "MultiarmBandit"
         create_env_fn = make_create_env(MultiarmBandit)
 
-    register_env(1, create_env_fn)
+    register_env(env_name, create_env_fn)
 
     # Instantiate the agent
     # create the agent that will be used to compute the actions
