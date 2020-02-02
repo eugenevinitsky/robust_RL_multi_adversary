@@ -85,7 +85,7 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
 
         # used to track the previously observed states to induce a memory
         self.obs_size = 111
-        # TODO(@kparvate) these values need to change when you change domain
+        # TODO(@kjang) friction and mass now have separate coefficients per limb, you'll have to update this appropriately
         if self.cheating:
             self.obs_size += 2
             self.friction_coef = 1.0
@@ -97,15 +97,12 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
 
         # Do the initialization
         super(AdvMAAnt, self).__init__()
-        import ipdb; ipdb.set_trace()
-        self._adv_f_bname = 'foot'
-        bnames = self.model.body_names
-        self._adv_bindex = bnames.index(
-            self._adv_f_bname)  # Index of the body on which the adversary force will be applied
+        # @todo(kjang): intialize mass values
         dr_mass_bname = 'torso'
         self.dr_bindex = bnames.index(dr_mass_bname)
         self.original_friction = np.array(self.model.geom_friction)
         self.original_mass = self.model.body_mass[self.dr_bindex]
+
         obs_space = self.observation_space
         if self.concat_actions:
             action_space = self.action_space
@@ -174,7 +171,7 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
             # the -1 corresponds to not having any adversary on at all
             self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
 
-    # TODO(@kparvate) these values need to change when you change domain
+    # TODO(@kjang) randomize the correct parameters (take a look at how yuqing does it in hopper)
     def randomize_domain(self):
         self.friction_coef = np.random.choice(hopper_friction_sweep)
         self.mass_coef = np.random.choice(hopper_mass_sweep)

@@ -10,6 +10,7 @@ import gym
 from gym.spaces import Box, Dict
 import numpy as np
 from ray.rllib.env import MultiAgentEnv
+from scipy.linalg import solve_discrete_are
 
 if sys.platform == 'darwin':
     try:
@@ -31,10 +32,24 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.dim = config['dim']
         self.scaling = config['scaling']
         self.agent_strength = np.abs(config['agent_strength'])
+        # this is how much cost we put on actions. Backwards compatibility, remove the get later.
+        self.action_cost_coeff = config['action_cost_coeff']
         # we create an env that's stable but close to the RHP
         self.A = np.identity(self.dim) * (- np.abs(self.scaling))
         self.B = np.identity(self.dim)
+        self.Q = np.identity(self.dim)
+        self.R = np.identity(self.dim) * self.action_cost_coeff
         self.perturbation_matrix = np.zeros(self.dim)
+
+        # agent starting position
+        self.start_pos = np.ones(self.dim) * 2
+        self.curr_pos = self.start_pos
+
+        self.horizon = config["horizon"]
+        self.rollout_length = config["rollout_length"]
+
+        self.step_num = 0
+        self.total_rew = 0
 
         # this is just for visualizing the position
         self.show_image = False
@@ -55,6 +70,9 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.l2_memory = config['l2_memory']
         self.l2_memory_target_coeff = config['l2_memory_target_coeff']
 
+        self.adversary_range = self.num_adv_strengths * self.advs_per_strength
+        self.curr_adversary = 0
+
         # This sets whether we should use adversaries across a reward range
         self.reward_range = config["reward_range"]
         # This sets the adversaries low reward range
@@ -67,21 +85,11 @@ class LinearEnv(MultiAgentEnv, gym.Env):
                                           num=self.num_adv_rews)
         # repeat the bins so that we can index the adversaries easily
         self.reward_targets = np.repeat(self.reward_targets, self.advs_per_rew)
+        # this tells us if we should compute regret as the reward or LQR cost as the reward
+        self.regret_reward = config['regret']
+        self.optimal_K = np.zeros((self.dim, self.dim))
 
         print('reward targets are', self.reward_targets)
-
-        # agent starting position
-        self.start_pos = np.ones(self.dim) * 2
-        self.curr_pos = self.start_pos
-
-        self.horizon = config["horizon"]
-        self.rollout_length = config["rollout_length"]
-
-        self.step_num = 0
-
-        self.adversary_range = self.num_adv_strengths * self.advs_per_strength
-        self.curr_adversary = 0
-        self.total_rew = 0
 
         # keep track of the actions that they did take
         self.action_list = []
@@ -155,26 +163,57 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         elif self.step_num == 0 and self.adversary_range == 0:
             self.perturbation_matrix = np.random.uniform(low=-self.adversary_strength, high=self.adversary_strength,
                                                          size=self.adv_action_space.low.shape[0]).reshape((self.dim, self.dim))
-
-        if not self.should_perturb:
+        elif self.step_num == 0 and not self.should_perturb:
             self.perturbation_matrix = np.zeros((self.dim, self.dim))
+        if self.step_num == 0 and self.regret_reward:
+            # NOTE, this does not have sign included. It's not really important though since the
+            # sign doesn't show up in the regret
+            self.X = solve_discrete_are(self.A + self.perturbation_matrix, self.B, self.Q, self.R)
+            self.optimal_K = np.linalg.inv(self.R + self.B.T @ self.X @ self.B) @ self.B.T @ self.X @ self.A
+
+            # # Note that these do not necessarily yield stable eigenvalues if the action cost is very high
+            # self.optimal_K = self.estimate_K(self.horizon + 1, self.A + self.perturbation_matrix, self.B)
+            # for i in range(self.horizon + 1):
+            # if np.any(np.linalg.eigvals(self.A + self.perturbation_matrix - self.B @ self.optimal_K) < -1 ):
+            #     import ipdb; ipdb.set_trace()
+            #     sys.exit("Something is messed up with your discrete ARE, it is returning unstable systems")
+
+        # if np.any(np.linalg.eigvals(self.A) < 1.1):
+        #     print('curr pos', self.curr_pos)
+        #     print('action', action_dict)
+        #     print('current reward', self.total_rew)
 
         # dynamics update
         self.curr_pos = (self.A + self.perturbation_matrix) @ self.curr_pos + self.B @ action_dict['agent']
 
         done = False
-        if self.step_num > self.horizon:
+        if self.step_num == self.horizon:
             done = True
 
         self.update_observed_obs(np.concatenate((self.curr_pos, action_dict['agent'])))
 
         curr_obs = {'agent': self.observed_states}
-        # LQR cost with Q and R being the identity
-        base_rew = -(np.linalg.norm(self.curr_pos)) - (np.linalg.norm(action_dict['agent']))
+        if self.regret_reward:
+            # this is the optimal infinite time reward
+            optim_cost = (self.start_pos.T @ self.X @ self.start_pos) / self.horizon
+            # we treat the action as a diagonal K matrix
+            agent_cost = self.curr_pos.T @ self.Q  @ self.curr_pos + action_dict['agent'].T @ self.R @ action_dict['agent']
+            regret = optim_cost - agent_cost
+            # WARNING, the regret may occasionally be positive as the finite horizon LQR does not guarantee the optimal
+            # 1 step action
+            # if regret > 5:
+            #     import ipdb; ipdb.set_trace()
+            #     print(regret)
+            #     print(self.total_rew)
+            base_rew = regret
+        else:
+            # LQR cost with Q and R being the identity. We don't take the square to keep the costs in reasonable size
+            base_rew = -(np.linalg.norm(self.curr_pos)) - self.action_cost_coeff * (np.linalg.norm(action_dict['agent']))
         self.total_rew += base_rew
+        # print(self.total_rew)
         curr_rew = {'agent': base_rew}
 
-        if self.adversary_range > 0 and self.curr_adversary > 0:
+        if self.adversary_range > 0 and self.curr_adversary >= 0:
 
             # the adversaries get observations on the final steps and on the first step
             if done:
@@ -282,6 +321,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         if self.show_image:
             self.render()
 
+
         return curr_obs
 
     def select_new_adversary(self):
@@ -321,3 +361,20 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         # cv2.resizeWindow('image', 1000, 1000)
         # cv2.imshow("image", img)
         # cv2.waitKey(2)
+
+    def estimate_K(self, horizon, A, B):
+        """Solve for K recursively. Note that this returns -K so you don't need to add a sign to the matrix product with the state."""
+        Q, R = self.Q, self.R
+        # Calculate P matrices first for each step
+        P_matrices = np.zeros((horizon + 1, Q.shape[0], Q.shape[1]))
+        P_matrices[horizon] = Q
+        for i in range(horizon - 1, 0, -1):
+            P_t = P_matrices[i + 1]
+            P_matrices[i] = Q + (A.T @ P_t @ A) - (A.T @ P_t @ B @ np.matmul(np.linalg.inv(R + B.T @ P_t @ B), B.T @ P_t @ A))
+        # Hardcoded shape of K, change to inferred shape for diverse testing
+        K_matrices = np.zeros((horizon, self.dim, self.dim))
+        for i in range(horizon):
+            P_i = P_matrices[i + 1]
+            K_matrices[i] = -np.matmul(np.linalg.inv(R + B.T @ P_i @ B), B.T @ P_i @ A)
+        return K_matrices
+

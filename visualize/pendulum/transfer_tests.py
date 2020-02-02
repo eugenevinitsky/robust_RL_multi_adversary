@@ -41,18 +41,16 @@ def make_set_mass_and_fric(friction_coef, mass_coef, mass_body='pole'):
         bindex = bnames.index(mass_bname)
         env.model.body_mass[bindex] = (env.model.body_mass[bindex] * mass_coef)
         env.model.geom_friction[:] = (env.model.geom_friction * friction_coef)[:]
+    return set_mass 
+
+def make_set_fric_hard(max_fric_coeff, min_fric_coeff, high_fric_idx, mass_body='pole'):
+    def set_mass(env):
+        env.model.geom_friction[high_fric_idx] = (env.model.geom_friction * max_fric_coeff)[high_fric_idx]
+        low_fric_idx = np.ones(len(env.model.geom_friction), np.bool)
+        low_fric_idx[high_fric_idx] = 0
+        env.model.geom_friction[low_fric_idx] = (env.model.geom_friction * min_fric_coeff)[low_fric_idx]
     return set_mass
 
-def make_ant_transfer_test(friction_coefs, mass_body='pole'):
-    def modify_env(env):
-        import ipdb; ipdb.set_trace()
-        mass_bname = 'torso'
-        bnames = env.model.body_names
-        bindex = bnames.index(mass_bname)
-        env.model.body_mass[bindex] = (env.model.body_mass[bindex] * mass_coef)
-        env.model.geom_friction[:] = (env.model.geom_friction * friction_coef)[:]
-    return modify_env
-    
 
 # test name, is_env_config, config_value, params_name, params_value
 run_list = [
@@ -72,28 +70,38 @@ pendulum_run_list = [
     ['mass125', make_set_mass(mass_list[3])],
     ['mass15', make_set_mass(mass_list[4])],
 ]
-
+#hopper geoms: floor, torso, thigh, leg, foot
 hopper_run_list = [
     ['base', []]
 ]
+hopper_test_list=[
+    ['friction_hard_torsolegmax_floorthighfootmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [1, 3])],
+    ['friction_hard_floorthighmax_torsolegfootmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [0, 2])],
+    ['friction_hard_footlegmax_floortorsothighmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [3, 4])],
+    ['friction_hard_torsothighfloormax_footlegmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [0, 1, 2])],
+    ['friction_hard_torsofootmax_floorthighlegmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [1, 4])],
+    ['friction_hard_floorthighlegmax_torsofootmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [0, 3, 2])],
+    ['friction_hard_floorfootmax_torsothighlegmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [4, 0])],
+    ['friction_hard_thighlegmax_floortorsofootmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [2, 3])],
+]
+num_hopper_custom_tests = len(hopper_run_list)
 
+#cheetah geoms: ('floor', 'torso', 'head', 'bthigh', 'bshin', 'bfoot', 'fthigh', 'fshin', 'ffoot')
 cheetah_run_list = [
     ['base', []]
 ]
 
+#@todo(kjang): you'll need to do something basically identical the hopper ^ for ant
 ant_run_list = [
     ['base', []]
 ]
 
-# TODO @evinitsky add call make_ant_transfer_test w/ appropriate transfer parameters and append to ant_run_list
-
-grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
-for mass, fric in np.vstack((grid[0].ravel(), grid[1].ravel())).T:
+hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
+for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
     hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
-
 cheetah_grid = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep)
-for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).T:
-    cheetah_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
+#for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).T:
+#    cheetah_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
 
 
 # for x in np.linspace(1, 15.0, 15):
@@ -191,35 +199,25 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
               'wb') as file:
         np.save(file, np.array(temp_output))
 
-    if 'Hopper' == rllib_config['env']:
-        reward_means = np.array(temp_output)[1:, 0].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
+    if 'MALerrelHopperEnv' == rllib_config['env'] and len(temp_output) > num_hopper_custom_tests:
+        reward_means = np.array(temp_output)[num_hopper_custom_tests:, 0].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
         output_name = output_file_name + 'rew'
         save_heatmap(reward_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'hopper')
 
-        step_means = np.array(temp_output)[1:, 2].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
+        step_means = np.array(temp_output)[num_hopper_custom_tests:, 2].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
         output_name = output_file_name + 'steps'
         save_heatmap(step_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'hopper')
 
-    if 'Cheetah' == rllib_config['env']:
+    if 'MALerrelCheetahEnv' == rllib_config['env']:
         reward_means = np.array(temp_output)[1:, 0].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
         output_name = output_file_name + 'rew'
-        save_heatmap(reward_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'cheetah')
+        save_heatmap(reward_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
 
         step_means = np.array(temp_output)[1:, 2].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
         output_name = output_file_name + 'steps'
-        save_heatmap(step_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'cheetah')
+        save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
 
-    # TODO(kparvate) change this for ant
-    if 'Cheetah' == rllib_config['env']:
-        reward_means = np.array(temp_output)[1:, 0].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
-        output_name = output_file_name + 'rew'
-        save_heatmap(reward_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'cheetah')
-
-        step_means = np.array(temp_output)[1:, 2].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
-        output_name = output_file_name + 'steps'
-        save_heatmap(step_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'cheetah')
-
-    elif 'Pendulum' in rllib_config['env']:
+    elif 'MALerrelPendulumEnv' in rllib_config['env']:
         means = np.array(temp_output)[1:, 0]
         with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"), 'wb') as transfer_robustness:
             fig = plt.figure()
@@ -277,6 +275,7 @@ if __name__ == '__main__':
                         help='The file name we use to save our results')
     parser.add_argument('--output_dir', type=str, default=output_path,
                         help='')
+    parser.add_argument('--run_holdout',  action='store_true', default=False, help='If true, run holdout tests')
 
     parser = replay_parser(parser)
     args = parser.parse_args()
@@ -287,7 +286,10 @@ if __name__ == '__main__':
     if rllib_config['env'] == "MALerrelPendulumEnv":
         lerrel_run_list = pendulum_run_list
     elif rllib_config['env'] == "MALerrelHopperEnv":
-        lerrel_run_list = hopper_run_list
+        if args.run_holdout:
+            lerrel_run_list = hopper_test_list
+        else:
+            lerrel_run_list = hopper_run_list
     elif rllib_config['env'] == "MALerrelCheetahEnv":
         lerrel_run_list = cheetah_run_list
     elif rllib_config['env'] == "MALerrelAntEnv":

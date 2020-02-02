@@ -16,7 +16,7 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
 
     for (dirpath, dirnames, filenames) in os.walk(exp_path):
         for run in filenames:
-            if "sweep_rew.txt" in run:
+            if "domain_rand_rew" in run:
                 titles.append(dirpath.split("/")[-1][0:5])
                 results.append(np.mean(np.load(os.path.join(dirpath, run))))
 
@@ -25,7 +25,25 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
     plt.xticks(range(len(titles)), titles)
     if show_plots:
         plt.show()
-    with open('{}/{}_{}.png'.format(output_path, exp_name, "results"),'wb') as result_plot:
+    with open('{}/{}_{}.png'.format(output_path, exp_name, "domain_rand_transfer"),'wb') as result_plot:
+        plt.savefig(result_plot)
+
+
+    results = []
+    titles = []
+    plt.figure(figsize=(10, 5))
+    for (dirpath, dirnames, filenames) in os.walk(exp_path):
+        for run in filenames:
+            if "base_sweep_rew" in run:
+                titles.append(dirpath.split("/")[-1][0:5])
+                results.append(np.mean(np.load(os.path.join(dirpath, run))))
+
+    xrange = np.arange(len(results))
+    plt.bar(xrange, results)
+    plt.xticks(range(len(titles)), titles)
+    if show_plots:
+        plt.show()
+    with open('{}/{}_{}.png'.format(output_path, exp_name, "base_score"),'wb') as result_plot:
         plt.savefig(result_plot)
 
 

@@ -39,16 +39,10 @@ def setup_ma_config(config, create_env):
     adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}}
 
     # for both of these we need a graph that zeros out agents that weren't active
-    if (config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
-        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
-        policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
-                                                env.adv_action_space, adversary_config) for i in
-                              range(num_adversaries)})
-    else:
-        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
-        policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
-                                                env.adv_action_space, adversary_config) for i in
-                              range(num_adversaries)})
+    policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+    policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
+                                            env.adv_action_space, adversary_config) for i in
+                          range(num_adversaries)})
 
     # TODO(@evinitsky) put this back
     # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
@@ -80,13 +74,13 @@ def setup_exps(args):
     parser = init_parser()
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
-    parser.add_argument('--horizon', type=int, default=40)
+    parser.add_argument('--horizon', type=int, default=100)
     parser.add_argument('--rollout_length', type=int, default=5, help='How many steps we take before being reset')
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO')
     parser.add_argument('--dim', type=int, default=2, help='Dimension of the matrices')
     parser.add_argument('--scaling', type=float, default=-0.2, help='Eigenvalues of the A matrix')
-    parser.add_argument('--agent_strength', type=float, default=0.8)
-    parser.add_argument('--adv_strength', type=float, default=0.3, help='Strength of active adversaries in the env')
+    parser.add_argument('--agent_strength', type=float, default=0.5)
+    parser.add_argument('--adv_strength', type=float, default=0.5, help='Strength of active adversaries in the env')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
                                                                          'Multiply this by `advs_per_strength` to get the total number of adversaries'
                                                                          'Default - retrain lerrel, single agent')
@@ -118,16 +112,23 @@ def setup_exps(args):
                              'but WAY fast')
     parser.add_argument('--l2_memory_target_coeff', type=float, default=0.05,
                         help='The coefficient used to update the running mean if l2_memory is true')
+    parser.add_argument('--action_cost_coeff', type=float, default=5.0,
+                        help='Scaling on the norm of the actions to penalize the agent for taking large actions')
+    parser.add_argument('--regret', action='store_true', default=False,
+                        help='If true, the cost is computed in terms of regret. If false, it\'s the l2 cost')
+
     args = parser.parse_args(args)
 
     if args.reward_range and args.num_adv_strengths * args.advs_per_strength <= 0:
         sys.exit('must specify number of strength levels, number of adversaries when using reward range')
     if (args.num_adv_strengths * args.advs_per_strength != args.num_adv_rews * args.advs_per_rew) and args.reward_range:
         sys.exit('Your number of adversaries per reward range must match the total number of adversaries')
-    if args.scaling + args.dim * args.adv_strength > args.agent_strength:
+
+    # warning, scaling should always be negative, all the strengths should be positive
+    if np.abs(args.scaling + np.abs(args.dim * args.adv_strength) - np.abs(args.agent_strength)) > 1:
         sys.exit('The adversary can always make the env unstable')
 
-    if args.scaling + args.dim * args.adv_strength < 0:
+    if np.abs(args.scaling - np.abs(args.dim * args.adv_strength)) < 1:
         sys.exit('The adversary cannot make the env unstable')
 
     alg_run = args.algorithm
@@ -138,7 +139,7 @@ def setup_exps(args):
         config['gamma'] = 0.95
         if args.grid_search:
             config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
-            config['lr'] = tune.grid_search([5e-4, 5e-3])
+            config['lr'] = tune.grid_search([5e-4, 5e-5])
         else:
             config['lambda'] = 0.97
             config['lr'] = 5e-4
@@ -174,6 +175,8 @@ def setup_exps(args):
     config['env_config']['l2_in_tranche'] = args.l2_in_tranche
     config['env_config']['l2_memory'] = args.l2_memory
     config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
+    config['env_config']['action_cost_coeff'] = args.action_cost_coeff
+    config['env_config']['regret'] = args.regret
 
     config['env_config']['run'] = alg_run
 

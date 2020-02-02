@@ -121,6 +121,8 @@ def setup_exps(args):
                         help='If true we concatenate prior actions into the state. This helps a lot for prediction.')
     parser.add_argument('--domain_randomization', action='store_true', default=False,
                         help='If true we use vanilla domain randomization over the transfer task.')
+    parser.add_argument('--extreme_domain_randomization', action='store_true', default=False,
+                        help='If true we use domain randomization across different joints/links as well')
     parser.add_argument('--cheating', action='store_true', default=False,
                         help='Enabled with domain randomization, will provide the learner with the transfer params.')
     parser.add_argument('--reward_range', action='store_true', default=False,
@@ -189,11 +191,19 @@ def setup_exps(args):
         config = deepcopy(DEFAULT_PPO_CONFIG)
         config['seed'] = 0
         config['train_batch_size'] = args.train_batch_size
-        config['gamma'] = 0.995
+        if args.env_name == 'cheetah':
+            config['kl_coeff'] = 1.0
+            config['clip_param'] = 0.2
+            config['grad_clip'] = 0.5
+            config['gamma'] = 0.99
         config['vf_clip_param'] = 100.0
         if args.grid_search:
-            config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
-            config['lr'] = tune.grid_search([5e-5, 5e-4])
+            if args.env_name == 'cheetah':
+                config['lambda'] = tune.grid_search([0.9, 0.95, 1.0])
+                config ['lr'] = tune.grid_search([1e-4, 5e-4])
+            else:
+                config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
+                config['lr'] = tune.grid_search([5e-5, 5e-4])
 
         elif args.seed_search:
             config['seed'] = tune.grid_search([i for i in range(6)])
@@ -259,6 +269,7 @@ def setup_exps(args):
     config['env_config']['concat_actions'] = args.concat_actions
     config['env_config']['num_concat_states'] = args.num_concat_states
     config['env_config']['domain_randomization'] = args.domain_randomization
+    config['env_config']['extreme_domain_randomization'] = args.extreme_domain_randomization
     config['env_config']['cheating'] = args.cheating
     config['env_config']['l2_reward'] = args.l2_reward
     config['env_config']['kl_reward'] = args.kl_reward
@@ -385,6 +396,8 @@ def on_episode_end(info):
         env.select_new_adversary()
         if hasattr(env, 'domain_randomization') and env.domain_randomization:
             env.randomize_domain()
+        elif hasattr(env, 'extreme_domain_randomization') and env.extreme_domain_randomization:
+            env.extreme_randomize_domain()
         episode = info["episode"]
         episode.custom_metrics["num_active_advs"] = env.adversary_range
 
@@ -453,7 +466,7 @@ if __name__ == "__main__":
             except OSError as exc:
                 if exc.errno != errno.EEXIST:
                     raise
-        for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
+        for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results/hc_test")):
             # if "checkpoint_{}".format(args.num_iters) in dirpath:
             if "checkpoint" in dirpath:
                 # grab the experiment name
@@ -464,7 +477,6 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, dirpath.split('_')[-1])
 
                 # TODO(@ev) gross find somewhere else to put this
-
                 if config['env'] == "MALerrelPendulumEnv":
                     from visualize.pendulum.transfer_tests import pendulum_run_list
                     lerrel_run_list = pendulum_run_list
