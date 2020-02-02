@@ -148,7 +148,7 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
         high = [self.max_mean_reward] * self.num_arms + [self.max_std] * self.num_arms
         return Box(low=np.array(low), high=np.array(high))
 
-    def step(self, action_dict):
+    def step(self, action_dict, custom_strategy=None):
         if self.step_num == 0:
             if self.transfer:
                 prng = np.random.RandomState(self.rollout_num)
@@ -181,8 +181,13 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
 
             self.means = self.means[random_arm_order]
             self.std_devs = self.std_devs[random_arm_order]
+            print(self.means, self.std_devs)
 
-        arm_choice = action_dict['agent']
+        if custom_strategy:
+            arm_choice = custom_strategy(self, self.step_num)
+        else:
+            arm_choice = action_dict['agent']
+        print(arm_choice)
         base_rew = np.random.normal(loc=self.means[arm_choice], scale=self.std_devs[arm_choice])
         if self.regret:
             base_rew = base_rew - max(self.means)
@@ -244,6 +249,7 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
                         # we get rewarded for being far away for other agents
                         adv_rew_dict = {'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]
                                         + l2_dists_mean * self.l2_reward_coeff}
+                        # print(adv_reward[self.curr_adversary], l2_dists_mean * self.l2_reward_coeff)
                         curr_rew.update(adv_rew_dict)
                     else:
                         is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]

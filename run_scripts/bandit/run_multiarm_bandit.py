@@ -79,8 +79,9 @@ def setup_ma_config(config, create_env):
     }})
 
 
-def setup_exps(args):
-    parser = init_parser()
+def setup_exps(args, parser=None):
+    if not parser:
+        parser = init_parser()
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
     parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?',
@@ -311,7 +312,6 @@ if __name__ == "__main__":
 
                 ray.shutdown()
                 ray.init()
-
                 run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path, run_list=make_bandit_transfer_list(args.num_arms))
                 visualize_adversaries(config, checkpoint_path, 100, output_path)
 

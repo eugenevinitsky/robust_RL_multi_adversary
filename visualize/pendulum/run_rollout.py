@@ -64,7 +64,7 @@ def instantiate_rollout(rllib_config, checkpoint):
         env_name = "MultiarmBandit"
         create_env_fn = make_create_env(MultiarmBandit)
 
-    register_env(env_name, create_env_fn)
+    register_env(1, create_env_fn)
 
     # Instantiate the agent
     # create the agent that will be used to compute the actions
@@ -97,6 +97,40 @@ def instantiate_rollout(rllib_config, checkpoint):
 
     return env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init
 
+def run_non_rl_rollout(env, strategy, num_rollouts):
+    """ Runs a set of rollouts on the env using 'strategy' for the agent. Note that strategy must be a function
+    that takes an env, and returns the agent's action
+    """
+    rewards = []
+    step_nums = []
+
+    # actually do the rollout
+    for r_itr in range(num_rollouts):
+        obs = env.reset()
+        prev_rewards = collections.defaultdict(lambda: 0.)
+        done = False
+        reward_total = 0.0
+        step_num = 0
+        while not done:
+            step_num += 1
+            # we turn the adversaries off so you only send in the pendulum keys
+            next_obs, reward, done, info = env.step({}, custom_strategy=strategy)
+            # we only want the robot reward, not the adversary reward
+            reward_total += info['agent']['agent_reward']
+            obs = next_obs
+
+            if isinstance(done, dict):
+                done = done['__all__']
+
+        print("Episode reward", reward_total)
+
+        rewards.append(reward_total)
+        step_nums.append(step_num)
+
+    env.close()
+
+    print('the average reward is ', np.mean(rewards))
+    return rewards, step_num
 
 def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init, num_rollouts, render, adv_num=None):
 

@@ -19,15 +19,9 @@ def load_data(results_path):
     for (dirpath, dirnames, filenames) in os.walk(results_path):
         for run in filenames:
             if "sweep_rew.txt" in run and 'with_adv' not in run:
-                tag = dirpath.split("/")[-2][7:-13]
+                tag = dirpath
                 run_results = np.load(os.path.join(dirpath, run))
-
-                base_score = run_results[0, 0]
-                means = run_results[1:, 0]
-                stds = run_results[1:, 1]
-                step_means = run_results[1:, 2]
-                step_stds = run_results[1:, 3]
-                all_file_names[tag] = (base_score, means, stds, step_means, step_stds, dirpath)
+                all_file_names[tag] = run_results, dirpath
 
     return all_file_names
 
@@ -35,7 +29,8 @@ def make_heatmap(results_path, exp_type, output_path, show=False):
     sweep_data = load_data(results_path)
     for file_name in sweep_data:
         print(file_name)
-        _, means, _, _, _, dirpath = sweep_data[file_name]
+        run_results, dirpath = sweep_data[file_name]
+        means = run_results[1:, 0]
         # TODO(@evinitsky) remove hardcoding
         if exp_type == 'hopper':
             means = means.reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
