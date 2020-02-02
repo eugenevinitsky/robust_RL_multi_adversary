@@ -138,7 +138,7 @@ def setup_exps(args, parser=None):
     if args.algorithm == 'PPO':
         config = deepcopy(DEFAULT_PPO_CONFIG)
         config['train_batch_size'] = args.train_batch_size
-        config['gamma'] = 0.95
+        config['gamma'] = 1.0
         if args.grid_search:
             config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
         else:
