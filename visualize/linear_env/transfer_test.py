@@ -86,6 +86,62 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
               'wb') as file:
         np.save(file, np.array(rew_list))
 
+    # set the adversary range to zero so that we get domain randomization.
+    # here we specifically focus on unstable systems
+    env.adversary_range = 0
+    env.should_perturb = False
+    rew_list = []
+    sample_idx = 0
+    original_A = env.A
+    while sample_idx < num_rollouts:
+        prev_actions = DefaultMapping(
+            lambda agent_id: action_init[mapping_cache[agent_id]])
+        prev_rewards = collections.defaultdict(lambda: 0.)
+        obs = env.reset()
+        # here we set the A matrix manually to have eigenvalues that could be outside the unit circle
+        # with uniform probability.
+        eigv_range = np.abs(env.adversary_strength * env.dim)
+        dim = env.dim
+        # to make life easy, we sample on the real line and not the complex plane
+        eigs = np.random.uniform(low=-eigv_range, high=-eigv_range / 2, size=dim)
+        diag_mat = np.diag(eigs)
+        # now sample some unitary matrices
+        orthonormal_mat = ortho_group.rvs(dim)
+        env.A = original_A + orthonormal_mat.T @ diag_mat @ orthonormal_mat
+
+        action_dict = {}
+        # we have an is_active key here
+        # multi_obs = {'agent': obs}
+        done = {}
+        rew = 0
+        done['__all__'] = False
+        while not done['__all__']:
+            for agent_id, a_obs in obs.items():
+                if a_obs is not None:
+                    policy_id = mapping_cache.setdefault(
+                        agent_id, policy_agent_mapping(agent_id))
+                    p_use_lstm = use_lstm[policy_id]
+                    if not p_use_lstm:
+                        flat_obs = _flatten_action(a_obs)
+                        a_action = agent.compute_action(
+                            flat_obs,
+                            prev_action=prev_actions[agent_id],
+                            prev_reward=prev_rewards[agent_id],
+                            policy_id=policy_id)
+                    prev_actions[agent_id] = a_action
+                    action_dict[agent_id] = a_action
+            obs, reward, done, info = env.step(action_dict)
+
+            for agent_id, r in reward.items():
+                prev_rewards[agent_id] = r
+            rew += reward['agent']
+        rew_list.append(rew)
+        sample_idx += 1
+
+    with open('{}/{}_{}_rew'.format(outdir, output_file_name, "hard_domain_rand"),
+              'wb') as file:
+        np.save(file, np.array(rew_list))
+
     # compute the base score just on the env alone without randomization. Make sure to put the
     # A matrix back to what it should be
     env.A = original_A
