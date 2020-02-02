@@ -122,7 +122,7 @@ def run_non_rl_rollout(env, strategy, num_rollouts):
             if isinstance(done, dict):
                 done = done['__all__']
 
-        print("Episode reward", reward_total)
+        # print("Episode reward", reward_total)
 
         rewards.append(reward_total)
         step_nums.append(step_num)

@@ -71,7 +71,7 @@ def make_bandit_transfer_list(num_arms):
         run_list.append(['needle_in_haystack', make_bandit_transfer_example(means=np.array([-0.5, -0.5, -0.5, -0.5, 1.0]), stds=np.array([0.1, 0.1, 0.1, 0.1, 0.1]))])
     elif num_arms == 10:
         run_list.append(['spread_high_std', make_bandit_transfer_example(means=np.array([-1.0, -0.75, -0.5, -0.25, -0.1, 0.1, 0.25, 0.5, 0.75, 1.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))])
-        run_list.append(['cluster_high_std', make_bandit_transfer_example(means=np.array([-0.4, -0.3, -0.2, -0.1, -0.5, 0.5, 0.1, 0.2, 0.3, 0.4]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0]))])
+        run_list.append(['cluster_high_std', make_bandit_transfer_example(means=np.array([-0.4, -0.3, -0.2, -0.1, -0.5, 0.5, 0.1, 0.2, 0.3, 0.4]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))])
         run_list.append(['one_good_boi', make_bandit_transfer_example(means=np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.1]))])
         run_list.append(['needle_in_haystack', make_bandit_transfer_example(means=np.array([-0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 1.0]), stds=np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]))])
     return run_list

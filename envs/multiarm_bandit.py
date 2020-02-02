@@ -74,7 +74,6 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
                                           num=self.num_adv_strengths)
         # repeat the bins so that we can index the adversaries easily
         self.reward_targets = np.repeat(self.reward_targets, self.advs_per_strength)
-        print('reward targets are', self.reward_targets)
 
         self.horizon = config["horizon"]
         self.step_num = 0
@@ -179,16 +178,21 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
                 self.std_devs = np.random.uniform(low=self.min_std, high=self.max_std, size=self.num_arms)
                 random_arm_order = np.random.permutation(self.num_arms)
 
+            if custom_strategy:
+                custom_strategy.reset()
+
             self.means = self.means[random_arm_order]
             self.std_devs = self.std_devs[random_arm_order]
-            print(self.means, self.std_devs)
 
         if custom_strategy:
-            arm_choice = custom_strategy(self, self.step_num)
+            arm_choice = custom_strategy.get_arm(self, self.step_num)
         else:
             arm_choice = action_dict['agent']
-        print(arm_choice)
         base_rew = np.random.normal(loc=self.means[arm_choice], scale=self.std_devs[arm_choice])
+
+        if custom_strategy:
+            custom_strategy.add_reward(arm_choice, base_rew)
+
         if self.regret:
             base_rew = base_rew - max(self.means)
         done = self.step_num > self.horizon
@@ -249,7 +253,6 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
                         # we get rewarded for being far away for other agents
                         adv_rew_dict = {'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]
                                         + l2_dists_mean * self.l2_reward_coeff}
-                        # print(adv_reward[self.curr_adversary], l2_dists_mean * self.l2_reward_coeff)
                         curr_rew.update(adv_rew_dict)
                     else:
                         is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]

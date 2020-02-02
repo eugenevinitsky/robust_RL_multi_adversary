@@ -157,7 +157,7 @@ def setup_exps(args, parser=None):
     config['num_workers'] = args.num_cpus
     config['seed'] = 0
 
-    config['env_config']['horizon'] = args.horizon * args.num_arms
+    config['env_config']['horizon'] = args.horizon
     config['env_config']['num_arms'] = args.num_arms
     config['env_config']['num_adv_strengths'] = args.num_adv_strengths
     config['env_config']['advs_per_strength'] = args.advs_per_strength
