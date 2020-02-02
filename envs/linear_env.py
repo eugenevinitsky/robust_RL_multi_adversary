@@ -174,9 +174,9 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             # # Note that these do not necessarily yield stable eigenvalues if the action cost is very high
             # self.optimal_K = self.estimate_K(self.horizon + 1, self.A + self.perturbation_matrix, self.B)
             # for i in range(self.horizon + 1):
-            if np.any(np.linalg.eigvals(self.A + self.perturbation_matrix - self.B @ self.optimal_K) < -1 ):
-                import ipdb; ipdb.set_trace()
-                sys.exit("Something is messed up with your discrete ARE, it is returning unstable systems")
+            # if np.any(np.linalg.eigvals(self.A + self.perturbation_matrix - self.B @ self.optimal_K) < -1 ):
+            #     import ipdb; ipdb.set_trace()
+            #     sys.exit("Something is messed up with your discrete ARE, it is returning unstable systems")
 
         # if np.any(np.linalg.eigvals(self.A) < 1.1):
         #     print('curr pos', self.curr_pos)
@@ -195,7 +195,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         curr_obs = {'agent': self.observed_states}
         if self.regret_reward:
             # this is the optimal infinite time reward
-            optim_cost = self.start_pos.T @ self.X @ self.start_pos
+            optim_cost = (self.start_pos.T @ self.X @ self.start_pos) / self.horizon
             # we treat the action as a diagonal K matrix
             agent_cost = self.curr_pos.T @ self.Q  @ self.curr_pos + action_dict['agent'].T @ self.R @ action_dict['agent']
             regret = optim_cost - agent_cost
