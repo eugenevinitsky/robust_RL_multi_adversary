@@ -32,7 +32,10 @@
 #ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_5adv_concat1_rew_l1000_h3500_str0p25_all 700 \
 #01-29-2020" --start --stop --tmux --cluster-name=ev_results_1
 
-# results from final ICML run
+# results from final ICML run, 2/01
 
-ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat10_grid_dr 700 \
-01-31-2020" --start --stop --tmux --cluster-name=ev_results_1
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat1_grid 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_1
+
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat10_grid 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_2
