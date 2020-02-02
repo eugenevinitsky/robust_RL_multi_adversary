@@ -74,7 +74,7 @@ def setup_exps(args):
     parser = init_parser()
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
-    parser.add_argument('--horizon', type=int, default=40)
+    parser.add_argument('--horizon', type=int, default=100)
     parser.add_argument('--rollout_length', type=int, default=5, help='How many steps we take before being reset')
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO')
     parser.add_argument('--dim', type=int, default=2, help='Dimension of the matrices')
@@ -112,8 +112,10 @@ def setup_exps(args):
                              'but WAY fast')
     parser.add_argument('--l2_memory_target_coeff', type=float, default=0.05,
                         help='The coefficient used to update the running mean if l2_memory is true')
-    parser.add_argument('--action_cost_coeff', type=float, default=20.0,
+    parser.add_argument('--action_cost_coeff', type=float, default=5.0,
                         help='Scaling on the norm of the actions to penalize the agent for taking large actions')
+    parser.add_argument('--regret', action='store_true', default=False,
+                        help='If true, the cost is computed in terms of regret. If false, it\'s the l2 cost')
 
     args = parser.parse_args(args)
 
@@ -174,6 +176,7 @@ def setup_exps(args):
     config['env_config']['l2_memory'] = args.l2_memory
     config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
     config['env_config']['action_cost_coeff'] = args.action_cost_coeff
+    config['env_config']['regret'] = args.regret
 
     config['env_config']['run'] = alg_run
 
