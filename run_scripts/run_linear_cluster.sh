@@ -187,7 +187,7 @@
 
 # second round of experiments
 
-# 2d experiments with low of 100
+# 2d experiments with low of -100
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
 --num_iters 500 --train_batch_size 20000 --num_cpus 4 --advs_per_strength 5 --low_reward -100 \
 --num_adv_strengths 1 --reward_range --advs_per_rew 1 --num_adv_rews 5 --exp_title linear_5adv_d2_conc25_h25_low100_r2 --run_transfer_tests \
