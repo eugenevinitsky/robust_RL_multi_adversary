@@ -1,5 +1,6 @@
 from gym.envs.mujoco.ant import AntEnv
 from gym.spaces import Box, Dict
+from copy import deepcopy
 import numpy as np
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
@@ -34,6 +35,7 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
         self.concat_actions = config["concat_actions"]
         # This is whether we concatenate the agent action into the observation
         self.domain_randomization = config["domain_randomization"]
+        self.extreme_domain_randomization = config["extreme_domain_randomization"]
         self.cheating = config["cheating"]
         # whether the adversaries are receiving penalties for being too similar
         self.l2_reward = config['l2_reward']
@@ -100,8 +102,8 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
         # @todo(kjang): intialize mass values
         dr_mass_bname = 'torso'
         self.dr_bindex = bnames.index(dr_mass_bname)
-        self.original_friction = np.array(self.model.geom_friction)
-        self.original_mass = self.model.body_mass[self.dr_bindex]
+        self.original_friction = deepcopy(np.array(self.model.geom_friction))
+        self.original_mass = deepcopy(self.model.body_mass[self.dr_bindex])
 
         obs_space = self.observation_space
         if self.concat_actions:
@@ -170,6 +172,16 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
         if self.adversary_range > 0:
             # the -1 corresponds to not having any adversary on at all
             self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
+
+    def extreme_randomize_domain(self):
+        num_geoms = len(self.model.geom_friction)
+        num_masses = len(self.model.body_mass)
+
+        self.friction_coef = np.random.choice(hopper_friction_sweep, num_geoms)[:, np.newaxis]
+        self.mass_coef = np.random.choice(hopper_mass_sweep, num_masses)
+
+        self.model.body_mass[:] = (self.original_mass_all * self.mass_coef)
+        self.model.geom_friction[:] = (self.original_friction * self.friction_coef)
 
     # TODO(@kjang) randomize the correct parameters (take a look at how yuqing does it in hopper)
     def randomize_domain(self):
