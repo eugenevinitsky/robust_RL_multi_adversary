@@ -34,7 +34,7 @@ if not os.path.exists(output_path):
             raise
 
 # now run sync_s3
-p1 = subprocess.Popen(os.path.expanduser("~/adversarial_sim2real/run_scripts/s3_sync.sh"))
+p1 = subprocess.Popen(os.path.expanduser("~/adversarial_sim2real/run_scripts/s3_sync.sh {}".format(date)).split(' '))
 p1.wait()
 
 for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/s3_test")):
