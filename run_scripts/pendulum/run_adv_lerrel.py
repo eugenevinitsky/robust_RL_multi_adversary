@@ -467,7 +467,7 @@ if __name__ == "__main__":
             except OSError as exc:
                 if exc.errno != errno.EEXIST:
                     raise
-        for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results/hc_test")):
+        for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
             # if "checkpoint_{}".format(args.num_iters) in dirpath:
             if "checkpoint" in dirpath:
                 # grab the experiment name
