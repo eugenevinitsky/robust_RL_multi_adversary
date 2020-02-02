@@ -197,13 +197,16 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         np.save(file, np.array(temp_output))
 
     if 'MALerrelHopperEnv' == rllib_config['env'] and len(temp_output) > num_hopper_custom_tests:
-        reward_means = np.array(temp_output)[num_hopper_custom_tests:, 0].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
-        output_name = output_file_name + 'rew'
-        save_heatmap(reward_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'hopper')
+        try:
+            reward_means = np.array(temp_output)[num_hopper_custom_tests:, 0].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
+            output_name = output_file_name + 'rew'
+            save_heatmap(reward_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'hopper')
 
-        step_means = np.array(temp_output)[num_hopper_custom_tests:, 2].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
-        output_name = output_file_name + 'steps'
-        save_heatmap(step_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'hopper')
+            step_means = np.array(temp_output)[num_hopper_custom_tests:, 2].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
+            output_name = output_file_name + 'steps'
+            save_heatmap(step_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'hopper')
+        except:
+            pass
 
     if 'MALerrelCheetahEnv' == rllib_config['env']:
         reward_means = np.array(temp_output)[1:, 0].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))

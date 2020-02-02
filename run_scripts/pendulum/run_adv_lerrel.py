@@ -207,7 +207,7 @@ def setup_exps(args):
                 config['lr'] = tune.grid_search([5e-5, 5e-4])
 
         elif args.seed_search:
-            config['seed'] = tune.grid_search([i for i in range(6)])
+            config['seed'] = tune.grid_search([i for i in range(10)])
             config['lr'] = args.lr
             config['lambda'] = args.lambda_val
         else:
@@ -478,13 +478,15 @@ if __name__ == "__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, dirpath.split('_')[-1])
 
+                test_list = []
                 # TODO(@ev) gross find somewhere else to put this
                 if config['env'] == "MALerrelPendulumEnv":
                     from visualize.pendulum.transfer_tests import pendulum_run_list
                     lerrel_run_list = pendulum_run_list
                 elif config['env'] == "MALerrelHopperEnv":
-                    from visualize.pendulum.transfer_tests import hopper_run_list
+                    from visualize.pendulum.transfer_tests import hopper_run_list, hopper_test_list
                     lerrel_run_list = hopper_run_list
+                    test_list = hopper_test_list
                 elif config['env'] == "MALerrelCheetahEnv":
                     from visualize.pendulum.transfer_tests import cheetah_run_list
                     lerrel_run_list = cheetah_run_list
@@ -496,6 +498,9 @@ if __name__ == "__main__":
                 ray.shutdown()
                 ray.init()
                 run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=lerrel_run_list)
+                if len(test_list) > 0:
+                    run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=test_list)
+
                 sample_actions(config, checkpoint_path, min(2 * args.train_batch_size, 20000), output_path)
 
                 if args.use_s3:
