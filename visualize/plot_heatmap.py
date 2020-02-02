@@ -26,12 +26,14 @@ def load_data(results_path):
                     run_results = np.loadtxt(os.path.join(dirpath, run))
 
                 base_score = run_results[0, 0]
+                base_std = run_results[0, 1]
                 base_steps = run_results[0, 2]
+                base_steps_std = run_results[0, 3]
                 means = run_results[1:, 0]
                 stds = run_results[1:, 1]
                 step_means = run_results[1:, 2]
                 step_stds = run_results[1:, 3]
-                all_file_names[tag] = (base_score, base_steps, means, stds, step_means, step_stds, dirpath)
+                all_file_names[tag] = (base_score, base_std, base_steps, base_steps_std, means, stds, step_means, step_stds, dirpath)
 
     return all_file_names
 
@@ -39,7 +41,7 @@ def make_heatmap(results_path, exp_type, output_path, show=False):
     sweep_data = load_data(results_path)
     for file_name in sweep_data:
         print(file_name)
-        _, _, means, _, _, _, dirpath = sweep_data[file_name]
+        _, _, _, _, means, _, _, _, dirpath = sweep_data[file_name]
         # TODO(@evinitsky) remove hardcoding
         if exp_type == 'hopper':
             means = means.reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
