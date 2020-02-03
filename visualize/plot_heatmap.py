@@ -2,6 +2,7 @@
 """
 
 import argparse
+from collections import OrderedDict
 import os
 
 import matplotlib.pyplot as plt
@@ -15,7 +16,7 @@ cheetah_mass_sweep = np.linspace(.5, 1.5, 11)
 cheetah_friction_sweep = np.linspace(0.1, 0.9, 11)
 
 def load_data(results_path):
-    all_file_names = {}
+    all_file_names = OrderedDict()
     for (dirpath, dirnames, filenames) in os.walk(results_path):
         for run in filenames:
             if "sweep_rew.txt" in run and not "adv_mean_sweep_rew" in run:
