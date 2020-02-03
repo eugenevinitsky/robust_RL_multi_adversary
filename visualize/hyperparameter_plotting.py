@@ -7,7 +7,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from visualize.plot_heatmap import load_data
+from visualize.plot_heatmap import load_data, load_data_by_name
 
 def plot_total_transfer_scores(output_path, exp_name, exp_path, base_exp=None, show=False):
     exp_data = load_data(exp_path)
@@ -85,6 +85,32 @@ def save_barchart(total_scores, output_path, exp_path, file_name, show):
             plt.show()
         plt.close(fig)
 
+
+def test_barcharts(exp_path):
+    test_names = [
+         'friction_hard_torsolegmax_floorthighfootmin',
+         'friction_hard_floorthighmax_torsolegfootmin',
+         'friction_hard_footlegmax_floortorsothighmin',
+         'friction_hard_torsothighfloormax_footlegmin',
+         'friction_hard_torsofootmax_floorthighlegmin',
+         'friction_hard_floorthighlegmax_torsofootmin',
+         'friction_hard_floorfootmax_torsothighlegmin',
+         'friction_hard_thighlegmax_floortorsofootmin',
+        ]
+    for test in test_names:
+        data = load_data_by_name(exp_path, test)
+        means = [x[0] for x in data.values()]
+        std = [x[1] for x in data.values()]
+        with open('{}/{}.png'.format(exp_path, test), 'wb') as output:
+            fig, ax = plt.subplots(figsize=(18, 4))
+            ax.bar(range(len(data)), means, yerr=std,
+                   align='center')
+            plt.savefig(output)
+
+
+
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('experiment_path', type=str, help='Pass the path to the folder containing all your results files')
@@ -92,8 +118,11 @@ if __name__ == "__main__":
     parser.add_argument('--base_experiment', required=False, type=str, help='subtract this experiment\'s heatmap from the others before taking the mean\
                                                                             if folder, find best base')
     parser.add_argument('--show_plots', action="store_true", help='Show plots as they are created.')
+    parser.add_argument('--test_plots', action="store_true", help="If true, construct the additional test plots")
     args = parser.parse_args()
 
     plot_total_transfer_scores(args.output_path, os.path.basename(args.experiment_path), args.experiment_path, base_exp=args.base_experiment, show=args.show_plots)
 
+    if args.test_plots:
+        test_barcharts(args.experiment_path)
 

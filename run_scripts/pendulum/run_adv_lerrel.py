@@ -174,8 +174,6 @@ def setup_exps(args):
 
     if args.alternate_training and args.advs_per_strength > 1:
         sys.exit('You can only have 1 adversary if you are alternating training')
-    if args.domain_randomization and args.num_adv_strengths * args.advs_per_strength > 0:
-        sys.exit('cannot have adversaries and domain randomization' )
     if args.cheating and not args.domain_randomization:
         sys.exit('cheating should not be enabled without domain randomization' )
     if args.reward_range and args.num_adv_strengths * args.advs_per_strength <= 0:
