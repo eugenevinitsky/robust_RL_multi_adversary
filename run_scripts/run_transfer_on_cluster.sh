@@ -34,8 +34,8 @@
 
 # results from final ICML run, 2/01
 
-ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat1_grid 700 \
-02-01-2020" --start --stop --tmux --cluster-name=ev_results_1
+#ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat1_grid 700 \
+#02-01-2020" --start --stop --tmux --cluster-name=ev_results_1
 
 #ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat10_grid 700 \
 #02-01-2020" --start --stop --tmux --cluster-name=ev_results_2
@@ -46,29 +46,29 @@ ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_tr
 #ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_1adv_concat10_grid_str0p25 700 \
 #02-01-2020" --start --stop --tmux --cluster-name=ev_results_4
 #
-ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_5adv_concat1_grid_str0p25rew_l1000_h3500 700 \
-02-01-2020" --start --stop --tmux --cluster-name=ev_results_5
+#ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_5adv_concat1_grid_str0p25rew_l1000_h3500 700 \
+#02-01-2020" --start --stop --tmux --cluster-name=ev_results_5
+##
+#ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_5adv_concat10_grid_str0p25rew_l1000_h3500 700 \
+#02-01-2020" --start --stop --tmux --cluster-name=ev_results_6
+##
+#ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_5adv_concat1_grid_str0p25_norew 700 \
+#02-01-2020" --start --stop --tmux --cluster-name=ev_results_7
+##
+#ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_5adv_concat10_grid_str0p25_norew 700 \
+#02-01-2020" --start --stop --tmux --cluster-name=ev_results_8
+##
+#ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_10adv_concat1_grid_str0p25rew_l1000_h3500 700 \
+#02-01-2020" --start --stop --tmux --cluster-name=ev_results_9
 #
-ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_5adv_concat10_grid_str0p25rew_l1000_h3500 700 \
-02-01-2020" --start --stop --tmux --cluster-name=ev_results_6
-#
-ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_5adv_concat1_grid_str0p25_norew 700 \
-02-01-2020" --start --stop --tmux --cluster-name=ev_results_7
-#
-ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_5adv_concat10_grid_str0p25_norew 700 \
-02-01-2020" --start --stop --tmux --cluster-name=ev_results_8
-#
-ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_10adv_concat1_grid_str0p25rew_l1000_h3500 700 \
-02-01-2020" --start --stop --tmux --cluster-name=ev_results_9
-
-ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_10adv_concat10_grid_str0p25rew_l1000_h3500 700 \
-02-01-2020" --start --stop --tmux --cluster-name=ev_results_10
-#
-ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_10adv_concat1_grid_str0p25_norew 700 \
-02-01-2020" --start --stop --tmux --cluster-name=ev_results_11
-#
-ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_10adv_concat10_grid_str0p25_norew 700 \
-02-01-2020" --start --stop --tmux --cluster-name=ev_results_12
+#ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_10adv_concat10_grid_str0p25rew_l1000_h3500 700 \
+#02-01-2020" --start --stop --tmux --cluster-name=ev_results_10
+##
+#ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_10adv_concat1_grid_str0p25_norew 700 \
+#02-01-2020" --start --stop --tmux --cluster-name=ev_results_11
+##
+#ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_10adv_concat10_grid_str0p25_norew 700 \
+#02-01-2020" --start --stop --tmux --cluster-name=ev_results_12
 
 #ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat1_grid_dr 700 \
 #02-01-2020" --start --stop --tmux --cluster-name=ev_results_13
@@ -81,3 +81,53 @@ ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_tr
 #
 #ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat10_grid_extremedr 700 \
 #02-01-2020" --start --stop --tmux --cluster-name=ev_results_16
+
+# results from final ICML run, 2/02
+
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat1_seed_lv0p9_lr0005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_1
+
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat10_seed_lv0p5_lr0005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_2
+
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_1adv_concat1_seed_str0p25_lv0p0_lr0005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_3
+
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_1adv_concat10_seed_str0p25_lv1p0_lr0005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_4
+
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_5adv_concat1_seed_str0p25rew_l1000_h3500_lv0p9_lr0005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_5
+#
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_5adv_concat10_seed_str0p25rew_l1000_h3500_lv0p9_lr0005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_6
+#
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_5adv_concat1_seed_str0p25_norew_lv0p5_lr00005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_7
+#
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_5adv_concat10_seed_str0p25_norew_lv0p5_lr00005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_8
+#
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_10adv_concat1_seed_str0p25rew_l1000_h3500_lv0p5_lr0005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_9
+
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_10adv_concat10_seed_str0p25rew_l1000_h3500_lv0p9_lr0005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_10
+#
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_10adv_concat1_seed_str0p25_norew_lv0p5_lr00005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_11
+#
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_10adv_concat10_seed_str0p25_norew_lv0p9_lr0005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_12
+
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat1_seed_dr_lv0p9_lr0005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_13
+
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat10_seed_dr_lv0p5_lr00005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_14
+
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat1_seed_extremedr_lv0p5_lr0005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_15
+
+ray exec ../autoscale.yaml "python ~/adversarial_sim2real/run_scripts/cluster_transfer_tests.py hop_0adv_concat10_seed_extremedr_lv0p9_lr00005 700 \
+02-01-2020" --start --stop --tmux --cluster-name=ev_results_16
