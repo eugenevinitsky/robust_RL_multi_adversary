@@ -1,0 +1,2 @@
+If you want to reproduce the results of this paper exactly, run the following scripts (note, it will consume a lot of
+compute), move the resultant data into the final_data folder and run the generate_all_graphs.py script.
