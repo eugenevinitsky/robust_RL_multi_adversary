@@ -143,7 +143,7 @@ def setup_exps(args, parser=None):
             config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
         else:
             config['lambda'] = 0.97
-            config['lr'] = 5e-4
+            config['lr'] = 5e-3
         config['sgd_minibatch_size'] = 64 * max(int(args.train_batch_size / 1e4), 1)
         if args.use_lstm:
             config['sgd_minibatch_size'] *= 5
