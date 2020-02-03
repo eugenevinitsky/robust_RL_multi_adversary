@@ -812,10 +812,18 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 
 # 1/30 experiments
 
-# now we do the seed search for the reward ranges
+# # now we do the seed search for the reward ranges
+# ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+# --train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
+# --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --seed_search --use_s3 --env_name hopper \
+# --exp_title hop_5adv_concat8_str0p25_all_norew_seed_lv0p5_lr5e05 --num_cpus 10 --run_transfer_tests --multi_node \
+# --adv_strength 0.25 --adv_all_actions --lambda_val 0.5 --lr .00005" \
+# --start --stop --tmux --cluster-name=ev_pend_test1
+
+
+# kathy training the ant baseline
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
---train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --seed_search --use_s3 --env_name hopper \
---exp_title hop_5adv_concat8_str0p25_all_norew_seed_lv0p5_lr5e05 --num_cpus 10 --run_transfer_tests --multi_node \
---adv_strength 0.25 --adv_all_actions --lambda_val 0.5 --lr .00005" \
---start --stop --tmux --cluster-name=ev_pend_test1
+--train_batch_size 100000 --num_iters 700 --checkpoint_freq 100  \
+--use_s3 --env_name ant --grid_search \
+--exp_title kj_ant_0 --num_cpus 10 --multi_node"
+--start --stop --tmux --cluster-name=kj_ant_0

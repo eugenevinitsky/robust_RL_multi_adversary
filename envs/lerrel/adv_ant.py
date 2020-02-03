@@ -3,6 +3,7 @@ from gym.spaces import Box, Dict
 from copy import deepcopy
 import numpy as np
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
+from visualize.plot_heatmap import ant_friction_sweep, ant_mass_sweep
 
 class AdvMAAnt(AntEnv, MultiAgentEnv):
     def __init__(self, config):
@@ -88,6 +89,7 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
         # used to track the previously observed states to induce a memory
         self.obs_size = 111
         # TODO(@kjang) friction and mass now have separate coefficients per limb, you'll have to update this appropriately
+        # 
         if self.cheating:
             self.obs_size += 2
             self.friction_coef = 1.0
@@ -100,10 +102,12 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
         # Do the initialization
         super(AdvMAAnt, self).__init__()
         # @todo(kjang): intialize mass values
-        dr_mass_bname = 'torso'
+        bnames = self.model.body_names
+        dr_mass_bname = 'torso' # hardcoced 
         self.dr_bindex = bnames.index(dr_mass_bname)
         self.original_friction = deepcopy(np.array(self.model.geom_friction))
         self.original_mass = deepcopy(self.model.body_mass[self.dr_bindex])
+        self.original_mass_all = deepcopy(self.model.body_mass)
 
         obs_space = self.observation_space
         if self.concat_actions:
@@ -135,7 +139,7 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
                       shape=None, dtype=np.float32)
             return box
         else:
-            return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(2,))
+            return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(8,))
 
     @property
     def adv_observation_space(self):
@@ -174,19 +178,20 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
             self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
 
     def extreme_randomize_domain(self):
+        # @kjang 
         num_geoms = len(self.model.geom_friction)
         num_masses = len(self.model.body_mass)
 
-        self.friction_coef = np.random.choice(hopper_friction_sweep, num_geoms)[:, np.newaxis]
-        self.mass_coef = np.random.choice(hopper_mass_sweep, num_masses)
+        self.friction_coef = np.random.choice(ant_friction_sweep, num_geoms)[:, np.newaxis]
+        self.mass_coef = np.random.choice(ant_mass_sweep, num_masses)
 
         self.model.body_mass[:] = (self.original_mass_all * self.mass_coef)
         self.model.geom_friction[:] = (self.original_friction * self.friction_coef)
 
     # TODO(@kjang) randomize the correct parameters (take a look at how yuqing does it in hopper)
     def randomize_domain(self):
-        self.friction_coef = np.random.choice(hopper_friction_sweep)
-        self.mass_coef = np.random.choice(hopper_mass_sweep)
+        self.friction_coef = np.random.choice(ant_friction_sweep)
+        self.mass_coef = np.random.choice(ant_mass_sweep)
 
         self.model.body_mass[self.dr_bindex] = (self.original_mass * self.mass_coef)
         self.model.geom_friction[:] = (self.original_friction * self.friction_coef)[:]
@@ -210,7 +215,10 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
                     self.curr_adversary]
 
                 # self._adv_to_xfrc(adv_action)
-                ant_action += adv_action
+                try:
+                    ant_action += adv_action
+                except:
+                    import ipdb; ipdb.set_trace()
                 # apply clipping to action
                 if self.clip_actions:
                     ant_action = np.clip(obs_ant_action, a_min=self.action_space.low,
