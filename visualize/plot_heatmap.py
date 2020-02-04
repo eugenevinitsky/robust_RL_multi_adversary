@@ -55,7 +55,7 @@ def load_data_by_name(results_path, name):
     return all_file_names
 
 
-def make_heatmap(results_path, exp_type, output_path, show=False):
+def make_heatmap(results_path, exp_type, output_path, show=False, output_file_name=None):
     sweep_data = load_data(results_path)
     for file_name in sweep_data:
         print(file_name)
@@ -69,9 +69,12 @@ def make_heatmap(results_path, exp_type, output_path, show=False):
         if not output_path:
             output_name = dirpath
         else:
-            output_name
+            output_name = output_path
+
+        if not output_file_name:
+            output_file_name = file_name.split("sweep")[0]
         save_heatmap(means, hopper_mass_sweep, hopper_friction_sweep, output_name,
-                     file_name.split("sweep")[0], show, exp_type)
+                     output_file_name, show, exp_type)
 
 def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show, exp_type):
     # with open('{}/{}_{}.png'.format(output_path, file_name, "transfer_heatmap"),'wb') as heatmap:
