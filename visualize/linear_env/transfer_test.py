@@ -34,6 +34,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     # set the adversary range to zero so that we get domain randomization
     env.adversary_range = 0
     env.should_perturb = False
+    env.eigval_rand = False
     rew_list = []
     sample_idx = 0
     original_A = env.A
@@ -90,6 +91,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     # here we specifically focus on unstable systems
     env.adversary_range = 0
     env.should_perturb = False
+    env.eigval_rand = False
     rew_list = []
     sample_idx = 0
     original_A = env.A
@@ -146,6 +148,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     # A matrix back to what it should be
     env.A = original_A
     env.should_perturb = False
+    env.eigval_rand = False
     rew_list = []
     sample_idx = 0
     while sample_idx < num_rollouts:

@@ -116,6 +116,8 @@ def setup_exps(args):
                         help='Scaling on the norm of the actions to penalize the agent for taking large actions')
     parser.add_argument('--regret', action='store_true', default=False,
                         help='If true, the cost is computed in terms of regret. If false, it\'s the l2 cost')
+    parser.add_argument('--eigval_rand', action='store_true', default=False,
+                        help='If true, rather than sampling random matrices we sample random eigenvalues')
 
     args = parser.parse_args(args)
 
@@ -177,6 +179,7 @@ def setup_exps(args):
     config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
     config['env_config']['action_cost_coeff'] = args.action_cost_coeff
     config['env_config']['regret'] = args.regret
+    config['env_config']['eigval_rand'] = args.eigval_rand
 
     config['env_config']['run'] = alg_run
 

@@ -11,6 +11,7 @@ from gym.spaces import Box, Dict
 import numpy as np
 from ray.rllib.env import MultiAgentEnv
 from scipy.linalg import solve_discrete_are
+from scipy.stats import ortho_group
 
 if sys.platform == 'darwin':
     try:
@@ -69,6 +70,8 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.l2_in_tranche = config['l2_in_tranche']
         self.l2_memory = config['l2_memory']
         self.l2_memory_target_coeff = config['l2_memory_target_coeff']
+        # if true we sample eigenvalues uniiformly instead of matrix entries
+        self.eigval_rand = config['eigval_rand']
 
         self.adversary_range = self.num_adv_strengths * self.advs_per_strength
         self.curr_adversary = 0
@@ -161,8 +164,15 @@ class LinearEnv(MultiAgentEnv, gym.Env):
                 self.action_list = [action_dict['adversary{}'.format(self.curr_adversary)]]
                 self.local_l2_memory_array[self.curr_adversary] += action_dict['adversary{}'.format(self.curr_adversary)]
         elif self.step_num == 0 and self.adversary_range == 0:
-            self.perturbation_matrix = np.random.uniform(low=-self.adversary_strength, high=self.adversary_strength,
-                                                         size=self.adv_action_space.low.shape[0]).reshape((self.dim, self.dim))
+            if self.eigval_rand:
+                eigs = np.random.uniform(low=-self.adversary_strength, high=self.adversary_strength, size=self.dim)
+                diag_mat = np.diag(eigs)
+                # now sample some unitary matrices
+                orthonormal_mat = ortho_group.rvs(self.dim)
+                self.perturbation_matrix = orthonormal_mat.T @ diag_mat @ orthonormal_mat
+            else:
+                self.perturbation_matrix = np.random.uniform(low=-self.adversary_strength, high=self.adversary_strength,
+                                                             size=self.adv_action_space.low.shape[0]).reshape((self.dim, self.dim))
         elif self.step_num == 0 and not self.should_perturb:
             self.perturbation_matrix = np.zeros((self.dim, self.dim))
         if self.step_num == 0 and self.regret_reward:

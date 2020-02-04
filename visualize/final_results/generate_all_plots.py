@@ -10,9 +10,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from visualize.linear_env.test_eigenvals import plot_eigenvals
+from visualize.plot_heatmap import make_heatmap
 
 
-def generate_bar_plots(file_list, title, file_name, x_title=None, y_title=None, open_cmd=lambda x: np.load(x), legend_rule=None):
+def generate_bar_plots(file_list, title, file_name, x_title=None, y_title=None, open_cmd=lambda x: np.load(x),
+                       legend_rule=None, loc=None, y_lim=[]):
     plt.figure()
     if x_title:
         plt.xlabel(x_title)
@@ -30,8 +32,14 @@ def generate_bar_plots(file_list, title, file_name, x_title=None, y_title=None, 
         # ax = plt.bar(np.arange(3) + i * spacing, [np.mean(data), np.min(data), np.max(data)],  color=colors[i])
         # ax_list.append(ax)
     ax = plt.bar(np.arange(len(file_list)), mean_list, yerr=std_list, color=colors, capsize=3)
-    plt.legend(ax, legend_titles)
+    if loc:
+        location_val = loc
+    else:
+        location_val = 0
+    plt.legend(ax, legend_titles, loc=location_val)
     plt.xticks([])
+    if len(y_lim) > 0:
+        plt.ylim(y_lim)
     # plt.xticks(np.arange(len(file_list)), tick_titles)
     # plt.tick_params(bottom=False)
     plt.tight_layout()
@@ -133,7 +141,7 @@ if __name__ == '__main__':
     legend_titles = ['1 Adversary', '5 Adversaries', 'Domain randomization']
     title = 'Accumulated regret for base system, Dimension 2'
     file_name = 'final_plots/linear_env/base_regret_2d.png'
-    generate_bar_plots(file_list, title, file_name, None, y_title)
+    generate_bar_plots(file_list, title, file_name, None, y_title, loc=3, y_lim=[-340, 0])
 
     # Generate the bar plots for the linear system, 2d, base domain randomization score
     file_list = [data_dir + 'linear_1adv_d2_conc100_h100_r1/PPO_3_lambda=0.5,lr=5e-05_2020-02-02_23-40-21zsnsvemv/'
@@ -146,7 +154,7 @@ if __name__ == '__main__':
     legend_titles = ['1 Adversary', '5 Adversaries', 'Domain randomization']
     title = 'Accumulated regret for domain randomization, Dimension 2'
     file_name = 'final_plots/linear_env/drand_regret_2d.png'
-    generate_bar_plots(file_list, title, file_name, None, y_title)
+    generate_bar_plots(file_list, title, file_name, None, y_title, loc=3, y_lim=[-550, 0])
 
     # Generate the bar plots for the linear system, 2d, hard domain randomization score
     file_list = [data_dir + 'linear_1adv_d2_conc100_h100_r1/PPO_3_lambda=0.5,lr=5e-05_2020-02-02_23-40-21zsnsvemv/'
@@ -159,7 +167,7 @@ if __name__ == '__main__':
     legend_titles = ['1 Adversary', '5 Adversaries', 'Domain randomization']
     title = 'Accumulated regret for unstable systems, Dimension 2'
     file_name = 'final_plots/linear_env/hard_regret_2d.png'
-    generate_bar_plots(file_list, title, file_name, None, y_title)
+    generate_bar_plots(file_list, title, file_name, None, y_title, loc=3)
 
     ################################################### 4 DIMENSIONS #################################################
 
@@ -174,7 +182,7 @@ if __name__ == '__main__':
     legend_titles = ['1 Adversary', '5 Adversaries', 'Domain randomization']
     title = 'Accumulated regret for base system, Dimension 4'
     file_name = 'final_plots/linear_env/base_regret_4d.png'
-    generate_bar_plots(file_list, title, file_name, None, y_title)
+    generate_bar_plots(file_list, title, file_name, None, y_title, loc=3)
 
     # Generate the bar plots for the linear system, 4d, base domain randomization score
     file_list = [data_dir + 'linear_1adv_d4_conc100_h100_r1/PPO_3_lambda=0.5,lr=5e-05_2020-02-02_23-45-28uumkborq/'
@@ -187,7 +195,7 @@ if __name__ == '__main__':
     legend_titles = ['1 Adversary', '5 Adversaries', 'Domain randomization']
     title = 'Accumulated regret for domain randomization, Dimension 4'
     file_name = 'final_plots/linear_env/drand_regret_4d.png'
-    generate_bar_plots(file_list, title, file_name, None, y_title)
+    generate_bar_plots(file_list, title, file_name, None, y_title, loc=3, y_lim=[-1550, 0])
 
     # Generate the bar plots for the linear system, 4d, hard domain randomization score
     file_list = [data_dir + 'linear_1adv_d4_conc100_h100_r1/PPO_3_lambda=0.5,lr=5e-05_2020-02-02_23-45-28uumkborq/'
@@ -200,7 +208,7 @@ if __name__ == '__main__':
     legend_titles = ['1 Adversary', '5 Adversaries', 'Domain randomization']
     title = 'Accumulated regret for unstable systems, Dimension 4'
     file_name = 'final_plots/linear_env/hard_regret_4d.png'
-    generate_bar_plots(file_list, title, file_name, None, y_title)
+    generate_bar_plots(file_list, title, file_name, None, y_title, loc=3)
 
     ################################################### 6 DIMENSIONS #################################################
 
@@ -215,7 +223,7 @@ if __name__ == '__main__':
     legend_titles = ['1 Adversary', '5 Adversaries', 'Domain randomization']
     title = 'Accumulated regret for base system, Dimension 6'
     file_name = 'final_plots/linear_env/base_regret_6d.png'
-    generate_bar_plots(file_list, title, file_name, None, y_title)
+    generate_bar_plots(file_list, title, file_name, None, y_title, loc=3, y_lim=[-1300, 0])
 
     # Generate the bar plots for the linear system, 6d, base domain randomization score
     file_list = [data_dir + 'linear_1adv_d6_conc100_h100_r1/PPO_0_lambda=0.5,lr=0.0005_2020-02-02_23-50-25udhwqfrx/'
@@ -228,7 +236,7 @@ if __name__ == '__main__':
     legend_titles = ['1 Adversary', '5 Adversaries', 'Domain randomization']
     title = 'Accumulated regret for domain randomization, Dimension 6'
     file_name = 'final_plots/linear_env/drand_regret_6d.png'
-    generate_bar_plots(file_list, title, file_name, None, y_title)
+    generate_bar_plots(file_list, title, file_name, None, y_title, loc=3, y_lim=[-4200, 0])
 
     # Generate the bar plots for the linear system, 6d, hard domain randomization score
     file_list = [data_dir + 'linear_1adv_d6_conc100_h100_r1/PPO_0_lambda=0.5,lr=0.0005_2020-02-02_23-50-25udhwqfrx/'
@@ -241,14 +249,33 @@ if __name__ == '__main__':
     legend_titles = ['1 Adversary', '5 Adversaries', 'Domain randomization']
     title = 'Accumulated regret for unstable systems, Dimension 6'
     file_name = 'final_plots/linear_env/hard_regret_6d.png'
-    generate_bar_plots(file_list, title, file_name, None, y_title)
+    generate_bar_plots(file_list, title, file_name, None, y_title, loc=3)
 
     ###################################################################################################################
     ######################################### HOPPER #########################################################
     ###################################################################################################################
 
-    # generate the relevant heatmaps that will go into the paper
+    ###########################################################
+    data_dir = '/Users/eugenevinitsky/Desktop/Research/Data/sim2real/transfer_results/adv_robust/02-02-2020/'
 
+    # generate the relevant heatmaps that will go into the paper
+    # 0 adversary
+    make_heatmap(data_dir + 'hop_0adv_concat1_seed_lv0p9_lr0005/PPO_2_seed=2_2020-02-02_22-49-49107ecvph/', 'hopper',
+                 'hopper', output_file_name='0adv_hopper')
+
+    # 1 adversary
+    make_heatmap(data_dir + 'hop_1adv_concat1_seed_str0p25_lv0p0_lr0005/PPO_9_seed=9_2020-02-02_22-53-39u2gwqrg8/', 'hopper',
+                 'hopper', output_file_name='1adv_hopper')
+
+    # 5 adversary
+    make_heatmap(data_dir + 'hop_5adv_concat10_seed_str0p25rew_l1000_h3500_lv0p9_lr0005/PPO_0_seed=0_2020-02-02_22-56-06h0gae7mk', 'hopper',
+                 'hopper', output_file_name='5adv_hopper')
+
+    # Domain randomization
+    make_heatmap(data_dir + 'hop_0adv_concat10_seed_dr_lv0p5_lr00005/PPO_0_seed=0_2020-02-02_23-06-31qtb9bzqs', 'hopper',
+                 'hopper', output_file_name='dr_hopper')
+
+    ##############################################################
     # generate the bar charts comparing 0 adv, dr, and 5 adv for hopper
 
     # generate the test set maps for the best validation set result
@@ -281,4 +308,7 @@ if __name__ == '__main__':
                   data_dir + 'hop_5adv_concat10_seed_str0p25rew_l1000_h3500_lv0p9_lr0005/']
     legend_names = ['0 Adversary', '1 Adversary, No Memory', 'DR', '5 Adversary, Memory']
     titles = ['blah' for i in range(len(test_names))] + ['Average score across test set on 10 seeds']
+    with open('hopper/test_to_str.txt', 'w') as file:
+        for a, b in zip([string.ascii_uppercase[i] for i in range(len(test_names))], test_names):
+            file.write(a + ' ' + b + '\n')
     plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3200], titles=titles)

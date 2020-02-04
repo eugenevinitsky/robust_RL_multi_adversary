@@ -396,8 +396,9 @@
 #--lambda_val 0.9 --lr .00005" \
 #--start --stop --tmux --cluster-name=ev_pend_test16
 
+
 ###
-# 2/03 exps
+# 2/04 exps
 ########
 
 # 5 adv grid search w/ memory and reward ranges and DR
@@ -415,3 +416,11 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 --exp_title hop_5adv_concat10_grid_str0p25rew_l1000_h3500_edr --num_cpus 10 --run_transfer_tests --multi_node --adv_strength 0.25 \
 --grid_search --low_reward 1000 --high_reward 3500 --reward_range --adv_all_actions --concat_actions --extreme_domain_randomization" \
 --start --stop --tmux --cluster-name=ev_pend_test7
+
+# 5 adv grid search w/ memory and reward ranges and DR
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+--train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 10 \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --use_s3 --env_name hopper \
+--exp_title hop_5adv_concat10_grid_str0p25rew_l1000_h4500 --num_cpus 10 --run_transfer_tests --multi_node --adv_strength 0.25 \
+--grid_search --low_reward 1000 --high_reward 4500 --reward_range --adv_all_actions --concat_actions" \
+--start --stop --tmux --cluster-name=ev_pend_test8
