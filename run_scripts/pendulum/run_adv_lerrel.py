@@ -343,7 +343,7 @@ def setup_exps(args):
         'name': args.exp_title,
         'run_or_experiment': runner,
         'trial_name_creator': trial_str_creator,
-        # 'checkpoint_freq': args.checkpoint_freq,
+        'checkpoint_freq': args.checkpoint_freq,
         'checkpoint_at_end': True,
         'stop': stop_dict,
         'config': config,

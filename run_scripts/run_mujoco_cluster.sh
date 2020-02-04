@@ -835,10 +835,32 @@
 # --exp_title kj_ant_1 --num_cpus 10 --multi_node" \
 # --start --stop --tmux --cluster-name=kj_ant_1
 
-# # kj_ant_2 seed search for adversaries with reward ranges
+# # # kj_ant_2 seed search for adversaries with reward ranges
+# ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+# --train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
+# --num_adv_strengths 1 --advs_per_strength 5 --num_adv_rews 5 --advs_per_rew 1 --seed_search --use_s3 --env_name ant \
+# --exp_title kj_ant_2 --num_cpus 10 --run_transfer_tests --multi_node \
+# --adv_strength 0.25 --low_reward 2000 --high_reward 6000 --adv_all_actions --lambda_val 0.5 --lr .00005" \
+# --start --stop --tmux --cluster-name=ev_pend_test1
+
+# # kj_ant_3 seed search for adversaries with reward ranges and working transfer tests
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
 --num_adv_strengths 1 --advs_per_strength 5 --num_adv_rews 5 --advs_per_rew 1 --seed_search --use_s3 --env_name ant \
---exp_title kj_ant_2 --num_cpus 10 --run_transfer_tests --multi_node \
+--exp_title kj_ant_3 --num_cpus 10 --run_transfer_tests --multi_node \
 --adv_strength 0.25 --low_reward 2000 --high_reward 6000 --adv_all_actions --lambda_val 0.5 --lr .00005" \
---start --stop --tmux --cluster-name=ev_pend_test1
+--start --stop --tmux --cluster-name=kj_ant_3
+
+# # kj_ant_4 grid search domain randomization with torso
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+--train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
+--grid_search --use_s3 --env_name ant --domain_randomization --num_adv_strengths 0 --advs_per_strength 0 \
+--exp_title kj_ant_4 --num_cpus 10 --run_transfer_tests --multi_node " \
+--start --stop --tmux --cluster-name=kj_ant_4
+
+# # kj_ant_5 grid search extreme domain randomization
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+--train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
+--grid_search --use_s3 --env_name ant --extreme_domain_randomization --num_adv_strengths 0 --advs_per_strength 0 \
+--exp_title kj_ant_5 --num_cpus 10 --run_transfer_tests --multi_node " \
+--start --stop --tmux --cluster-name=kj_ant_5
