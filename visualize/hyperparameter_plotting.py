@@ -101,10 +101,12 @@ def test_barcharts(exp_path):
         data = load_data_by_name(exp_path, test)
         means = [x[0] for x in data.values()]
         std = [x[1] for x in data.values()]
+        titles = [key[:6] for key in data.keys()]
         with open('{}/{}.png'.format(exp_path, test), 'wb') as output:
             fig, ax = plt.subplots(figsize=(18, 4))
             ax.bar(range(len(data)), means, yerr=std,
                    align='center')
+            plt.xticks(range(len(data)), titles)
             plt.savefig(output)
 
 

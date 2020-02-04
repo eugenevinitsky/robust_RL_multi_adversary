@@ -1,14 +1,15 @@
 """Construct plots of how we expect the eigenvalues to evolve with dimension. What fraction are stable vs.
 unstable as we increase the dimension?"""
+import os
 
 import numpy as np
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-if __name__ == '__main__':
-    perturb_scale = 0.4
-    dims = [2, 4, 6, 8, 20, 40, 100]
-    num_samples = 100
+def plot_eigenvals(output_path):
+    perturb_scale = 1.0
+    dims = [2, 4, 8]
+    num_samples = 500
     eigs = [[] for i in range(len(dims))]
     for dim_idx, dim in enumerate(dims):
         for i in range(num_samples):
@@ -22,7 +23,7 @@ if __name__ == '__main__':
     norms = [np.mean(np.linalg.norm(eig_list, axis=-1)) for eig_list in eigs]
     plt.bar(np.arange(len(dims)), norms)
     plt.xticks(np.arange(len(dims)), [str(dim) for dim in dims])
-    plt.savefig('Dim_mag')
+    plt.savefig(os.path.join(output_path, 'dim_mag.png'))
 
     # create a circle plot of magnitudes
     plt.figure()
@@ -36,4 +37,9 @@ if __name__ == '__main__':
     plt.title('Eigenvalues of random matrices as dimension increases')
 
     plt.legend([str(dim) for dim in dims])
-    plt.savefig('Dim_scatter')
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_path, 'eig_scatter.png'))
+
+
+if __name__ == '__main__':
+    plot_eigenvals(os.path.dirname(os.path.abspath(__file__)))
