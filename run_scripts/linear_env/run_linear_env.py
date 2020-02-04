@@ -127,11 +127,11 @@ def setup_exps(args):
         sys.exit('Your number of adversaries per reward range must match the total number of adversaries')
 
     # warning, scaling should always be negative, all the strengths should be positive
-    if np.abs(args.scaling + np.abs(args.dim * args.adv_strength) - np.abs(args.agent_strength)) > 1:
-        sys.exit('The adversary can always make the env unstable')
-
-    if np.abs(args.scaling - np.abs(args.dim * args.adv_strength)) < 1:
-        sys.exit('The adversary cannot make the env unstable')
+    # if np.abs(args.scaling + np.abs(args.dim * args.adv_strength) - np.abs(args.agent_strength)) > 1:
+    #     sys.exit('The adversary can always make the env unstable')
+    #
+    # if np.abs(args.scaling - np.abs(args.dim * args.adv_strength)) < 1:
+    #     sys.exit('The adversary cannot make the env unstable')
 
     alg_run = args.algorithm
 
