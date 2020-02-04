@@ -128,6 +128,11 @@ def setup_exps(args, parser=None):
     parser.add_argument('--regret_formulation', action='store_true', default=False,
                         help='If true we compute reward as difference between obtained reward and expected reward'
                              'if the best arm was picked.')
+
+    parser.add_argument('--lr', type=float, default=5e-3, help='The lower range that adversaries try'
+                                                                      'to push you to')
+    parser.add_argument('--gae_lambda', type=float, default=0.5, help='The upper range that adversaries try'
+                                                                          'to push you to')
     args = parser.parse_args(args)
 
     if args.reward_range and args.num_adv_strengths * args.advs_per_strength <= 0:
@@ -143,8 +148,8 @@ def setup_exps(args, parser=None):
             config['lr'] = tune.grid_search([5e-4, 5e-3])
             config['lambda'] = tune.grid_search([0.3, 0.5, 0.9])
         else:
-            config['lambda'] = 0.97
-            config['lr'] = 5e-3
+            config['lambda'] = args.gae_lambda
+            config['lr'] = args.lr
         config['sgd_minibatch_size'] = 64 * max(int(args.train_batch_size / 1e4), 1)
         if args.use_lstm:
             config['sgd_minibatch_size'] *= 5
