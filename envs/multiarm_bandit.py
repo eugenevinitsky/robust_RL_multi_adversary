@@ -31,8 +31,8 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
     def __init__(self, config):
         self.config = config
         
-        self.min_mean_reward = -1
-        self.max_mean_reward = 1
+        self.min_mean_reward = -5
+        self.max_mean_reward = 5
         self.min_std = 0.1
         self.max_std = 1
         self.num_arms = config["num_arms"]
@@ -152,8 +152,8 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
             if self.transfer:
                 prng = np.random.RandomState(self.rollout_num)
                 if self.transfer == PSEUDORANDOM_TRANSFER:
-                    self.means = prng.uniform(-1, 1, self.num_arms)
-                    self.std_devs = prng.uniform(0.1, 1, self.num_arms)
+                    self.means = prng.uniform(self.min_mean_reward, self.max_mean_reward, self.num_arms)
+                    self.std_devs = prng.uniform(self.min_std, self.max_std, self.num_arms)
                 else:
                     # breaking an abstration barrier here but yolo
                     self.means = self.transfer[0]
