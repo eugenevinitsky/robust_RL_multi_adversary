@@ -61,7 +61,7 @@ def instantiate_rollout(rllib_config, checkpoint):
         create_env_fn = make_create_env(AdvMAHalfCheetahEnv)
     elif rllib_config['env'] == "MALerrelAntEnv":
         env_name = "MALerrelAntEnv"
-        create_env_fn = make_create_env(AdvMAAntEnv)
+        create_env_fn = make_create_env(AdvMAAnt)
     elif rllib_config['env'] == "GoalEnv":
         env_name = "GoalEnv"
         create_env_fn = make_create_env(GoalEnv)

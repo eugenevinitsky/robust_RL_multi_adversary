@@ -14,7 +14,8 @@ import ray
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from visualize.pendulum.run_rollout import run_rollout, instantiate_rollout
-from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep
+from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, \
+    cheetah_friction_sweep, cheetah_mass_sweep, ant_friction_sweep, ant_mass_sweep
 import errno
 
 
@@ -92,8 +93,34 @@ cheetah_run_list = [
 ]
 
 #@todo(kjang): you'll need to do something basically identical the hopper ^ for ant
+# 0 floor
+# 1 torso_geom
+# 2 aux_1_geom
+# 3 left_leg_geom
+# 4 left_ankle_geom
+# 5 aux_2_geom
+# 6 right_leg_geom
+# 7 right_ankle_geom
+# 8 aux_3_geom
+# 9 back_leg_geom
+# 10 third_ankle_geom
+# 11 aux_4_geom
+# 12 rightback_leg_geom
+# 13 fourth_ankle_geom
+
 ant_run_list = [
     ['base', []]
+]
+
+ant_test_list = [
+    # ['base', []],
+    ['friction_hard_torsoleftlegleftanklemax_elsemin', make_set_fric_hard(max(ant_friction_sweep), min(ant_friction_sweep), [1, 3, 4])],
+    ['friction_hard_torsorightlegrightanklemax_elsemin', make_set_fric_hard(max(ant_friction_sweep), min(ant_friction_sweep), [1, 6, 7])],
+    ['friction_hard_torsobacklegthirdanklemax_elsemin', make_set_fric_hard(max(ant_friction_sweep), min(ant_friction_sweep), [1, 9, 10])],
+    ['friction_hard_torsorighbacklegfourthanklemax_elsemin', make_set_fric_hard(max(ant_friction_sweep), min(ant_friction_sweep), [1, 12, 13])],
+    ['friction_hard_flooranklesmax_elsemin', make_set_fric_hard(max(ant_friction_sweep), min(ant_friction_sweep), [0, 4, 6, 10, 13])],
+    ['friction_hard_torsolegsmax_elsemin', make_set_fric_hard(max(ant_friction_sweep), min(ant_friction_sweep), [1, 3, 6, 9, 12])],
+    ['friction_hard_torsoanklesmax_elsemin', make_set_fric_hard(max(ant_friction_sweep), min(ant_friction_sweep), [1, 4, 7, 10, 13])],
 ]
 
 hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
@@ -102,6 +129,9 @@ for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
 cheetah_grid = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep)
 #for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).T:
 #    cheetah_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
+ant_grid = np.meshgrid(ant_mass_sweep, ant_friction_sweep)
+for mass, fric in np.vstack((ant_grid[0].ravel(), ant_grid[1].ravel())).T:
+    ant_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
 
 
 # for x in np.linspace(1, 15.0, 15):
@@ -217,6 +247,15 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         output_name = output_file_name + 'steps'
         save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
 
+    if 'MALerrelAntEnv' == rllib_config['env']:
+        reward_means = np.array(temp_output)[1:, 0]#.reshape(len(ant_mass_sweep), len(ant_friction_sweep))
+        # output_name = output_file_name + 'rew'
+        # save_heatmap(reward_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'cheetah')
+
+        step_means = np.array(temp_output)[1:, 2]#.reshape(len(ant_mass_sweep), len(ant_friction_sweep))
+        # output_name = output_file_name + 'steps'
+        # save_heatmap(step_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'cheetah')
+
     elif 'MALerrelPendulumEnv' in rllib_config['env']:
         means = np.array(temp_output)[1:, 0]
         with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"), 'wb') as transfer_robustness:
@@ -293,7 +332,10 @@ if __name__ == '__main__':
     elif rllib_config['env'] == "MALerrelCheetahEnv":
         lerrel_run_list = cheetah_run_list
     elif rllib_config['env'] == "MALerrelAntEnv":
-        lerrel_run_list = cheetah_run_list
+        if args.run_holdout:
+            lerrel_run_list = ant_test_list
+        else:
+            lerrel_run_list = ant_run_list
 
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
