@@ -85,7 +85,7 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
             for eig in eigenvals:
                 real_vals.append(np.real(eig))
                 img_vals.append(np.imag(eig))
-        handle_list.append(plt.scatter(real_vals, img_vals, color=colors[i], label=adversary, s=12))
+        handle_list.append(plt.scatter(real_vals, img_vals, color=colors[i], label=adversary, s=15))
         plt.title('Scatter of eigenvalues for {}'.format(adversary))
         i += 1
         output_str = '{}/{}'.format(outdir, '{}_action_histogram.png'.format(adversary))

@@ -195,9 +195,9 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     # turn on the perturbations we are going to compute adversary scores
     env.should_perturb = True
     env.adversary_range = env.num_adv_strengths * env.advs_per_strength
-    rew_list = []
-    sample_idx = 0
     for i in range(env.adversary_range):
+        rew_list = []
+        sample_idx = 0
         while sample_idx < num_rollouts:
             prev_actions = DefaultMapping(
                 lambda agent_id: action_init[mapping_cache[agent_id]])

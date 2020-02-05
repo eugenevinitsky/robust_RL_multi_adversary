@@ -118,6 +118,10 @@ def setup_exps(args):
                         help='If true, the cost is computed in terms of regret. If false, it\'s the l2 cost')
     parser.add_argument('--eigval_rand', action='store_true', default=False,
                         help='If true, rather than sampling random matrices we sample random eigenvalues')
+    parser.add_argument('--lambda_val', type=float, default=0.9,
+                        help='PPO lambda value')
+    parser.add_argument('--lr', type=float, default=5e-4,
+                        help='PPO lambda value')
 
     args = parser.parse_args(args)
 
@@ -142,7 +146,12 @@ def setup_exps(args):
         if args.grid_search:
             config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
             config['lr'] = tune.grid_search([5e-4, 5e-5])
+        elif args.seed_search:
+            config['seed'] = tune.grid_search([i for i in range(10)])
+            config['lambda'] = args.lambda_val
+            config['lr'] = args.lr
         else:
+            config['seed'] = 0
             config['lambda'] = 0.97
             config['lr'] = 5e-4
         config['sgd_minibatch_size'] = 64 * max(int(args.train_batch_size / 1e4), 1)
@@ -156,7 +165,6 @@ def setup_exps(args):
 
     # Universal hyperparams
     config['num_workers'] = args.num_cpus
-    config['seed'] = 0
 
     config['env_config']['horizon'] = args.horizon
     config['env_config']['rollout_length'] = args.rollout_length
