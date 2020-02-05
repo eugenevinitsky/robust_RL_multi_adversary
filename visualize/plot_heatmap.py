@@ -5,7 +5,12 @@ import argparse
 from collections import OrderedDict
 import os
 
+import matplotlib
 import matplotlib.pyplot as plt
+font = {'family' : 'normal',
+        'size' : 12}
+matplotlib.rc('font', **font)
+
 import numpy as np
 
 # TODO(@evinitsky) please put this back
@@ -84,7 +89,7 @@ def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show
         plt.title(file_name)
         plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x * 3.53) for x in mass_sweep])
         plt.ylabel("Mass coef")
-        plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
+        plt.xticks(ticks=np.arange(len(friction_sweep))[0::2], labels=["{:0.2f}".format(x) for x in friction_sweep][0::2])
         plt.xlabel("Friction coef")
     elif exp_type == 'cheetah':
         plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=2000, vmax=6000)
@@ -94,7 +99,8 @@ def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show
         plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
         plt.xlabel("Friction coef")
     plt.colorbar()
-    plt.savefig('{}/{}_{}.png'.format(output_path, file_name, "transfer_heatmap"))
+    plt.tight_layout()
+    plt.savefig('{}/{}_{}.png'.format(output_path.replace(' ', '_'), file_name, "transfer_heatmap"))
     if show:
         plt.show()
     plt.close(fig)

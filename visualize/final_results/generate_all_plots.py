@@ -261,19 +261,19 @@ if __name__ == '__main__':
     # generate the relevant heatmaps that will go into the paper
     # 0 adversary
     make_heatmap(data_dir + 'hop_0adv_concat1_seed_lv0p9_lr0005/PPO_2_seed=2_2020-02-02_22-49-49107ecvph/', 'hopper',
-                 'hopper', output_file_name='0adv_hopper')
+                 'hopper', output_file_name='0 Adversaries')
 
     # 1 adversary
     make_heatmap(data_dir + 'hop_1adv_concat1_seed_str0p25_lv0p0_lr0005/PPO_9_seed=9_2020-02-02_22-53-39u2gwqrg8/', 'hopper',
-                 'hopper', output_file_name='1adv_hopper')
+                 'hopper', output_file_name='1 Adversary')
 
     # 5 adversary
     make_heatmap(data_dir + 'hop_5adv_concat10_seed_str0p25rew_l1000_h3500_lv0p9_lr0005/PPO_0_seed=0_2020-02-02_22-56-06h0gae7mk', 'hopper',
-                 'hopper', output_file_name='5adv_hopper')
+                 'hopper', output_file_name='5 Adversaries')
 
     # Domain randomization
     make_heatmap(data_dir + 'hop_0adv_concat10_seed_dr_lv0p5_lr00005/PPO_0_seed=0_2020-02-02_23-06-31qtb9bzqs', 'hopper',
-                 'hopper', output_file_name='dr_hopper')
+                 'hopper', output_file_name='Domain Randomization')
 
     ##############################################################
     # generate the bar charts comparing 0 adv, dr, and 5 adv for hopper
