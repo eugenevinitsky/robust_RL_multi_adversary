@@ -135,25 +135,32 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
         plt.close(fig)
 
 
-    for adversary, adv_dict in adversary_grid_dict.items():
+    for adv_idx, (adversary, adv_dict) in enumerate(adversary_grid_dict.items()):
         colors = cm.brg(np.linspace(0, 1, num_arms))
-        fig = plt.figure(figsize=(8, 8))
+        fig = plt.figure()
         ax = fig.gca()
-        ax.set_xlim([-3, 3])
-        ax.set_ylim([0, 5])
-        x = np.arange(-2, 2, 0.001)
+        plt.yticks([])
+        ax.set_xlim([-7.5, 7.5])
+        ax.set_ylim([0, 2])
+        ax.set_ylabel("Probability Density", fontsize=10)
+        ax.set_xlabel("Arm Reward", fontsize=10)
+        x = np.arange(-10, 10, 0.001)
         i = 0
-        handle_list = []
         sampled_actions = adv_dict['sampled_actions']
+        legends = []
         for arm in range(num_arms):
+            legends.append("Arm {}".format(arm))
             for action in sampled_actions:
                 arm_spread = norm.pdf(x, action[arm], action[num_arms + arm])
                 ax.fill_between(x, arm_spread, alpha=0.02, color=colors[i])
+                
             i += 1
-        plt.title('Arm distributions over {} sampled obs'.format(num_samples))
+        plt.title('Arm Distributions for Adversary with Regret Target {0:.2f}'.format(np.linspace(-100.0, 0, num_adversaries)[adv_idx]), fontsize=12)
         output_str = '{}/{}_{}'.format(outdir, adversary, 'arm_distribution.png')
-        # legends = ['goal'] + ['adversary{}'.format(i) for i in range(len(adversary_grid_dict))]
-        # plt.legend(legends)
+        leg = plt.legend(legends)
+        for i, lh in enumerate(leg.legendHandles): 
+            lh.set_alpha(1)
+            lh.set_color(colors[i])
         plt.savefig(output_str)
         plt.close(fig)
 

@@ -130,10 +130,10 @@ def run_bandit_optimal_transfer_tests(strategy, test_name, config, output_file_n
     std_devs = np.array(transfer_results)[:,1]
     if len(means) > 0:
         with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_performance"), 'wb') as transfer_robustness:
-            fig = plt.figure(figsize=(10, 5))
+            fig = plt.figure(figsize=(20, 5))
             plt.bar(np.arange(len(means)), means)
             plt.title("Bandit performance tests")
-            plt.xticks(ticks=np.arange(len(means)), labels=[transfer[0] for transfer in run_list])
+            plt.xticks(ticks=np.arange(len(means)), labels=[transfer[0] for transfer in run_list], rotation=70)
             plt.xlabel("Bandit test name")
             plt.ylabel("Bandit regret")
             plt.savefig(transfer_robustness)
@@ -179,7 +179,7 @@ if __name__ == "__main__":
     if args.strategy == 'all':
         for strategy_name in strategies:
             strategy = get_strategy(strategy_name)
-            output_file_name = "{}/{}".format(args.output_file_name, strategy_name)
+            output_file_name = "{}_{}/{}".format(args.output_file_name, strategy_name, strategy_name)
             run_bandit_optimal_transfer_tests(strategy, strategy_name, exp_dict['config']['env_config'], output_file_name, args.output_dir, args.num_rollouts)
     else:
         strategy = get_strategy(args.strategy)

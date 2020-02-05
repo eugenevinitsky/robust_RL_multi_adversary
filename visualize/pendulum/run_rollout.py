@@ -67,7 +67,7 @@ def instantiate_rollout(rllib_config, checkpoint):
     register_env(env_name, create_env_fn)
 
     # Instantiate the agent
-    # create the agent that will be used to compute the actions
+    # create the agent that will be used to compute the action
     agent = agent_cls(env=env_name, config=rllib_config)
     agent.restore(checkpoint)
 
