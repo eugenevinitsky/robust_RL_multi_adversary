@@ -46,9 +46,6 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
     with open('{}/{}_{}.png'.format(output_path, exp_name, "hard_domain_rand_transfer"),'wb') as result_plot:
         plt.savefig(result_plot)
 
-
-
-
     results = []
     titles = []
     plt.figure(figsize=(10, 5))
@@ -65,6 +62,29 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
         plt.show()
     with open('{}/{}_{}.png'.format(output_path, exp_name, "base_score"),'wb') as result_plot:
         plt.savefig(result_plot)
+
+
+    for (dirpath, dirnames, filenames) in os.walk(exp_path):
+        results = []
+        titles = []
+        for run in filenames:
+            if "adversary" in run and 'png' not in run:
+                titles.append(run.split('_')[-3])
+                print(np.mean(np.load(os.path.join(dirpath, run))))
+                print(run)
+                results.append(np.mean(np.load(os.path.join(dirpath, run))))
+        if len(results) > 0:
+            plt.figure(figsize=(10, 5))
+            results_sorted = [result for _, result in sorted(zip(titles,results))]
+            titles_sorted = sorted(titles)
+            xrange = np.arange(len(results))
+            plt.bar(xrange, results_sorted)
+            plt.xticks(range(len(titles)), titles_sorted)
+            if show_plots:
+                plt.show()
+            with open('{}/{}_{}.png'.format(dirpath, exp_name, "adversary_score"), 'wb') as result_plot:
+                plt.savefig(result_plot)
+            plt.close()
 
 
 if __name__ == "__main__":
