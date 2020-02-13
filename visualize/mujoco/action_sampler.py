@@ -13,8 +13,8 @@ from ray.rllib.env.base_env import _DUMMY_AGENT_ID
 from ray.rllib.evaluation.episode import _flatten_action
 from ray.rllib.models.tf.tf_action_dist import DiagGaussian
 
-from visualize.pendulum.run_rollout import instantiate_rollout, DefaultMapping
-from visualize.pendulum.transfer_tests import reset_env
+from visualize.mujoco.run_rollout import instantiate_rollout, DefaultMapping
+from visualize.mujoco.transfer_tests import reset_env
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 

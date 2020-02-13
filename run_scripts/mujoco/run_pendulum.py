@@ -18,8 +18,8 @@ from ray.tune.registry import register_env
 
 # from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy, DEFAULT_CONFIG
 
-from visualize.pendulum.transfer_tests import run_transfer_tests
-from visualize.pendulum.visualize_adversaries import visualize_adversaries
+from visualize.mujoco.transfer_tests import run_transfer_tests
+from visualize.mujoco.visualize_adversaries import visualize_adversaries
 from utils.parsers import init_parser, ray_parser, ma_env_parser
 from utils.pendulum_env_creator import pendulum_env_creator
 from utils.rllib_utils import get_config_from_path

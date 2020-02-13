@@ -14,15 +14,14 @@ try:
 except ImportError:
     from ray.rllib.agents.registry import get_agent_class
 
-from envs.lerrel.adv_hopper import AdvMAHopper
-from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
-from envs.lerrel.adv_cheetah import AdvMAHalfCheetahEnv
-from envs.lerrel.adv_ant import AdvMAAnt
+from envs.mujoco.adv_hopper import AdvMAHopper
+from envs.mujoco.adv_inverted_pendulum_env import AdvMAPendulumEnv
+from envs.mujoco.adv_cheetah import AdvMAHalfCheetahEnv
+from envs.mujoco.adv_ant import AdvMAAnt
 
-from envs.goal_env import GoalEnv
 from envs.linear_env import LinearEnv
 
-from utils.pendulum_env_creator import pendulum_env_creator, lerrel_pendulum_env_creator, make_create_env
+from utils.pendulum_env_creator import make_create_env
 
 from models.conv_lstm import ConvLSTM
 from models.recurrent_tf_model_v2 import LSTM
@@ -50,21 +49,15 @@ def instantiate_rollout(rllib_config, checkpoint):
     agent_cls = get_agent_class(rllib_config['env_config']['run'])
     # configure the env
 
-    if rllib_config['env'] == "MALerrelPendulumEnv":
-        env_name = "MALerrelPendulumEnv"
+    if rllib_config['env'] == "MAPendulumEnv":
+        env_name = "MAPendulumEnv"
         create_env_fn = make_create_env(AdvMAPendulumEnv)
-    elif rllib_config['env'] == "MALerrelHopperEnv":
-        env_name = "MALerrelHopperEnv"
+    elif rllib_config['env'] == "MAHopperEnv":
+        env_name = "MAHopperEnv"
         create_env_fn = make_create_env(AdvMAHopper)
-    elif rllib_config['env'] == "MALerrelCheetahEnv":
-        env_name = "MALerrelCheetahEnv"
+    elif rllib_config['env'] == "MACheetahEnv":
+        env_name = "MACheetahEnv"
         create_env_fn = make_create_env(AdvMAHalfCheetahEnv)
-    elif rllib_config['env'] == "MALerrelAntEnv":
-        env_name = "MALerrelAntEnv"
-        create_env_fn = make_create_env(AdvMAAntEnv)
-    elif rllib_config['env'] == "GoalEnv":
-        env_name = "GoalEnv"
-        create_env_fn = make_create_env(GoalEnv)
     elif rllib_config['env'] == "LinearEnv":
         env_name = "LinearEnv"
         create_env_fn = make_create_env(LinearEnv)

@@ -12,7 +12,7 @@ from ray.rllib.evaluation.episode import _flatten_action
 from ray.rllib.models.tf.tf_action_dist import DiagGaussian
 import seaborn as sns; sns.set()
 
-from visualize.pendulum.run_rollout import instantiate_rollout, DefaultMapping
+from visualize.mujoco.run_rollout import instantiate_rollout, DefaultMapping
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 

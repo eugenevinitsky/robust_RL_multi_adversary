@@ -240,9 +240,9 @@ class AdvMAHalfCheetahEnv(HalfCheetahEnv, MultiAgentEnv):
             self.local_l2_memory_array[self.curr_adversary, :, self.step_num] += actions[
                 'adversary{}'.format(self.curr_adversary)]
 
-        xposbefore = self.sim.data.qpos[0] #note this is different than lerrel's version
+        xposbefore = self.sim.data.qpos[0] # note this is different than the RARL version
         self.do_simulation(cheetah_action, self.frame_skip)
-        xposafter = self.sim.data.qpos[0] #note this is different than lerrel's version
+        xposafter = self.sim.data.qpos[0] # note this is different than the RARL version
         ob = self._get_obs()
         reward_ctrl = - 0.1 * np.square(cheetah_action).sum()
         reward_run = (xposafter - xposbefore)/self.dt

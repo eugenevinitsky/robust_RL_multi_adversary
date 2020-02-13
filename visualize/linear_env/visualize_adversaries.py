@@ -12,7 +12,7 @@ import numpy as np
 import ray
 from ray.rllib.evaluation.episode import _flatten_action
 
-from visualize.pendulum.run_rollout import instantiate_rollout, DefaultMapping
+from visualize.mujoco.run_rollout import instantiate_rollout, DefaultMapping
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 

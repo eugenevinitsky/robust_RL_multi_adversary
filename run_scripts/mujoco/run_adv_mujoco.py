@@ -25,14 +25,14 @@ from ray.tune.registry import register_env
 
 from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
 from algorithms.custom_kl_distribution import LogitsDist
-from envs.lerrel.adv_hopper import AdvMAHopper
-from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
-from envs.lerrel.adv_cheetah import AdvMAHalfCheetahEnv
-from envs.lerrel.adv_ant import AdvMAAnt
+from envs.mujoco.adv_hopper import AdvMAHopper
+from envs.mujoco.adv_inverted_pendulum_env import AdvMAPendulumEnv
+from envs.mujoco.adv_cheetah import AdvMAHalfCheetahEnv
+from envs.mujoco.adv_ant import AdvMAAnt
 
-from visualize.pendulum.transfer_tests import run_transfer_tests
-from visualize.pendulum.action_sampler import sample_actions
-# from visualize.pendulum.visualize_adversaries import visualize_adversaries
+from visualize.mujoco.transfer_tests import run_transfer_tests
+from visualize.mujoco.action_sampler import sample_actions
+# from visualize.mujoco.visualize_adversaries import visualize_adversaries
 from utils.pendulum_env_creator import make_create_env
 from utils.parsers import init_parser, ray_parser, ma_env_parser
 from utils.rllib_utils import get_config_from_path
@@ -101,7 +101,7 @@ def setup_exps(args):
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
                                                                          'Multiply this by `advs_per_strength` to get the total number of adversaries'
-                                                                         'Default - retrain lerrel, single agent')
+                                                                         'Default single agent trained with RARL')
     parser.add_argument('--advs_per_strength', type=int, default=1, help='How many adversaries exist at each strength level')
     parser.add_argument('--adv_strength', type=float, default=5.0, help='Strength of active adversaries in the env')
     parser.add_argument('--alternate_training', action='store_true', default=False)
@@ -158,7 +158,7 @@ def setup_exps(args):
     parser.add_argument('--no_end_if_fall', action='store_true', default=False,
                         help='If true, the env continues even after a fall ')
     parser.add_argument('--adv_all_actions', action='store_true', default=False,
-                        help='If true we apply perturbations to the actions instead of to Lerrels parametrization')
+                        help='If true we apply perturbations to the actions instead of the RARL parametrization')
     parser.add_argument('--entropy_coeff', type=float, default=0.0,
                         help='If you want to penalize entropy, set this to a negative value')
     parser.add_argument('--clip_actions', action='store_true', default=False,
@@ -292,19 +292,19 @@ def setup_exps(args):
         config['model']['lstm_cell_size'] = 64
 
     if args.env_name == "pendulum":
-        env_name = "MALerrelPendulumEnv"
+        env_name = "MAPendulumEnv"
         env_tag = "pendulum"
         create_env_fn = make_create_env(AdvMAPendulumEnv)
     elif args.env_name == "hopper":
-        env_name = "MALerrelHopperEnv"
+        env_name = "MAHopperEnv"
         env_tag = "hopper"
         create_env_fn = make_create_env(AdvMAHopper)
     elif args.env_name == "cheetah":
-        env_name = "MALerrelCheetahEnv"
+        env_name = "MACheetahEnv"
         env_tag = "cheetah"
         create_env_fn = make_create_env(AdvMAHalfCheetahEnv)
     elif args.env_name == "ant":
-        env_name = "MALerrelAntEnv"
+        env_name = "MAAntEnv"
         env_tag = "ant"
         create_env_fn = make_create_env(AdvMAAnt)
 
@@ -476,23 +476,23 @@ if __name__ == "__main__":
 
                 test_list = []
                 # TODO(@ev) gross find somewhere else to put this
-                if config['env'] == "MALerrelPendulumEnv":
-                    from visualize.pendulum.transfer_tests import pendulum_run_list
-                    lerrel_run_list = pendulum_run_list
-                elif config['env'] == "MALerrelHopperEnv":
-                    from visualize.pendulum.transfer_tests import hopper_run_list, hopper_test_list
-                    lerrel_run_list = hopper_run_list
+                if config['env'] == "MAPendulumEnv":
+                    from visualize.mujoco.transfer_tests import pendulum_run_list
+                    run_list = pendulum_run_list
+                elif config['env'] == "MAHopperEnv":
+                    from visualize.mujoco.transfer_tests import hopper_run_list, hopper_test_list
+                    run_list = hopper_run_list
                     test_list = hopper_test_list
-                elif config['env'] == "MALerrelCheetahEnv":
-                    from visualize.pendulum.transfer_tests import cheetah_run_list
-                    lerrel_run_list = cheetah_run_list
-                elif config['env'] == "MALerrelAntEnv":
-                    from visualize.pendulum.transfer_tests import cheetah_run_list
-                    lerrel_run_list = cheetah_run_list
+                elif config['env'] == "MACheetahEnv":
+                    from visualize.mujoco.transfer_tests import cheetah_run_list
+                    run_list = cheetah_run_list
+                elif config['env'] == "MAAntEnv":
+                    from visualize.mujoco.transfer_tests import cheetah_run_list
+                    run_list = cheetah_run_list
 
                 ray.shutdown()
                 ray.init()
-                run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=lerrel_run_list)
+                run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=run_list)
                 if len(test_list) > 0:
                     run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=test_list, is_test=True)
 
