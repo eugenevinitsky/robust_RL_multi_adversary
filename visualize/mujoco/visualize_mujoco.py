@@ -13,10 +13,10 @@ import ray
 
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
-from visualize.pendulum.run_rollout import run_rollout, instantiate_rollout
+from visualize.mujoco.run_rollout import run_rollout, instantiate_rollout
 from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep
 import errno
-from visualize.pendulum.transfer_tests import reset_env
+from visualize.mujoco.transfer_tests import reset_env
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')

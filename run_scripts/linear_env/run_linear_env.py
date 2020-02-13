@@ -83,7 +83,7 @@ def setup_exps(args):
     parser.add_argument('--adv_strength', type=float, default=0.5, help='Strength of active adversaries in the env')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
                                                                          'Multiply this by `advs_per_strength` to get the total number of adversaries'
-                                                                         'Default - retrain lerrel, single agent')
+                                                                         'Default - retrain RARL, single agent')
     parser.add_argument('--advs_per_strength', type=int, default=1,
                         help='How many adversaries exist at each strength level')
     parser.add_argument('--num_concat_states', type=int, default=1,

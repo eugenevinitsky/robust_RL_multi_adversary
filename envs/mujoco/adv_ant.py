@@ -365,7 +365,3 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
 
         return curr_obs
 
-
-def hopper_env_creator(env_config):
-    env = AdvMAHopper(env_config)
-    return env

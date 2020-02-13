@@ -13,7 +13,7 @@ import ray
 
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
-from visualize.pendulum.run_rollout import run_rollout, instantiate_rollout
+from visualize.mujoco.run_rollout import run_rollout, instantiate_rollout
 from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep
 import errno
 
@@ -97,12 +97,6 @@ hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
 for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
     hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
 cheetah_grid = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep)
-#for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).T:
-#    cheetah_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
-
-
-# for x in np.linspace(1, 15.0, 15):
-#     lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
 
 def reset_env(env, num_active_adv=0):
     """Undo parameters that need to be off"""
@@ -200,7 +194,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
               'wb') as file:
         np.save(file, np.array(temp_output))
 
-    if 'MALerrelHopperEnv' == rllib_config['env'] and len(temp_output) > num_hopper_custom_tests:
+    if 'MAHopperEnv' == rllib_config['env'] and len(temp_output) > num_hopper_custom_tests:
         try:
             reward_means = np.array(temp_output)[num_hopper_custom_tests:, 0].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
             output_name = output_file_name + 'rew'
@@ -212,7 +206,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         except:
             pass
 
-    if 'MALerrelCheetahEnv' == rllib_config['env']:
+    if 'MACheetahEnv' == rllib_config['env']:
         reward_means = np.array(temp_output)[1:, 0].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
         output_name = output_file_name + 'rew'
         save_heatmap(reward_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
@@ -221,7 +215,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         output_name = output_file_name + 'steps'
         save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
 
-    elif 'MALerrelPendulumEnv' in rllib_config['env']:
+    elif 'MAPendulumEnv' in rllib_config['env']:
         means = np.array(temp_output)[1:, 0]
         with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"), 'wb') as transfer_robustness:
             fig = plt.figure()
@@ -288,17 +282,17 @@ if __name__ == '__main__':
 
     ray.init(num_cpus=args.num_cpus)
 
-    if rllib_config['env'] == "MALerrelPendulumEnv":
-        lerrel_run_list = pendulum_run_list
-    elif rllib_config['env'] == "MALerrelHopperEnv":
+    if rllib_config['env'] == "MAPendulumEnv":
+        run_list = pendulum_run_list
+    elif rllib_config['env'] == "MAHopperEnv":
         if args.run_holdout:
-            lerrel_run_list = hopper_test_list
+            run_list = hopper_test_list
         else:
-            lerrel_run_list = hopper_run_list
-    elif rllib_config['env'] == "MALerrelCheetahEnv":
-        lerrel_run_list = cheetah_run_list
+            run_list = hopper_run_list
+    elif rllib_config['env'] == "MACheetahEnv":
+        run_list = cheetah_run_list
 
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
     run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name,
-                       os.path.join(args.output_dir, date), run_list=lerrel_run_list, render=args.show_images)
+                       os.path.join(args.output_dir, date), run_list=run_list, render=args.show_images)
