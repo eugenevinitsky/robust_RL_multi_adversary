@@ -57,7 +57,6 @@ provider:
 # How Ray will authenticate with newly launched nodes.
 auth:
     ssh_user: ubuntu
-    ssh_private_key: /Users/eugenevinitsky/.ssh/MyKeyPair.pem
 
 # By default Ray creates a new private keypair, but you can also use your own.
 # If you do so, make sure to also set "KeyName" in the head and worker node
@@ -70,7 +69,6 @@ auth:
 head_node:
     InstanceType: c4.8xlarge
     ImageId: ami-0a80e903adf5cb898 # Adversarial w/ Mujoco Sim2Real AMI
-    KeyName: MyKeyPair
 
     InstanceMarketOptions:
         MarketType: spot
@@ -89,7 +87,6 @@ head_node:
 worker_nodes:
     InstanceType: c4.8xlarge
     ImageId: ami-0a80e903adf5cb898 # Adversarial w/ Mujoco Sim2Real AMI
-    KeyName: MyKeyPair
 
     # Run workers on spot by default. Comment this out to use on-demand.
     InstanceMarketOptions:

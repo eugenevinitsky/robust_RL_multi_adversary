@@ -67,7 +67,6 @@ def setup_ma_config(config, create_env):
         policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     
-    # TODO(@evinitsky) put this back
     # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
     #                                         env.adv_action_space, adversary_config) for i in range(num_adversaries)})
 
@@ -286,7 +285,6 @@ def setup_exps(args):
 
     ModelCatalog.register_custom_model("rnn", LSTM)
     config['model']['fcnet_hiddens'] = [64, 64]
-    # TODO(@evinitsky) turn this on
     if args.use_lstm:
         config['model']['fcnet_hiddens'] = [64]
         config['model']['use_lstm'] = False
@@ -489,7 +487,6 @@ if __name__ == "__main__":
                     from visualize.pendulum.transfer_tests import cheetah_run_list
                     lerrel_run_list = cheetah_run_list
                 elif config['env'] == "MALerrelAntEnv":
-                    # TODO(@kparvate) this needs to change
                     from visualize.pendulum.transfer_tests import cheetah_run_list
                     lerrel_run_list = cheetah_run_list
 

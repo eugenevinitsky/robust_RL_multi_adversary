@@ -7,16 +7,20 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
 def plot_eigenvals(output_path):
-    perturb_scale = 1.0
+    perturb_scale = 0.4
     dims = [2, 4, 8]
     num_samples = 500
     eigs = [[] for i in range(len(dims))]
     for dim_idx, dim in enumerate(dims):
+        num_stable = 0
         for i in range(num_samples):
             new_mat = (perturb_scale / dim) * np.random.uniform(low=-1, high=1, size=(dim, dim))
             eigvals = np.linalg.eigvals(new_mat)
             for eigval in eigvals:
+                if np.linalg.norm(eigval) < (perturb_scale / 2):
+                    num_stable += 1
                 eigs[dim_idx].append([np.real(eigval), np.imag(eigval)])
+        print('fraction stable of dim {} is {}'.format(dim, num_stable / (num_samples * dim)))
 
     # create a bar plot of the magnitudes
     plt.figure()
