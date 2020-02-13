@@ -2,15 +2,15 @@ name: sim2real
 
 dependencies:
     - python==3.6.8
-    - tensorflow==1.14.0
+    - tensorflow==1.15.0
     - pip:
         - numpy==1.17.1
         - gym==0.14.0
-        - ray==0.7.6
+        - ray==0.8.0
         - lz4==2.2.1
         - psutil==5.6.3
         - requests==2.22.0
-        - matplotlib==3.0.0
+        - matplotlib
         - opencv-python==4.1.1
         - gym==0.14.0
         - awscli==1.16.259

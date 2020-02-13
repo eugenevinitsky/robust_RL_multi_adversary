@@ -8,12 +8,11 @@ import os
 import matplotlib
 import matplotlib.pyplot as plt
 font = {'family' : 'normal',
-        'size' : 12}
+        'size' : 16}
 matplotlib.rc('font', **font)
 
 import numpy as np
 
-# TODO(@evinitsky) please put this back
 hopper_mass_sweep = np.linspace(.7, 1.3, 11)
 hopper_friction_sweep = np.linspace(0.7, 1.3, 11)
 
@@ -60,12 +59,11 @@ def load_data_by_name(results_path, name):
     return all_file_names
 
 
-def make_heatmap(results_path, exp_type, output_path, show=False, output_file_name=None):
+def make_heatmap(results_path, exp_type, output_path, show=False, output_file_name=None, fontsize=14, title_fontsize=16):
     sweep_data = load_data(results_path)
     for file_name in sweep_data:
         print(file_name)
         _, _, _, _, means, _, _, _, dirpath = sweep_data[file_name]
-        # TODO(@evinitsky) remove hardcoding
         if exp_type == 'hopper':
             means = means.reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
         elif exp_type == 'cheetah':
@@ -79,25 +77,25 @@ def make_heatmap(results_path, exp_type, output_path, show=False, output_file_na
         if not output_file_name:
             output_file_name = file_name.split("sweep")[0]
         save_heatmap(means, hopper_mass_sweep, hopper_friction_sweep, output_name,
-                     output_file_name, show, exp_type)
+                     output_file_name, show, exp_type, fontsize, title_fontsize)
 
-def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show, exp_type):
+def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show, exp_type, fontsize=14, title_fontsize=16):
     # with open('{}/{}_{}.png'.format(output_path, file_name, "transfer_heatmap"),'wb') as heatmap:
     fig = plt.figure()
     if exp_type == 'hopper':
         plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
-        plt.title(file_name)
+        plt.title(file_name, fontsize=title_fontsize)
         plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x * 3.53) for x in mass_sweep])
-        plt.ylabel("Mass coef")
+        plt.ylabel("Mass coef", fontsize=fontsize)
         plt.xticks(ticks=np.arange(len(friction_sweep))[0::2], labels=["{:0.2f}".format(x) for x in friction_sweep][0::2])
-        plt.xlabel("Friction coef")
+        plt.xlabel("Friction coef", fontsize=fontsize)
     elif exp_type == 'cheetah':
         plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=2000, vmax=6000)
-        plt.title(file_name)
+        plt.title(file_name, fontsize=title_fontsize)
         plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x * 6.0) for x in mass_sweep])
-        plt.ylabel("Mass coef")
+        plt.ylabel("Mass coef", fontsize=fontsize)
         plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
-        plt.xlabel("Friction coef")
+        plt.xlabel("Friction coef", fontsize=fontsize)
     plt.colorbar()
     plt.tight_layout()
     plt.savefig('{}/{}_{}.png'.format(output_path.replace(' ', '_'), file_name, "transfer_heatmap"))

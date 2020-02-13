@@ -58,7 +58,6 @@ def get_logits(model, train_batch, index):
         input_dict["prev_rewards"] = train_batch[SampleBatch.PREV_REWARDS + '_' + str(index)]
     states = []
     i = 0
-    # TODO(@evinitsky) currently the adversaries should NOT be LSTMs, I don't know how we handle that yet
     while "state_in_{}".format(i) in train_batch:
         states.append(train_batch["state_in_{}".format(i)])
         i += 1
@@ -129,7 +128,6 @@ def setup_kl_loss(policy, model, dist_class, train_batch):
         other_std = train_batch["kj_std_{}".format(i)]
         other_mean = train_batch["kj_mean_{}".format(i)]
 
-        # TODO(@evinitsky) did I get the KL backwards? Should it be the other way around?
         # we clip here lest it blow up due to some really small probabilities
         kl_loss += tf.losses.huber_loss(tf.reduce_sum(
             - other_logstd + log_std +

@@ -18,7 +18,6 @@ def alter_config(env_params, passed_config):
     env_params['transfer']['friction'] = str(passed_config['friction'])
     env_params['transfer']['friction_coef'] = str(passed_config['friction_coef'])
 
-    # TODO(@evinitsky) remove this
     env_params['sim']['human_num'] = str(passed_config['human_num'])
 
 
