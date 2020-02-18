@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 plt.rcParams["axes.grid"] = False
 import ray
 
+from envs.multiarm_bandit import PSEUDORANDOM_TRANSFER
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from visualize.mujoco.run_rollout import run_rollout, instantiate_rollout
@@ -41,15 +42,6 @@ def make_set_mass_and_fric(friction_coef, mass_coef, mass_body='pole'):
         bindex = bnames.index(mass_bname)
         env.model.body_mass[bindex] = (env.model.body_mass[bindex] * mass_coef)
         env.model.geom_friction[:] = (env.model.geom_friction * friction_coef)[:]
-    return set_mass
-
-
-def make_set_fric_hard(max_fric_coeff, min_fric_coeff, high_fric_idx, mass_body='pole'):
-    def set_mass(env):
-        env.model.geom_friction[high_fric_idx] = (env.model.geom_friction * max_fric_coeff)[high_fric_idx]
-        low_fric_idx = np.ones(len(env.model.geom_friction), np.bool)
-        low_fric_idx[high_fric_idx] = 0
-        env.model.geom_friction[low_fric_idx] = (env.model.geom_friction * min_fric_coeff)[low_fric_idx]
     return set_mass
 
 def set_pseudorandom_transfer(env):
@@ -83,7 +75,6 @@ def make_bandit_transfer_list(num_arms):
         run_list.append(['hard', make_bandit_transfer_example(means=np.array([-5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))])
     return run_list
 
-
 # test name, is_env_config, config_value, params_name, params_value
 run_list = [
     ['base', []],
@@ -103,38 +94,31 @@ pendulum_run_list = [
     ['mass15', make_set_mass(mass_list[4])],
 ]
 
-#hopper geoms: floor, torso, thigh, leg, foot
 hopper_run_list = [
     ['base', []]
 ]
-hopper_test_list=[
-    ['friction_hard_torsolegmax_floorthighfootmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [1, 3])],
-    ['friction_hard_floorthighmax_torsolegfootmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [0, 2])],
-    ['friction_hard_footlegmax_floortorsothighmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [3, 4])],
-    ['friction_hard_torsothighfloormax_footlegmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [0, 1, 2])],
-    ['friction_hard_torsofootmax_floorthighlegmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [1, 4])],
-    ['friction_hard_floorthighlegmax_torsofootmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [0, 3, 2])],
-    ['friction_hard_floorfootmax_torsothighlegmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [4, 0])],
-    ['friction_hard_thighlegmax_floortorsofootmin', make_set_fric_hard(max(hopper_friction_sweep), min(hopper_friction_sweep), [2, 3])],
-]
-num_hopper_custom_tests = len(hopper_run_list)
 
-#cheetah geoms: ('floor', 'torso', 'head', 'bthigh', 'bshin', 'bfoot', 'fthigh', 'fshin', 'ffoot')
 cheetah_run_list = [
     ['base', []]
 ]
 
-hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
-for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
+grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
+for mass, fric in np.vstack((grid[0].ravel(), grid[1].ravel())).T:
     hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
+
 cheetah_grid = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep)
+for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).T:
+    cheetah_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
+
+
+# for x in np.linspace(1, 15.0, 15):
+#     lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
 
 def reset_env(env, num_active_adv=0):
     """Undo parameters that need to be off"""
     if hasattr(env, 'domain_randomization'):
         env.domain_randomization = False
-    if num_active_adv > 0:
-        env.adversary_range = env.advs_per_strength * env.num_adv_strengths
+    env.adversary_range = num_active_adv
 
 @ray.remote(memory=1500 * 1024 * 1024)
 def run_test(test_name, outdir, output_file_name, num_rollouts,
@@ -187,10 +171,8 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     # env.observation_space = spaces.Box(low=-1 * high, high=high, dtype=env.observation_space.dtype)
     if callable(env_modifier):
         env_modifier(env)
-    elif type(env) is MultiarmBandit:
-        env.transfer = env_modifier
     elif len(env_modifier) > 0:
-        setattr(env, env_modifier[0], env_modifier[1])
+        env.transfer = env_modifier
     rewards, step_num = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                  state_init, action_init, num_rollouts, render, adv_num)
 
@@ -204,8 +186,7 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     return np.mean(rewards), np.std(rewards), np.mean(step_num), np.std(step_num)
 
 
-def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir, run_list, is_test=False, render=False):
-
+def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir, run_list, render=False):
     output_file_path = os.path.join(outdir, output_file_name)
     if not os.path.exists(os.path.dirname(output_file_path)):
         try:
@@ -220,35 +201,29 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                  rllib_config=rllib_config, checkpoint=checkpoint, env_modifier=list[1], render=render) for list in run_list]
     temp_output = ray.get(temp_output)
 
-    output_name = "mean_sweep"
-    if is_test:
-        output_name = "holdout_test_sweep"
-    with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, output_name),
+    with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "mean_sweep"),
               'wb') as file:
         np.save(file, np.array(temp_output))
 
-    if 'MAHopperEnv' == rllib_config['env'] and len(temp_output) > num_hopper_custom_tests:
-        try:
-            reward_means = np.array(temp_output)[num_hopper_custom_tests:, 0].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
-            output_name = output_file_name + 'rew'
-            save_heatmap(reward_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'hopper')
+    if 'Hopper' == rllib_config['env']:
+        reward_means = np.array(temp_output)[1:, 0].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
+        output_name = output_file_name + 'rew'
+        save_heatmap(reward_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'hopper')
 
-            step_means = np.array(temp_output)[num_hopper_custom_tests:, 2].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
-            output_name = output_file_name + 'steps'
-            save_heatmap(step_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'hopper')
-        except:
-            pass
+        step_means = np.array(temp_output)[1:, 2].reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
+        output_name = output_file_name + 'steps'
+        save_heatmap(step_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'hopper')
 
-    if 'MACheetahEnv' == rllib_config['env']:
+    if 'Cheetah' == rllib_config['env']:
         reward_means = np.array(temp_output)[1:, 0].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
         output_name = output_file_name + 'rew'
-        save_heatmap(reward_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
+        save_heatmap(reward_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'cheetah')
 
         step_means = np.array(temp_output)[1:, 2].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
         output_name = output_file_name + 'steps'
-        save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
+        save_heatmap(step_means, hopper_mass_sweep, hopper_friction_sweep, outdir, output_name, False, 'cheetah')
 
-    elif 'MAPendulumEnv' in rllib_config['env']:
+    elif 'Pendulum' in rllib_config['env']:
         means = np.array(temp_output)[1:, 0]
         with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"), 'wb') as transfer_robustness:
             fig = plt.figure()
@@ -260,27 +235,26 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             plt.close(fig)
     
     elif 'Bandit' in rllib_config['env']:
-            means = np.array(temp_output)[:,0]
-            std_devs = np.array(temp_output)[:,1]
-            if len(means) > 0:
-                with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_performance"), 'wb') as transfer_robustness:
-                    fig = plt.figure()
-                    plt.bar(np.arange(len(means)), means)
-                    plt.title("Bandit performance tests")
-                    plt.xticks(ticks=np.arange(len(means)), labels=[transfer[0] for transfer in run_list])
-                    plt.xlabel("Bandit test name")
-                    plt.ylabel("Bandit regret")
-                    plt.savefig(transfer_robustness)
-                    plt.close(fig)
-
+        means = np.array(temp_output)[:,0]
+        std_devs = np.array(temp_output)[:,1]
+        if len(means) > 0:
+            with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_performance"), 'wb') as transfer_robustness:
+                fig = plt.figure()
+                plt.bar(np.arange(len(means)), means)
+                plt.title("Bandit performance tests")
+                plt.xticks(ticks=np.arange(len(means)), labels=[transfer[0] for transfer in run_list])
+                plt.xlabel("Bandit test name")
+                plt.ylabel("Bandit regret")
+                plt.savefig(transfer_robustness)
+                plt.close(fig)
+    
     num_advs = rllib_config['env_config']['advs_per_strength'] * rllib_config['env_config']['num_adv_strengths']
     adv_names = ["adversary{}".format(adv_num) for adv_num in range(num_advs)]
     if num_advs:
         temp_output = [run_test.remote(test_name="adversary{}".format(adv_num),
                     outdir=outdir, output_file_name=output_file_name,
                     num_rollouts=num_rollouts,
-                    rllib_config=rllib_config, checkpoint=checkpoint, render=render, env_modifier=[], adv_num=adv_num)
-                    for adv_num in range(num_advs)]
+                    rllib_config=rllib_config, checkpoint=checkpoint, render=render, env_modifier=[], adv_num=adv_num) for adv_num in range(num_advs)]
         temp_output = ray.get(temp_output)
 
         with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, "with_adv_mean_sweep"),
@@ -297,11 +271,11 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             plt.xlabel("Adv name")
             plt.savefig(file)
             plt.close(fig)
-
+        
         with open('{}/{}_{}'.format(outdir, output_file_name, "adv_steps.png"),
                 'wb') as file:
             steps = np.array(temp_output)[:,2]
-            adv_names = ["adversary{}" for adv_num in range(num_advs)]
+            adv_names = ["adversary{}".format(adv_num) for adv_num in range(num_advs)]
             fig = plt.figure()
             plt.bar(np.arange(num_advs), steps)
             plt.title("Steps under each adversary")
@@ -321,7 +295,6 @@ if __name__ == '__main__':
                         help='The file name we use to save our results')
     parser.add_argument('--output_dir', type=str, default=output_path,
                         help='')
-    parser.add_argument('--run_holdout',  action='store_true', default=False, help='If true, run holdout tests')
 
     parser = replay_parser(parser)
     args = parser.parse_args()
@@ -329,19 +302,16 @@ if __name__ == '__main__':
 
     ray.init(num_cpus=args.num_cpus)
 
-    if rllib_config['env'] == "MAPendulumEnv":
-        run_list = pendulum_run_list
-    elif rllib_config['env'] == "MAHopperEnv":
-        if args.run_holdout:
-            run_list = hopper_test_list
-        else:
-            run_list = hopper_run_list
-    elif rllib_config['env'] == "MACheetahEnv":
-        run_list = cheetah_run_list
+    if rllib_config['env'] == "MALerrelPendulumEnv":
+        lerrel_run_list = pendulum_run_list
+    elif rllib_config['env'] == "MALerrelHopperEnv":
+        lerrel_run_list = hopper_run_list
+    elif rllib_config['env'] == "MALerrelCheetahEnv":
+        lerrel_run_list = cheetah_run_list
     elif rllib_config['env'] == "MultiarmBandit":
-        run_list = make_bandit_transfer_list(rllib_config['env_config']['num_arms'])
+        lerrel_run_list = make_bandit_transfer_list(rllib_config['env_config']['num_arms'])
 
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
     run_transfer_tests(rllib_config, checkpoint, args.num_rollouts, args.output_file_name,
-                       os.path.join(args.output_dir, date), run_list=run_list, render=args.show_images)
+                       os.path.join(args.output_dir, date), run_list=lerrel_run_list, render=args.show_images)
