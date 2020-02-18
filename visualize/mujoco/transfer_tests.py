@@ -52,6 +52,37 @@ def make_set_fric_hard(max_fric_coeff, min_fric_coeff, high_fric_idx, mass_body=
         env.model.geom_friction[low_fric_idx] = (env.model.geom_friction * min_fric_coeff)[low_fric_idx]
     return set_mass
 
+def set_pseudorandom_transfer(env):
+    env.transfer = PSEUDORANDOM_TRANSFER
+
+def make_bandit_transfer_example(means, stds):
+    def set_env_transfer(env):
+        env.transfer = [means, stds]
+    return set_env_transfer
+
+def make_bandit_transfer_list(num_arms):
+    run_list = [
+        ['pseudorandom_base', set_pseudorandom_transfer]
+    ]
+    if num_arms == 2:
+        run_list.append(['hard', make_bandit_transfer_example(means=np.array([-5.0, 5.0]), stds=np.array([1.0, 1.0]))])
+        run_list.append(['easy', make_bandit_transfer_example(means=np.array([-5.0, 5.0]), stds=np.array([0.1, 0.1]))])
+        run_list.append(['2, max_std', make_bandit_transfer_example(means=np.array([-2, 2]), stds=np.array([1.0, 1.0]))])
+        run_list.append(['2, lopsided', make_bandit_transfer_example(means=np.array([-2, 2]), stds=np.array([1.0, 0.3]))])
+    elif num_arms == 5:
+        run_list.append(['spread_high_std', make_bandit_transfer_example(means=np.array([-5.0, -2.5, 0.0, 2.5, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0]))])
+        run_list.append(['cluster_high_std', make_bandit_transfer_example(means=np.array([-1.0, -0.5, 0.0, 0.5, 1.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0]))])
+        run_list.append(['one_good_boi', make_bandit_transfer_example(means=np.array([0.0, 0.0, 0.0, 0.0, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 0.1]))])
+        run_list.append(['needle_in_haystack', make_bandit_transfer_example(means=np.array([-0.5, -0.5, -0.5, -0.5, 5.0]), stds=np.array([0.1, 0.1, 0.1, 0.1, 0.1]))])
+        run_list.append(['hard', make_bandit_transfer_example(means=np.array([-5.0, -5.0, -5.0, -5.0, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0]))])
+    elif num_arms == 10:
+        run_list.append(['spread_high_std', make_bandit_transfer_example(means=np.array([-5.0, -3.75, -2.5, -1.25, -0.5, 0.5, 1.25, 2.5, 3.75, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))])
+        run_list.append(['cluster_high_std', make_bandit_transfer_example(means=np.array([-0.8, -0.6, -0.4, -0.2, -1.0, 1.0, 0.2, 0.4, 0.6, 0.8]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))])
+        run_list.append(['one_good_boi', make_bandit_transfer_example(means=np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.1]))])
+        run_list.append(['needle_in_haystack', make_bandit_transfer_example(means=np.array([-0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 5.0]), stds=np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]))])
+        run_list.append(['hard', make_bandit_transfer_example(means=np.array([-5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))])
+    return run_list
+
 
 # test name, is_env_config, config_value, params_name, params_value
 run_list = [
@@ -156,6 +187,8 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     # env.observation_space = spaces.Box(low=-1 * high, high=high, dtype=env.observation_space.dtype)
     if callable(env_modifier):
         env_modifier(env)
+    elif type(env) is MultiarmBandit:
+        env.transfer = env_modifier
     elif len(env_modifier) > 0:
         setattr(env, env_modifier[0], env_modifier[1])
     rewards, step_num = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
@@ -225,6 +258,20 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             plt.xlabel("Mass coef")
             plt.savefig(transfer_robustness)
             plt.close(fig)
+    
+    elif 'Bandit' in rllib_config['env']:
+            means = np.array(temp_output)[:,0]
+            std_devs = np.array(temp_output)[:,1]
+            if len(means) > 0:
+                with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_performance"), 'wb') as transfer_robustness:
+                    fig = plt.figure()
+                    plt.bar(np.arange(len(means)), means)
+                    plt.title("Bandit performance tests")
+                    plt.xticks(ticks=np.arange(len(means)), labels=[transfer[0] for transfer in run_list])
+                    plt.xlabel("Bandit test name")
+                    plt.ylabel("Bandit regret")
+                    plt.savefig(transfer_robustness)
+                    plt.close(fig)
 
     num_advs = rllib_config['env_config']['advs_per_strength'] * rllib_config['env_config']['num_adv_strengths']
     adv_names = ["adversary{}".format(adv_num) for adv_num in range(num_advs)]
@@ -291,6 +338,8 @@ if __name__ == '__main__':
             run_list = hopper_run_list
     elif rllib_config['env'] == "MACheetahEnv":
         run_list = cheetah_run_list
+    elif rllib_config['env'] == "MultiarmBandit":
+        run_list = make_bandit_transfer_list(rllib_config['env_config']['num_arms'])
 
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
