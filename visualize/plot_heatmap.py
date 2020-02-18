@@ -42,6 +42,17 @@ def load_data(results_path):
 
     return all_file_names
 
+def load_bandit_data(results_path):
+    all_file_names = OrderedDict()
+    for (dirpath, dirnames, filenames) in os.walk(results_path):
+        for run in filenames:
+            if "sweep_rew.txt" in run and 'with_adv' not in run:
+                tag = dirpath
+                run_results = np.load(os.path.join(dirpath, run))
+                all_file_names[tag] = run_results, dirpath
+    return all_file_names
+    
+
 def load_data_by_name(results_path, name):
     """This is used for the test set"""
     all_file_names = OrderedDict()
