@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 plt.rcParams["axes.grid"] = False
 import ray
 
+from envs.multiarm_bandit import MultiarmBandit, PSEUDORANDOM_TRANSFER
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from visualize.mujoco.run_rollout import run_rollout, instantiate_rollout
