@@ -68,7 +68,7 @@ def save_barchart(total_scores, output_path, output_file_name, num_arms, separat
             save_barchart({name: scores}, output_path, "{}/{}".format(output_file_name, name), separate_plots=False, group_seeds=group_seeds, show=show)
     else:
         exps = total_scores.keys()
-        fig, ax = plt.subplots(figsize=(18,10))
+        fig, ax = plt.subplots(figsize=(25,10))
         for exp_idx, exp in enumerate(exps):
             results = total_scores[exp]
             if group_seeds == 'mean':
@@ -93,10 +93,11 @@ def save_barchart(total_scores, output_path, output_file_name, num_arms, separat
             else:
                 ax = plt.bar(0.5 + np.arange(len(labels)) + dist * exp_idx, vals, color=colors)
 
-        plt.title('{}-armed Bandit Transfer Performance'.format(num_arms), fontsize=26)
-        plt.xticks(np.arange(len(exps)) * dist + dist / 2, ["Avg. Performance"] + ["Transfer Test {}".format(string.ascii_uppercase[i]) for i in range(len(exps) - 1)])
-        plt.ylabel("Mean score across seeds", fontsize=17)
-        plt.legend(ax, [label[1:] if label[0] == '0' else label for label in labels])
+        plt.title('{}-armed Bandit Transfer Performance'.format(num_arms), fontsize=40, pad=25)
+        plt.xticks(np.arange(len(exps)) * dist + dist / 2, ["Avg.\nPerformance"] + ["Transfer\nTest {}".format(string.ascii_uppercase[i]) for i in range(len(exps) - 1)], fontsize=35)
+        plt.yticks(fontsize=30)
+        plt.ylabel("Mean score across seeds", fontsize=30)
+        plt.legend(ax, ["RARL", "4 Adversaries", "10 Adversaries", "20 Adversaries", "Domain Randomization"], fontsize=25)
         with open('{}/{}_transfer_performance.png'.format(output_path, output_file_name),'wb') as png_out:
             plt.savefig(png_out)
         if show:

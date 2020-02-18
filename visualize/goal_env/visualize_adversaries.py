@@ -155,7 +155,8 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
                 ax.fill_between(x, arm_spread, alpha=0.02, color=colors[i])
                 
             i += 1
-        plt.title('Arm Distributions for Adversary with Regret Target {0:.2f}'.format(np.linspace(-100.0, 0, num_adversaries)[adv_idx]), fontsize=12)
+        # plt.title('Arm Distributions for Single Adversary with Regret Target {0:.2f}'.format(np.linspace(-100.0, 0, num_adversaries)[adv_idx]), fontsize=12)
+        plt.title('Arm Distributions for Single Adversary', fontsize=12)
         output_str = '{}/{}_{}'.format(outdir, adversary, 'arm_distribution.png')
         leg = plt.legend(legends)
         for i, lh in enumerate(leg.legendHandles): 

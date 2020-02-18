@@ -23,17 +23,19 @@ parser.add_argument('output_file', help='output png file loc')
 args = parser.parse_args()
 
 with open(args.adv_mean_sweep_location, 'rb') as file:
+        print(args.adv_mean_sweep_location)
         adv_mean_sweep = np.loadtxt(file)
 
 means = np.array(adv_mean_sweep)[:,0]
 num_adversaries = len(means)
 adv_names = ['adversary{}'.format(adv_num) for adv_num in range(num_adversaries)]
-fig = plt.figure()
+fig = plt.figure(figsize=(10, 4))
 plt.bar(np.arange(num_adversaries), means)
 plt.title("Regret playing against each adversary.")
 plt.xticks(np.arange(num_adversaries), adv_names)
 plt.xlabel("Adversary")
 plt.ylabel("Avg regret")
-with open(args.adv_mean_sweep_location, 'wb') as file:
+plt.tight_layout()
+with open(args.output_file, 'wb') as file:
         plt.savefig(file)
 plt.close(fig)
