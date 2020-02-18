@@ -74,7 +74,7 @@ def save_barchart(total_scores, output_path, exp_path, file_name, show):
                                                                              list([key[:6] for key in total_scores.keys()])[max_base]))
         else:
             bar_plot = ax.bar(range(len(total_scores)), list(total_scores.values()), yerr=np.std(list(total_scores.values())),align='center')
-        plt.xticks(range(len(total_scores)), list([key[:6] for key in total_scores.keys()]))
+        plt.xticks(range(len(total_scores)), list([key for key in total_scores.keys()]))
         plt.xlabel("Hyperparameter run")
         plt.ylabel("Mean score across swept transfer values")
         ax = plt.gca()
