@@ -1,4 +1,5 @@
-name mean stdfriction_hard_torsolegmax_floorthighfootmin 565.628006655689 55.22138505878242
+name mean std
+friction_hard_torsolegmax_floorthighfootmin 565.628006655689 55.22138505878242
 friction_hard_floorthighmax_torsolegfootmin 559.1446907975775 54.233685391275486
 friction_hard_footlegmax_floortorsothighmin 1206.511257861827 207.82311850749193
 friction_hard_torsothighfloormax_footlegmin 558.1939335650355 56.01609315841277

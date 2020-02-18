@@ -83,8 +83,11 @@ def plot_across_folders(folder_list, test_names, file_names, legend_names, open_
 
 
 def plot_across_seeds(outer_folder_list, test_names, file_names, legend_names, num_seeds, ylabel='Avg. Score',
-                      open_cmd=lambda x: np.loadtxt(x), yaxis=None, titles=[], fontsize=14, title_fontsize=16):
+                      open_cmd=lambda x: np.loadtxt(x), yaxis=None, titles=[], fontsize=14, title_fontsize=16,
+                      use_std=False):
     test_results = np.zeros((len(test_names), len(outer_folder_list)))
+    # indexed by [test_name, result_for given experiment]. Each internal element will be a list of length
+    # number of seeds or number of hyperparameters
     std_deviations = [[[] for _ in range(len(test_names))]  for _ in range(len(outer_folder_list))]
 
     colors = cm.rainbow(np.linspace(0, 1, len(outer_folder_list)))
@@ -101,7 +104,11 @@ def plot_across_seeds(outer_folder_list, test_names, file_names, legend_names, n
 
     for i, test in enumerate(test_names):
         plt.figure()
-        ax = plt.bar(np.arange(len(outer_folder_list)), test_results[i, :] / num_seeds, color=colors, capsize=3)
+        if use_std:
+            # TODO(@evinitsky) add error bars
+            ax = plt.bar(np.arange(len(outer_folder_list)), test_results[i, :] / num_seeds, color=colors, capsize=3)
+        else:
+            ax = plt.bar(np.arange(len(outer_folder_list)), test_results[i, :] / num_seeds, color=colors, capsize=3)
         plt.tight_layout()
         plt.legend(ax, legend_names)
         plt.ylabel(ylabel, fontsize=fontsize)
@@ -113,7 +120,13 @@ def plot_across_seeds(outer_folder_list, test_names, file_names, legend_names, n
     dist = 7
     plt.figure()
     for i, test in enumerate(test_names):
-        ax = plt.bar(np.arange(len(outer_folder_list)) + dist * i, test_results[i, :] / num_seeds, color=colors, capsize=3)
+        if use_std:
+            # we compute the std deviation of the means across the seeds
+            stds = [np.std(exp[i]) for exp in std_deviations]
+            ax = plt.bar(np.arange(len(outer_folder_list)) + dist * i, test_results[i, :] / num_seeds, color=colors, capsize=3,
+                         yerr=stds)
+        else:
+            ax = plt.bar(np.arange(len(outer_folder_list)) + dist * i, test_results[i, :] / num_seeds, color=colors, capsize=3)
         plt.tight_layout()
         plt.legend(ax, legend_names)
     plt.xticks([int(len(outer_folder_list) / 2) - 0.5 + (dist) * i for i in range(len(test_names))],
@@ -128,7 +141,6 @@ def plot_across_seeds(outer_folder_list, test_names, file_names, legend_names, n
 
     # Now write the means and standard deviations to a file for easy readout
     for i in range(len(outer_folder_list)):
-
         with open(file_names[-1] + '_' + legend_names[i] + '_' + 'mean_std.txt', 'w') as file:
             file.write('name mean std')
             for j, test_name in enumerate(test_names):
@@ -321,6 +333,9 @@ if __name__ == '__main__':
             file.write(a + ' ' + b + '\n')
     plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3800], titles=titles,
                       fontsize=fontsize)
+    output_files[-1] = 'final_plots/hopper/compare_all_seed_std'
+    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 5000], titles=titles,
+                      fontsize=fontsize, use_std=True)
 
     # generate the test set maps for the ablations
     output_files = ['final_plots/hopper/hop_seed_ablate' + name for name in test_names]
