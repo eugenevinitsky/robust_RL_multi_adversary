@@ -7,7 +7,7 @@ from envs.robotics import adv_fetch_env
 MODEL_XML_PATH = os.path.join('fetch', 'reach.xml')
 
 
-class MAFetchReachEnv(adv_fetch_env.MAFetchEnv, utils.EzPickle):
+class MAFetchReachEnv(adv_fetch_env.AdvMAFetchEnv, utils.EzPickle):
     def __init__(self, config, reward_type='dense'):
         initial_qpos = {
             'robot0:slide0': 0.4049,

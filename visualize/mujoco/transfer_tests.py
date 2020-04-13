@@ -15,7 +15,7 @@ from envs.multiarm_bandit import MultiarmBandit, PSEUDORANDOM_TRANSFER
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from visualize.mujoco.run_rollout import run_rollout, instantiate_rollout
-from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep
+from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep, fetch_friction_sweep, fetch_mass_sweep
 import errno
 
 
@@ -44,6 +44,11 @@ def make_set_mass_and_fric(friction_coef, mass_coef, mass_body='pole'):
         env.model.geom_friction[:] = (env.model.geom_friction * friction_coef)[:]
     return set_mass
 
+def make_set_mass_and_fric_fetch(friction_coef, mass_coef):
+    def set_mass(env):
+        env.sim.model.body_mass[:] = (env.sim.model.body_mass[:] * mass_coef)
+        env.sim.model.geom_friction[:] = (env.sim.model.geom_friction * friction_coef)
+    return set_mass
 
 def make_set_fric_hard(max_fric_coeff, min_fric_coeff, high_fric_idx, mass_body='pole'):
     def set_mass(env):
@@ -125,10 +130,17 @@ cheetah_run_list = [
     ['base', []]
 ]
 
+fetch_reach_run_list = [
+    ['base', []]
+]
+
 hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
 for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
     hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
 cheetah_grid = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep)
+fetch_grid = np.meshgrid(fetch_mass_sweep, fetch_friction_sweep)
+for mass, fric in np.vstack((fetch_grid[0].ravel(), fetch_grid[1].ravel())).T:
+    fetch_reach_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric_fetch(fric, mass)])
 
 def reset_env(env, num_active_adv=0):
     """Undo parameters that need to be off"""
@@ -248,6 +260,15 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         step_means = np.array(temp_output)[1:, 2].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
         output_name = output_file_name + 'steps'
         save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
+
+    elif 'MAFetchReachEnv' == rllib_config['env']:
+        reward_means = np.array(temp_output)[1:, 0].reshape(len(fetch_mass_sweep), len(fetch_friction_sweep))
+        output_name = output_file_name + 'rew'
+        save_heatmap(reward_means, fetch_mass_sweep, fetch_friction_sweep, outdir, output_name, False, 'fetchreach')
+
+        step_means = np.array(temp_output)[1:, 2].reshape(len(fetch_mass_sweep), len(fetch_friction_sweep))
+        output_name = output_file_name + 'steps'
+        save_heatmap(step_means, fetch_mass_sweep, fetch_friction_sweep, outdir, output_name, False, 'fetchreach')
 
     elif 'MAPendulumEnv' in rllib_config['env']:
         means = np.array(temp_output)[1:, 0]

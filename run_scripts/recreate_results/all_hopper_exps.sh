@@ -170,3 +170,6 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 #--exp_title hop_0adv_concat10_seed_dr_lv0p5_lr00005 --num_cpus 6 --run_transfer_tests --multi_node \
 #--seed_search --domain_randomization --adv_all_actions --concat_actions --lambda_val 0.5 --lr .00005" \
 #--start --stop --tmux --cluster-name=test10
+
+
+python run_scripts/mujoco/run_adv_mujoco.py --train_batch_size 100 --num_iters 1 --num_concat_states 1 --num_adv_strengths 0 --advs_per_strength 0 --advs_per_rew 0 --num_adv_rews 0 --env_name fetchreach --exp_title test_fetch  --run_transfer_tests  --adv_all_actions --concat_actions

@@ -7,6 +7,7 @@ from gym.spaces import Box, Discrete, Dict
 import numpy as np
 from os import path
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
+from visualize.plot_heatmap import fetch_friction_sweep, fetch_mass_sweep
 from copy import deepcopy
 
 
@@ -14,8 +15,6 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
     def __init__(self, config, model_path, n_substeps, gripper_extra_height, block_gripper,
         has_object, target_in_the_air, target_offset, obj_range, target_range,
         distance_threshold, initial_qpos, reward_type):
-
-
 
         self.horizon = 1000
         self.step_num = 0
@@ -97,10 +96,17 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             high_range = min((curr_tranche + 1) * self.advs_per_rew, i + self.advs_per_rew)
             self.comp_adversaries.append([low_range, high_range])
 
+
+        # Do the initialization
+        super(AdvMAFetchEnv, self).__init__(model_path, has_object=has_object, block_gripper=block_gripper, n_substeps=n_substeps,
+            gripper_extra_height=gripper_extra_height, target_in_the_air=target_in_the_air, target_offset=target_offset,
+            obj_range=obj_range, target_range=target_range, distance_threshold=distance_threshold,
+            initial_qpos=initial_qpos, reward_type=reward_type)
+
         # used to track the previously observed states to induce a memory
         # TODO(@evinitsky) bad hardcoding
         obs = self._get_obs()
-        self.obs_size = obs.size()
+        self.obs_size = int(np.squeeze(obs['all_obs'].shape))
         if self.cheating:
             raise NotImplementedError # TODO
         self.num_actions = self.n_actions
@@ -108,14 +114,9 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             self.obs_size += self.num_actions
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
 
-        # Do the initialization
-        super(AdvMAFetchEnv, self).__init__(model_path, has_object=has_object, block_gripper=block_gripper, n_substeps=n_substeps,
-            gripper_extra_height=gripper_extra_height, target_in_the_air=target_in_the_air, target_offset=target_offset,
-            obj_range=obj_range, target_range=target_range, distance_threshold=distance_threshold,
-            initial_qpos=initial_qpos, reward_type=reward_type)
-        self.original_friction = deepcopy(np.array(self.model.geom_friction))
-        self.original_mass_all = deepcopy(self.model.body_mass)
-        obs_space = self.observation_space
+        self.original_friction = deepcopy(np.array(self.sim.model.geom_friction))
+        self.original_mass_all = deepcopy(self.sim.model.body_mass)
+        obs_space = self.observation_space['all_obs']
         if self.concat_actions:
             action_space = self.action_space
             low = np.tile(np.concatenate((obs_space.low, action_space.low * 1000)), self.num_concat_states)
@@ -185,23 +186,21 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
 
     def extreme_randomize_domain(self):
-        raise NotImplementedError
-        num_geoms = len(self.model.geom_friction)
-        num_masses = len(self.model.body_mass)
+        num_geoms = len(self.sim.model.geom_friction)
+        num_masses = len(self.sim.model.body_mass)
 
-        self.friction_coef = np.random.choice(hopper_friction_sweep, num_geoms)[:, np.newaxis]
-        self.mass_coef = np.random.choice(hopper_mass_sweep, num_masses)
+        self.friction_coef = np.random.choice(fetch_friction_sweep, num_geoms)[:, np.newaxis]
+        self.mass_coef = np.random.choice(fetch_mass_sweep, num_masses)
 
-        self.model.body_mass[:] = (self.original_mass_all * self.mass_coef)
-        self.model.geom_friction[:] = (self.original_friction * self.friction_coef)
+        self.sim.model.body_mass[:] = (self.original_mass_all * self.mass_coef)
+        self.sim.model.geom_friction[:] = (self.original_friction * self.friction_coef)
 
     def randomize_domain(self):
-        raise NotImplementedError
-        self.friction_coef = np.random.choice(hopper_friction_sweep)
-        self.mass_coef = np.random.choice(hopper_mass_sweep)
+        self.friction_coef = np.random.choice(fetch_friction_sweep)
+        self.mass_coef = np.random.choice(fetch_mass_sweep)
 
-        self.model.body_mass[self.dr_bindex] = (self.original_mass * self.mass_coef)
-        self.model.geom_friction[:] = (self.original_friction * self.friction_coef)[:]
+        self.sim.model.body_mass[:] = (self.original_mass_all * self.mass_coef)
+        self.sim.model.geom_friction[:] = (self.original_friction * self.friction_coef)[:]
 
     def update_observed_obs(self, new_obs):
         """Add in the new observations and overwrite the stale ones"""
@@ -359,7 +358,6 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         self.step_num = 0
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
         self.total_reward = 0
-        super(RobotEnv, self).reset()
         did_reset_sim = False
         while not did_reset_sim:
             did_reset_sim = self._reset_sim()

@@ -1,6 +1,6 @@
 import numpy as np
 
-from gym.envs.robotics import rotations, robot_env, utils
+from envs.robotics import rotations, robot_env, utils
 
 
 def goal_distance(goal_a, goal_b):
@@ -114,6 +114,7 @@ class FetchEnv(robot_env.RobotEnv):
             object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
         ])
         all_obs = np.concatenate([obs.copy(), achieved_goal.copy(), self.goal.copy()])
+        all_obs = all_obs.flatten()
 
         return {
             'observation': obs.copy(),

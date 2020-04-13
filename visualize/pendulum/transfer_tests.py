@@ -110,7 +110,6 @@ cheetah_grid = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep)
 for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).T:
     cheetah_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
 
-
 # for x in np.linspace(1, 15.0, 15):
 #     lerrel_run_list.append(['mass_{}'.format(x), make_set_mass(x)])
 

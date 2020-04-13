@@ -13,7 +13,7 @@ except ImportError as e:
 
 DEFAULT_SIZE = 500
 
-class RobotEnv(gym.GoalEnv):
+class RobotEnv():
     def __init__(self, model_path, initial_qpos, n_actions, n_substeps):
         if model_path.startswith('/'):
             fullpath = model_path
