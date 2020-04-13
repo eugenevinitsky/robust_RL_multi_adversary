@@ -10,6 +10,7 @@ import gym
 from gym.spaces import Box, Dict
 import numpy as np
 from ray.rllib.env import MultiAgentEnv
+import scipy
 from scipy.linalg import solve_discrete_are
 from scipy.stats import ortho_group
 
@@ -38,7 +39,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         # we create an env that's stable but close to the RHP
         self.A = np.identity(self.dim) * (- np.abs(self.scaling))
         self.B = np.identity(self.dim)
-        self.Q = np.identity(self.dim)
+        self.Q = 10 * np.identity(self.dim)
         self.R = np.identity(self.dim) * self.action_cost_coeff
         self.perturbation_matrix = np.zeros(self.dim)
 
@@ -91,6 +92,9 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         # this tells us if we should compute regret as the reward or LQR cost as the reward
         self.regret_reward = config['regret']
         self.optimal_K = np.zeros((self.dim, self.dim))
+        # this tells us if we should reset the rollout or just continue. If true,
+        # our actions are also added as perturbations to a stabilizing controller
+        self.should_reset = config['should_reset']
 
         print('reward targets are', self.reward_targets)
 
@@ -135,7 +139,11 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
     @property
     def observation_space(self):
-        return Box(low=-np.inf, high=np.inf, shape=((self.dim + self.action_space.low.shape[0]) * self.num_concat_states, ))
+        if self.should_reset:
+            return Box(low=-np.inf, high=np.inf, shape=((self.dim + self.action_space.low.shape[0]) * self.num_concat_states, ))
+        else:
+            # here we see the K matrix and then the state, action pair at each time-step
+            return Box(low=-np.inf, high=np.inf, shape=(3 * self.dim**2 + self.action_space.low.shape[0] + self.dim, ))
 
     @property
     def action_space(self):
@@ -152,7 +160,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
     def step(self, action_dict):
 
         # the rollout gets reset periodically to prevent the reward from going off to infinity
-        if self.step_num % self.rollout_length == 0:
+        if self.step_num % self.rollout_length == 0 and self.should_reset:
             self.curr_pos = self.start_pos
 
         if self.step_num == 0 and self.adversary_range > 0:
@@ -175,11 +183,12 @@ class LinearEnv(MultiAgentEnv, gym.Env):
                                                              size=self.adv_action_space.low.shape[0]).reshape((self.dim, self.dim))
         elif self.step_num == 0 and not self.should_perturb:
             self.perturbation_matrix = np.zeros((self.dim, self.dim))
+
         if self.step_num == 0 and self.regret_reward:
             # NOTE, this does not have sign included. It's not really important though since the
             # sign doesn't show up in the regret
             self.X = solve_discrete_are(self.A + self.perturbation_matrix, self.B, self.Q, self.R)
-            self.optimal_K = np.linalg.inv(self.R + self.B.T @ self.X @ self.B) @ self.B.T @ self.X @ self.A
+            _, self.optimal_K = self.dlqr(self.A, self.B, self.Q, self.R)
 
             # # Note that these do not necessarily yield stable eigenvalues if the action cost is very high
             # self.optimal_K = self.estimate_K(self.horizon + 1, self.A + self.perturbation_matrix, self.B)
@@ -188,21 +197,48 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             #     import ipdb; ipdb.set_trace()
             #     sys.exit("Something is messed up with your discrete ARE, it is returning unstable systems")
 
+        # Okay, now if we are doing the pure regret formulation without resets, we do a rollout of length 100
+        # from a stabilizing controller to give us initial estimates of A and B
+        if not self.should_reset and self.step_num == 0 and self.regret_reward:
+            curr_pos = self.start_pos
+            x_mat = []
+            u_mat = []
+            trans_mat = []
+            for i in range(100):
+                x_mat.append(curr_pos)
+                inp = self.optimal_K @ curr_pos + np.random.normal(size=(self.dim,))
+                u_mat.append(inp)
+                xt_1 = (self.A + self.perturbation_matrix) @ curr_pos + self.B @ inp + \
+                    0.1 * np.random.normal(size=(self.dim,))
+                trans_mat.append(xt_1)
+                curr_pos = xt_1
+            # Now synthesize the A and B estimates
+            self.Ahat, self.Bhat = self._design_controller(
+                np.array(x_mat),
+                np.array(u_mat),
+                np.array(trans_mat))
+
         # if np.any(np.linalg.eigvals(self.A) < 1.1):
         #     print('curr pos', self.curr_pos)
         #     print('action', action_dict)
         #     print('current reward', self.total_rew)
 
         # dynamics update
-        self.curr_pos = (self.A + self.perturbation_matrix) @ self.curr_pos + self.B @ action_dict['agent']
+        self.curr_pos = (self.A + self.perturbation_matrix) @ self.curr_pos + self.B @ action_dict['agent'] + \
+                        0.1 * np.random.normal(size=(self.dim,))
 
         done = False
-        if self.step_num == self.horizon:
+        # if we go off to infinity the episode should end probably
+        if self.step_num == self.horizon or np.linalg.norm(self.curr_pos) > 100:
             done = True
 
         self.update_observed_obs(np.concatenate((self.curr_pos, action_dict['agent'])))
 
-        curr_obs = {'agent': self.observed_states}
+        if self.should_reset:
+            curr_obs = {'agent': self.observed_states}
+        else:
+            curr_obs = {'agent': np.concatenate((self.Ahat.flatten(), self.Bhat.flatten(), self._current_K.flatten(),
+                                                 self.curr_pos, action_dict['agent']))}
         if self.regret_reward:
             # this is the optimal infinite time reward
             optim_cost = (self.start_pos.T @ self.X @ self.start_pos) / self.horizon
@@ -232,7 +268,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
                     # so we make a positively shaped reward that peaks at self.reward_targets[i]
                     adv_reward = [self.reward_targets[i] - np.abs(self.reward_targets[i] - self.total_rew) for i in range(self.adversary_range)]
                 else:
-                    adv_reward = [-self.total_rew for _ in range(self.adversary_range)]
+                    adv_reward = [-base_rew for _ in range(self.adversary_range)]
 
                 if self.l2_reward:
                     # the adversary only takes actions at the first step so
@@ -304,15 +340,17 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.step_num += 1
         return curr_obs, curr_rew, done_dict, info
 
-
     def reset(self):
         self.step_num = 0
         self.total_rew = 0
         self.curr_pos = self.start_pos
 
-        self.update_observed_obs(np.concatenate((self.curr_pos, [0.0] * self.dim)))
+        if self.should_reset:
+            self.update_observed_obs(np.concatenate((self.curr_pos, [0.0] * self.dim)))
+            curr_obs = {'agent': self.observed_states}
+        else:
+            curr_obs = {'agent': np.zeros(self.observation_space.shape[0])}
 
-        curr_obs = {'agent': self.observed_states}
         if self.adversary_range > 0:
             if self.l2_reward and not self.l2_memory:
                 is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
@@ -330,7 +368,6 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
         if self.show_image:
             self.render()
-
 
         return curr_obs
 
@@ -388,3 +425,105 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             K_matrices[i] = -np.matmul(np.linalg.inv(R + B.T @ P_i @ B), B.T @ P_i @ A)
         return K_matrices
 
+    def _design_controller(self, states, inputs, transitions):
+
+
+        # do a least squares fit and controller based on the nominal
+        Anom, Bnom, _ = self.solve_least_squares(states, inputs, transitions, reg=1e-5)
+        _, K = self.dlqr(Anom, Bnom, self.Q, self.R)
+        self._current_K = K
+
+        # for debugging purposes,
+        # check to see if this controller will stabilize the true system
+        rho_true = self.spectral_radius(self.A + self.B.dot(self._current_K))
+        # print("_design_controller: rho(A_* + B_* K)={}".format(
+        #     rho_true))
+
+        return (Anom, Bnom)
+
+    def solve_least_squares(self, states, inputs, transitions, reg=0.0):
+        """Solve for system dynamics from states and inputs
+        """
+
+        assert len(states.shape) == 2
+        assert len(inputs.shape) == 2
+        assert len(transitions.shape) == 2
+        assert states.shape[0] == inputs.shape[0]
+        assert states.shape == transitions.shape
+
+        n, p = states.shape[1], inputs.shape[1]
+
+        X = np.hstack((states, inputs))
+        Y = transitions
+
+        regI = reg * np.eye(n + p)
+
+        Cov = X.T.dot(X) + regI
+
+        # (n+p) x n
+        Theta_hat = scipy.linalg.solve(Cov, X.T.dot(Y), sym_pos=False)
+        # n x (n+p)
+        Theta_hat = Theta_hat.T
+
+        A_est = Theta_hat[:, :n]
+        B_est = Theta_hat[:, n:]
+
+        return A_est, B_est, Cov
+
+    def dlqr(self, A, B, Q=None, R=None):
+        """Solve the discrete time lqr controller.
+        x[k+1] = A x[k] + B u[k]
+        cost = sum x[k].T*Q*x[k] + u[k].T*R*u[k]
+        """
+        # ref Bertsekas, p.151
+        if Q is None:
+            Q = np.eye(A.shape[0])
+        if R is None:
+            R = np.eye(B.shape[1])
+
+        P = scipy.linalg.solve_discrete_are(A, B, Q, R)
+        K = -scipy.linalg.solve(B.T.dot(P).dot(B) + R, B.T.dot(P).dot(A), sym_pos=True)
+
+        A_c = A + B.dot(K)
+        TOL = 1e-5
+        if self.spectral_radius(A_c) >= 1 + TOL:
+            print("WARNING: spectral radius of closed loop is:", self.spectral_radius(A_c))
+
+        return P, K
+
+    def LQR_cost(self, A, B, K, Q, R, sigma_w):
+        """Compute infinite time horizon average LQR cost.
+        Returns +inf if A+BK is not stable
+        """
+
+        L = A + B.dot(K)
+        if self.spectral_radius(L) >= 1:
+            return np.inf
+
+        M = Q + K.T.dot(R).dot(K)
+
+        P = self.solve_discrete_lyapunov(L, M)
+
+        return (sigma_w ** 2) * np.trace(P)
+
+    def spectral_radius(self, A):
+        assert len(A.shape) == 2 and A.shape[0] == A.shape[1]
+        return max(np.abs(np.linalg.eigvals(A)))
+
+    def solve_discrete_lyapunov(self, A, Q, method=None):
+        """Solve A^T P A - P + Q = 0
+        """
+
+        # newer versions of scipy solve A P A^T - P + Q = 0,
+        # while older ones solve A^T P A - P + Q = 0. I do not
+        # remember exactly which version of scipy made the change.
+
+        # I am going to assume you have the newer version installed.
+        # If the assertion below fails, please add an if statement
+        # that branches on your version.
+
+        P = scipy.linalg.solve_discrete_lyapunov(A.T, Q, method)
+
+        assert np.allclose(A.T.dot(P).dot(A) - P, -Q)
+
+        return P

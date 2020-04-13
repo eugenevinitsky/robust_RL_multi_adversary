@@ -112,7 +112,7 @@ def setup_exps(args):
                              'but WAY fast')
     parser.add_argument('--l2_memory_target_coeff', type=float, default=0.05,
                         help='The coefficient used to update the running mean if l2_memory is true')
-    parser.add_argument('--action_cost_coeff', type=float, default=5.0,
+    parser.add_argument('--action_cost_coeff', type=float, default=1.0,
                         help='Scaling on the norm of the actions to penalize the agent for taking large actions')
     parser.add_argument('--regret', action='store_true', default=False,
                         help='If true, the cost is computed in terms of regret. If false, it\'s the l2 cost')
@@ -122,6 +122,8 @@ def setup_exps(args):
                         help='PPO lambda value')
     parser.add_argument('--lr', type=float, default=5e-4,
                         help='PPO lambda value')
+    parser.add_argument('--should_reset', action='store_true', default=False,
+                        help='If true, the env is reset ever N steps back to the original point')
 
     args = parser.parse_args(args)
 
@@ -155,7 +157,7 @@ def setup_exps(args):
             config['lambda'] = 0.97
             config['lr'] = 5e-4
         config['sgd_minibatch_size'] = 64 * max(int(args.train_batch_size / 1e4), 1)
-        if args.use_lstm:
+        if args.use_lstm or not args.should_reset:
             config['sgd_minibatch_size'] *= 5
         config['num_sgd_iter'] = 10
         config['observation_filter'] = 'NoFilter'
@@ -188,16 +190,18 @@ def setup_exps(args):
     config['env_config']['action_cost_coeff'] = args.action_cost_coeff
     config['env_config']['regret'] = args.regret
     config['env_config']['eigval_rand'] = args.eigval_rand
+    config['env_config']['should_reset'] = args.should_reset
+
 
     config['env_config']['run'] = alg_run
 
     ModelCatalog.register_custom_model("rnn", LSTM)
     config['model']['fcnet_hiddens'] = [64, 64]
     # TODO(@evinitsky) turn this on
-    if args.use_lstm:
+    if args.use_lstm or args.should_reset:
         config['model']['fcnet_hiddens'] = [64]
-        config['model']['use_lstm'] = False
-        config['model']['lstm_use_prev_action_reward'] = True
+        config['model']['use_lstm'] = True
+        config['model']['lstm_use_prev_action_reward'] = False
         config['model']['lstm_cell_size'] = 64
 
     env_name = "LinearEnv"
@@ -314,7 +318,7 @@ if __name__ == "__main__":
                 ray.shutdown()
                 ray.init()
 
-                run_transfer_tests(config, checkpoint_path, 1000, args.exp_title, output_path)
+                run_transfer_tests(config, checkpoint_path, 100, args.exp_title, output_path)
                 visualize_adversaries(config, checkpoint_path, 100, output_path)
 
                 if args.use_s3:

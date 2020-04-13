@@ -239,6 +239,57 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                   'wb') as file:
             np.save(file, np.array(rew_list))
 
+    # run things on the example from the "regret bounds for LQR paper"
+    # turn on the perturbations we are going to compute adversary scores
+    if env.dim == 3:
+        env.should_perturb = False
+        env.adversary_range = 0
+        env.A = np.array([[ 1.01, 0.01, 0.0],
+                         [ 0.01, 1.01, 0.01],
+                         [ 0.0, 0.01, 1.01]])
+        rew_list = np.zeros((num_rollouts, env.horizon + 1))
+        sample_idx = 0
+        while sample_idx < num_rollouts:
+            prev_actions = DefaultMapping(
+                lambda agent_id: action_init[mapping_cache[agent_id]])
+            prev_rewards = collections.defaultdict(lambda: 0.)
+
+            print('on rollout {}'.format(sample_idx))
+            obs = env.reset()
+
+            action_dict = {}
+            # we have an is_active key here
+            # multi_obs = {'agent': obs}
+            done = {}
+            done['__all__'] = False
+            i = 0
+            while not done['__all__']:
+                for agent_id, a_obs in obs.items():
+                    if a_obs is not None:
+                        policy_id = mapping_cache.setdefault(
+                            agent_id, policy_agent_mapping(agent_id))
+                        p_use_lstm = use_lstm[policy_id]
+                        if not p_use_lstm:
+                            flat_obs = _flatten_action(a_obs)
+                            a_action = agent.compute_action(
+                                flat_obs,
+                                prev_action=prev_actions[agent_id],
+                                prev_reward=prev_rewards[agent_id],
+                                policy_id=policy_id)
+                        prev_actions[agent_id] = a_action
+                        action_dict[agent_id] = a_action
+                obs, reward, done, info = env.step(action_dict)
+                for agent_id, r in reward.items():
+                    prev_rewards[agent_id] = r
+                rew_list[sample_idx, i] = reward['agent']
+                i += 1
+            sample_idx += 1
+
+        with open('{}/{}_{}_rew'.format(outdir, output_file_name, "laplacian_example"),
+                  'wb') as file:
+            np.save(file, np.array(rew_list))
+
+
 
 def main():
     date = datetime.now(tz=pytz.utc)
