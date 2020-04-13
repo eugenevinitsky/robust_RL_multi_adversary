@@ -41,10 +41,12 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.B = np.identity(self.dim)
         self.Q = 10 * np.identity(self.dim)
         self.R = np.identity(self.dim) * self.action_cost_coeff
+        # Noise in actions
+        self.sigma_w = 0.1
         self.perturbation_matrix = np.zeros(self.dim)
 
         # agent starting position
-        self.start_pos = np.ones(self.dim) * 2
+        self.start_pos = np.zeros(self.dim)
         self.curr_pos = self.start_pos
 
         self.horizon = config["horizon"]
@@ -188,7 +190,9 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             # NOTE, this does not have sign included. It's not really important though since the
             # sign doesn't show up in the regret
             self.X = solve_discrete_are(self.A + self.perturbation_matrix, self.B, self.Q, self.R)
-            _, self.optimal_K = self.dlqr(self.A, self.B, self.Q, self.R)
+            self.Pstar, self.optimal_K = self.dlqr(self.A, self.B, self.Q, self.R)
+            # _J_star is the optimal infinite time reward
+            self._J_star = (self.sigma_w ** 2) * np.trace(self.Pstar)
 
             # # Note that these do not necessarily yield stable eigenvalues if the action cost is very high
             # self.optimal_K = self.estimate_K(self.horizon + 1, self.A + self.perturbation_matrix, self.B)
@@ -209,7 +213,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
                 inp = self.optimal_K @ curr_pos + np.random.normal(size=(self.dim,))
                 u_mat.append(inp)
                 xt_1 = (self.A + self.perturbation_matrix) @ curr_pos + self.B @ inp + \
-                    0.1 * np.random.normal(size=(self.dim,))
+                    self.sigma_w * np.random.normal(size=(self.dim,))
                 trans_mat.append(xt_1)
                 curr_pos = xt_1
             # Now synthesize the A and B estimates
@@ -225,7 +229,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
         # dynamics update
         self.curr_pos = (self.A + self.perturbation_matrix) @ self.curr_pos + self.B @ action_dict['agent'] + \
-                        0.1 * np.random.normal(size=(self.dim,))
+                        self.sigma_w * np.random.normal(size=(self.dim,))
 
         done = False
         # if we go off to infinity the episode should end probably
@@ -240,11 +244,9 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             curr_obs = {'agent': np.concatenate((self.Ahat.flatten(), self.Bhat.flatten(), self._current_K.flatten(),
                                                  self.curr_pos, action_dict['agent']))}
         if self.regret_reward:
-            # this is the optimal infinite time reward
-            optim_cost = (self.start_pos.T @ self.X @ self.start_pos) / self.horizon
             # we treat the action as a diagonal K matrix
             agent_cost = self.curr_pos.T @ self.Q  @ self.curr_pos + action_dict['agent'].T @ self.R @ action_dict['agent']
-            regret = optim_cost - agent_cost
+            regret = self._J_star - agent_cost
             # WARNING, the regret may occasionally be positive as the finite horizon LQR does not guarantee the optimal
             # 1 step action
             # if regret > 5:
@@ -266,9 +268,9 @@ class LinearEnv(MultiAgentEnv, gym.Env):
                 if self.reward_range:
                     # we don't want to give the adversaries an incentive to end the rollout early
                     # so we make a positively shaped reward that peaks at self.reward_targets[i]
-                    adv_reward = [self.reward_targets[i] - np.abs(self.reward_targets[i] - self.total_rew) for i in range(self.adversary_range)]
+                    adv_reward = [-np.abs(self.reward_targets[i] - self.total_rew) for i in range(self.adversary_range)]
                 else:
-                    adv_reward = [-base_rew for _ in range(self.adversary_range)]
+                    adv_reward = [-self.total_rew for _ in range(self.adversary_range)]
 
                 if self.l2_reward:
                     # the adversary only takes actions at the first step so

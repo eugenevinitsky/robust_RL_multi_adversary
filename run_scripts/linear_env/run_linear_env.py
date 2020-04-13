@@ -268,9 +268,12 @@ def on_train_result(info):
                 lambda env: env.update_global_action_mean(mean_result_vec)))
 
 def on_episode_end(info):
-    """Select the currently active adversary"""
+    # did the adversary output an unstable matrix?
+    env = info['env'].get_unwrapped()[0]
+    episode = info["episode"]
+    episode.custom_metrics["is_stable"] = max(np.abs(np.linalg.eigvals(env.A + env.perturbation_matrix))) <= 1.0
 
-    # store info about how many adversaries there are
+    # select a new adversary
     for env in info["env"].envs:
         env.select_new_adversary()
 

@@ -223,6 +223,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         np.save(file, np.array(rew_list))
 
     # turn on the perturbations we are going to compute adversary scores
+    env.A = original_A
     env.should_perturb = True
     env.adversary_range = env.num_adv_strengths * env.advs_per_strength
     for i in range(env.adversary_range):

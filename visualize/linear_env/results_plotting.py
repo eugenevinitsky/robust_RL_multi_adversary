@@ -75,8 +75,9 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
                 results.append(np.mean(np.load(os.path.join(dirpath, run))))
         if len(results) > 0:
             plt.figure(figsize=(10, 5))
-            results_sorted = [result for _, result in sorted(zip(titles,results))]
-            titles_sorted = sorted(titles)
+            adv_number = [int(title.split('adversary')[-1]) for title in titles]
+            results_sorted = [result for _, result in sorted(zip(adv_number,results))]
+            titles_sorted = sorted(adv_number)
             xrange = np.arange(len(results))
             plt.bar(xrange, results_sorted)
             plt.xticks(range(len(titles)), titles_sorted)
@@ -85,6 +86,22 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
             with open('{}/{}_{}.png'.format(dirpath, exp_name, "adversary_score"), 'wb') as result_plot:
                 plt.savefig(result_plot)
             plt.close()
+
+    results = []
+    titles = []
+    for (dirpath, dirnames, filenames) in os.walk(exp_path):
+        for run in filenames:
+            if "laplacian" in run and not 'png' in run:
+                titles.append(dirpath.split("/")[-1][0:5])
+                results.append(np.sum(np.load(os.path.join(dirpath, run))))
+
+    xrange = np.arange(len(results))
+    plt.bar(xrange, results)
+    plt.xticks(range(len(titles)), titles)
+    if show_plots:
+        plt.show()
+    with open('{}/{}_{}.png'.format(output_path, exp_name, "laplacian"),'wb') as result_plot:
+        plt.savefig(result_plot)
 
 
 if __name__ == "__main__":
