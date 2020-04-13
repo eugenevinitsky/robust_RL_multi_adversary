@@ -1,16 +1,22 @@
 import gym
 from gym import spaces
 from gym.utils import seeding
-from gym.envs.mujoco.hopper import HopperEnv
+from envs.robotics import FetchEnv
+from envs.robotics import RobotEnv
 from gym.spaces import Box, Discrete, Dict
 import numpy as np
 from os import path
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
-from visualize.plot_heatmap import hopper_friction_sweep, hopper_mass_sweep
 from copy import deepcopy
 
-class AdvMAHopper(HopperEnv, MultiAgentEnv):
-    def __init__(self, config):
+
+class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
+    def __init__(self, config, model_path, n_substeps, gripper_extra_height, block_gripper,
+        has_object, target_in_the_air, target_offset, obj_range, target_range,
+        distance_threshold, initial_qpos, reward_type):
+
+
+
         self.horizon = 1000
         self.step_num = 0
 
@@ -80,7 +86,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.num_adv_rews = config['num_adv_rews']
         self.advs_per_rew = config['advs_per_rew']
         self.reward_targets = np.linspace(start=self.low_reward, stop=self.high_reward,
-                                     num=self.num_adv_rews)
+                                          num=self.num_adv_rews)
         # repeat the bins so that we can index the adversaries easily
         self.reward_targets = np.repeat(self.reward_targets, self.advs_per_rew)
 
@@ -93,26 +99,21 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
         # used to track the previously observed states to induce a memory
         # TODO(@evinitsky) bad hardcoding
-        self.obs_size = 11
+        obs = self._get_obs()
+        self.obs_size = obs.size()
         if self.cheating:
-            self.obs_size += 2
-            self.friction_coef = 1.0
-            self.mass_coef = 1.0
-        self.num_actions = 3
+            raise NotImplementedError # TODO
+        self.num_actions = self.n_actions
         if self.concat_actions:
             self.obs_size += self.num_actions
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
 
         # Do the initialization
-        super(AdvMAHopper, self).__init__()
-        self._adv_f_bname = 'foot'
-        bnames = self.model.body_names
-        self._adv_bindex = bnames.index(
-            self._adv_f_bname)  # Index of the body on which the adversary force will be applied
-        dr_mass_bname = 'torso'
-        self.dr_bindex = bnames.index(dr_mass_bname)
+        super(AdvMAFetchEnv, self).__init__(model_path, has_object=has_object, block_gripper=block_gripper, n_substeps=n_substeps,
+            gripper_extra_height=gripper_extra_height, target_in_the_air=target_in_the_air, target_offset=target_offset,
+            obj_range=obj_range, target_range=target_range, distance_threshold=distance_threshold,
+            initial_qpos=initial_qpos, reward_type=reward_type)
         self.original_friction = deepcopy(np.array(self.model.geom_friction))
-        self.original_mass = deepcopy(self.model.body_mass[self.dr_bindex])
         self.original_mass_all = deepcopy(self.model.body_mass)
         obs_space = self.observation_space
         if self.concat_actions:
@@ -139,7 +140,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         if self.adv_all_actions:
             low = np.array(self.action_space.low.tolist())
             high = np.array(self.action_space.high.tolist())
-            box = Box(low=-np.ones(low.shape) * self.adversary_strength, high=np.ones(high.shape) * self.adversary_strength,
+            box = Box(low=-np.ones(low.shape) * self.adversary_strength,
+                      high=np.ones(high.shape) * self.adversary_strength,
                       shape=None, dtype=np.float32)
             return box
         else:
@@ -154,9 +156,6 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         else:
             return self.observation_space
 
-    def _adv_to_xfrc(self, adv_act):
-        self.sim.data.xfrc_applied[self._adv_bindex][0] = adv_act[0]
-        self.sim.data.xfrc_applied[self._adv_bindex][2] = adv_act[1]
 
     def update_curriculum(self, mean_rew):
         self.mean_rew = mean_rew
@@ -175,7 +174,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
     def update_global_action_mean(self, mean_array):
         """Use polyak averaging to generate an estimate of the current mean actions at each time step"""
-        self.global_l2_memory_array = (1 - self.l2_memory_target_coeff) * self.global_l2_memory_array + self.l2_memory_target_coeff * mean_array
+        self.global_l2_memory_array = (
+                                                  1 - self.l2_memory_target_coeff) * self.global_l2_memory_array + self.l2_memory_target_coeff * mean_array
         self.local_l2_memory_array = np.zeros(self.local_l2_memory_array.shape)
         self.local_num_observed_l2_samples = np.zeros(self.adversary_range)
 
@@ -183,8 +183,9 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         if self.adversary_range > 0:
             # the -1 corresponds to not having any adversary on at all
             self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
-    
+
     def extreme_randomize_domain(self):
+        raise NotImplementedError
         num_geoms = len(self.model.geom_friction)
         num_masses = len(self.model.body_mass)
 
@@ -195,6 +196,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.model.geom_friction[:] = (self.original_friction * self.friction_coef)
 
     def randomize_domain(self):
+        raise NotImplementedError
         self.friction_coef = np.random.choice(hopper_friction_sweep)
         self.mass_coef = np.random.choice(hopper_mass_sweep)
 
@@ -210,54 +212,56 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
     def step(self, actions):
         self.step_num += 1
+
+
         if isinstance(actions, dict):
-            # the hopper action before any adversary modifies it
-            obs_hopper_action = actions['agent']
-            hopper_action = actions['agent']
+            # the robot action before any adversary modifies it
+            obs_fetch_action = actions['agent']
+            fetch_action = actions['agent']
 
             if self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in actions.keys():
                 if self.adv_all_actions:
-                    adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
+                    adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[
+                        self.curr_adversary]
 
                     # self._adv_to_xfrc(adv_action)
-                    hopper_action += adv_action
+                    fetch_action += adv_action
                     # apply clipping to hopper action
                     if self.clip_actions:
-                        hopper_action = np.clip(obs_hopper_action, a_min=self.action_space.low, a_max=self.action_space.high)
+                        fetch_action = np.clip(obs_fetch_action, a_min=self.action_space.low,
+                                                a_max=self.action_space.high)
                 else:
-                    adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
-                    self._adv_to_xfrc(adv_action)
+                    raise NotImplementedError
         else:
             assert actions in self.action_space
-            obs_hopper_action = actions
-            hopper_action = actions
-
+            obs_fetch_action = actions
+            fetch_action = actions
 
         # keep track of the action that was taken
-        if self.l2_memory and self.l2_reward and isinstance(actions, dict) and 'adversary{}'.format(self.curr_adversary) in actions.keys():
-            self.local_l2_memory_array[self.curr_adversary, :, self.step_num] += actions['adversary{}'.format(self.curr_adversary)]
-        
-        posbefore = self.sim.data.qpos[0]
-        self.do_simulation(hopper_action, self.frame_skip)
-        posafter, height, ang = self.sim.data.qpos[0:3]
-        alive_bonus = 1.0
-        reward = (posafter - posbefore) / self.dt
-        reward += alive_bonus
-        reward -= 1e-3 * np.square(hopper_action).sum()
-        s = self.state_vector()
-        if self.no_end_if_fall:
-            done = False
-        else:
-            done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and
-                        (height > .7) and (abs(ang) < .2))
-        ob = self._get_obs()
+        if self.l2_memory and self.l2_reward and isinstance(actions, dict) and 'adversary{}'.format(
+                self.curr_adversary) in actions.keys():
+            self.local_l2_memory_array[self.curr_adversary, :, self.step_num] += actions[
+                'adversary{}'.format(self.curr_adversary)]
+
+        self._set_action(fetch_action)
+        self.sim.step()
+        self._step_callback()
+        obs = self._get_obs()
+
+        done = False
+        info = {
+            'is_success': self._is_success(obs['achieved_goal'], self.goal),
+        }
+        reward = self.compute_reward(obs['achieved_goal'], self.goal, info)
+        ob = obs['all_obs']
+
         # you are allowed to observe the mass and friction coefficients
         if self.cheating:
-            ob = np.concatenate((ob, [self.mass_coef, self.friction_coef]))
+            raise NotImplementedError
         done = done or self.step_num >= self.horizon
 
         if self.concat_actions:
-            self.update_observed_obs(np.concatenate((ob, obs_hopper_action)))
+            self.update_observed_obs(np.concatenate((ob, obs_fetch_action)))
         else:
             self.update_observed_obs(ob)
 
@@ -293,8 +297,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     # that peaks at the target value. We then scale it by (1 / max(1, self.step_num)) because
                     # if we are not actually able to hit the target, this reward can blow up.
                     adv_reward = [((float(self.step_num) / self.horizon) * self.reward_targets[
-                       i] - 1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
-                       i] - self.total_reward)) * (1 / max(1, self.step_num)) for i in range(self.adversary_range)]
+                        i] - 1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
+                        i] - self.total_reward)) * (1 / max(1, self.step_num)) for i in range(self.adversary_range)]
                 else:
                     adv_reward = [-reward for _ in range(self.adversary_range)]
 
@@ -321,11 +325,13 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                         if self.l2_in_tranche:
                             l2_dists = np.array(
                                 [[np.linalg.norm(action_i - action_j) for action_j in
-                                  self.global_l2_memory_array[self.comp_adversaries[i][0]: self.comp_adversaries[i][1], :, self.step_num]]
+                                  self.global_l2_memory_array[self.comp_adversaries[i][0]: self.comp_adversaries[i][1],
+                                  :, self.step_num]]
                                  for i, action_i in enumerate(action_list)])
                         else:
                             l2_dists = np.array(
-                                [[np.linalg.norm(action_i - action_j) for action_j in self.global_l2_memory_array[:, :, self.step_num]]
+                                [[np.linalg.norm(action_i - action_j) for action_j in
+                                  self.global_l2_memory_array[:, :, self.step_num]]
                                  for action_i in action_list])
                         l2_dists_mean = np.sum(l2_dists)
 
@@ -353,7 +359,12 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.step_num = 0
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
         self.total_reward = 0
-        obs = super().reset()
+        super(RobotEnv, self).reset()
+        did_reset_sim = False
+        while not did_reset_sim:
+            did_reset_sim = self._reset_sim()
+        self.goal = self._sample_goal().copy()
+        obs = self._get_obs()['all_obs']
 
         if self.concat_actions:
             self.update_observed_obs(np.concatenate((obs, [0.0] * 3)))
@@ -378,6 +389,4 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
         return curr_obs
 
-def hopper_env_creator(env_config):
-    env = AdvMAHopper(env_config)
-    return env
+
