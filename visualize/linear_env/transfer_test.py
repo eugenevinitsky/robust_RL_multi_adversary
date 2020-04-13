@@ -41,6 +41,8 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     while sample_idx < num_rollouts:
         prev_actions = DefaultMapping(
             lambda agent_id: action_init[mapping_cache[agent_id]])
+        agent_states = DefaultMapping(
+            lambda agent_id: state_init[mapping_cache[agent_id]])
         prev_rewards = collections.defaultdict(lambda: 0.)
         obs = env.reset()
         # here we set the A matrix manually to have eigenvalues that could be outside the unit circle
@@ -73,6 +75,14 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id)
+                    else:
+                        a_action, p_state, _ = agent.compute_action(
+                            a_obs,
+                            state=agent_states[agent_id],
+                            prev_action=prev_actions[agent_id],
+                            prev_reward=prev_rewards[agent_id],
+                            policy_id=policy_id)
+                        agent_states[agent_id] = p_state
                     prev_actions[agent_id] = a_action
                     action_dict[agent_id] = a_action
             obs, reward, done, info = env.step(action_dict)
@@ -98,6 +108,8 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     while sample_idx < num_rollouts:
         prev_actions = DefaultMapping(
             lambda agent_id: action_init[mapping_cache[agent_id]])
+        agent_states = DefaultMapping(
+            lambda agent_id: state_init[mapping_cache[agent_id]])
         prev_rewards = collections.defaultdict(lambda: 0.)
         obs = env.reset()
         # here we set the A matrix manually to have eigenvalues that could be outside the unit circle
@@ -130,6 +142,14 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id)
+                    else:
+                        a_action, p_state, _ = agent.compute_action(
+                            a_obs,
+                            state=agent_states[agent_id],
+                            prev_action=prev_actions[agent_id],
+                            prev_reward=prev_rewards[agent_id],
+                            policy_id=policy_id)
+                        agent_states[agent_id] = p_state
                     prev_actions[agent_id] = a_action
                     action_dict[agent_id] = a_action
             obs, reward, done, info = env.step(action_dict)
@@ -154,6 +174,8 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     while sample_idx < num_rollouts:
         prev_actions = DefaultMapping(
             lambda agent_id: action_init[mapping_cache[agent_id]])
+        agent_states = DefaultMapping(
+            lambda agent_id: state_init[mapping_cache[agent_id]])
         prev_rewards = collections.defaultdict(lambda: 0.)
         if env.adversary_range > 0:
             env.curr_adversary = np.random.randint(low=0, high=env.adversary_range)
@@ -179,6 +201,14 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id)
+                    else:
+                        a_action, p_state, _ = agent.compute_action(
+                            a_obs,
+                            state=agent_states[agent_id],
+                            prev_action=prev_actions[agent_id],
+                            prev_reward=prev_rewards[agent_id],
+                            policy_id=policy_id)
+                        agent_states[agent_id] = p_state
                     prev_actions[agent_id] = a_action
                     action_dict[agent_id] = a_action
             obs, reward, done, info = env.step(action_dict)
@@ -201,6 +231,8 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         while sample_idx < num_rollouts:
             prev_actions = DefaultMapping(
                 lambda agent_id: action_init[mapping_cache[agent_id]])
+            agent_states = DefaultMapping(
+                lambda agent_id: state_init[mapping_cache[agent_id]])
             prev_rewards = collections.defaultdict(lambda: 0.)
 
             env.curr_adversary = i
@@ -226,6 +258,14 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                                 prev_action=prev_actions[agent_id],
                                 prev_reward=prev_rewards[agent_id],
                                 policy_id=policy_id)
+                        else:
+                            a_action, p_state, _ = agent.compute_action(
+                                a_obs,
+                                state=agent_states[agent_id],
+                                prev_action=prev_actions[agent_id],
+                                prev_reward=prev_rewards[agent_id],
+                                policy_id=policy_id)
+                            agent_states[agent_id] = p_state
                         prev_actions[agent_id] = a_action
                         action_dict[agent_id] = a_action
                 obs, reward, done, info = env.step(action_dict)
@@ -244,14 +284,16 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     if env.dim == 3:
         env.should_perturb = False
         env.adversary_range = 0
-        env.A = np.array([[ 1.01, 0.01, 0.0],
-                         [ 0.01, 1.01, 0.01],
-                         [ 0.0, 0.01, 1.01]])
+        env.A = np.array([[1.01, 0.01, 0.0],
+                         [0.01, 1.01, 0.01],
+                         [0.0, 0.01, 1.01]])
         rew_list = np.zeros((num_rollouts, env.horizon + 1))
         sample_idx = 0
         while sample_idx < num_rollouts:
             prev_actions = DefaultMapping(
                 lambda agent_id: action_init[mapping_cache[agent_id]])
+            agent_states = DefaultMapping(
+                lambda agent_id: state_init[mapping_cache[agent_id]])
             prev_rewards = collections.defaultdict(lambda: 0.)
 
             print('on rollout {}'.format(sample_idx))
@@ -276,6 +318,14 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                                 prev_action=prev_actions[agent_id],
                                 prev_reward=prev_rewards[agent_id],
                                 policy_id=policy_id)
+                        else:
+                            a_action, p_state, _ = agent.compute_action(
+                                a_obs,
+                                state=agent_states[agent_id],
+                                prev_action=prev_actions[agent_id],
+                                prev_reward=prev_rewards[agent_id],
+                                policy_id=policy_id)
+                            agent_states[agent_id] = p_state
                         prev_actions[agent_id] = a_action
                         action_dict[agent_id] = a_action
                 obs, reward, done, info = env.step(action_dict)

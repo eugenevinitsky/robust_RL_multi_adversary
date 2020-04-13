@@ -229,7 +229,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
         done = False
         # if we go off to infinity the episode should end probably
-        if self.step_num == self.horizon or np.linalg.norm(self.curr_pos) > 100:
+        if self.step_num == self.horizon or np.linalg.norm(self.curr_pos) > 20:
             done = True
 
         self.update_observed_obs(np.concatenate((self.curr_pos, action_dict['agent'])))
@@ -251,7 +251,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             #     import ipdb; ipdb.set_trace()
             #     print(regret)
             #     print(self.total_rew)
-            base_rew = regret
+            base_rew = regret / 100.0
         else:
             # LQR cost with Q and R being the identity. We don't take the square to keep the costs in reasonable size
             base_rew = -(np.linalg.norm(self.curr_pos)) - self.action_cost_coeff * (np.linalg.norm(action_dict['agent']))

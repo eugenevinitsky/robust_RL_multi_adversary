@@ -192,13 +192,12 @@ def setup_exps(args):
     config['env_config']['eigval_rand'] = args.eigval_rand
     config['env_config']['should_reset'] = args.should_reset
 
-
     config['env_config']['run'] = alg_run
 
     ModelCatalog.register_custom_model("rnn", LSTM)
     config['model']['fcnet_hiddens'] = [64, 64]
     # TODO(@evinitsky) turn this on
-    if args.use_lstm or args.should_reset:
+    if args.use_lstm or not args.should_reset:
         config['model']['fcnet_hiddens'] = [64]
         config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = False
