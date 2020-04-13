@@ -838,46 +838,46 @@
 ######################################################################
 # 4/12 SOTA tests w/ more sensible reward range
 
-# Pure domain randomization
+ Pure domain randomization
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
 --num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 0 \
---num_adv_strengths 0 --advs_per_rew 0 --num_adv_rews 0 --exp_title linear_dr_d3_h200_r2 --run_transfer_tests \
+--num_adv_strengths 0 --advs_per_rew 0 --num_adv_rews 0 --exp_title linear_dr_d3_h200_r3 --run_transfer_tests \
 --grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.4 --agent_strength 0.4 \
 --eigval_rand --regret" \
 --start --stop --tmux --cluster-name=ev_lin_test1
 
-# 3d experiments w/ 1 RARL adversary
+ 3d experiments w/ 1 RARL adversary
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
 --num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 1 \
---num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 1 --exp_title linear_RARL_d3_conc100_h200_r2 --run_transfer_tests \
+--num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 1 --exp_title linear_RARL_d3_conc100_h200_r3 --run_transfer_tests \
 --grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.133 --agent_strength 0.4 --regret" \
 --start --stop --tmux --cluster-name=ev_lin_test2
 
 # 3d experiments w/ 5 RARL adversary
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
 --num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 5 \
---num_adv_strengths 1 --advs_per_rew 5 --num_adv_rews 1 --exp_title linear_RARL_5adv_d3_conc100_h200_r2 --run_transfer_tests \
+--num_adv_strengths 1 --advs_per_rew 5 --num_adv_rews 1 --exp_title linear_RARL_5adv_d3_conc100_h200_r3 --run_transfer_tests \
 --grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.133 --agent_strength 0.4 --regret" \
 --start --stop --tmux --cluster-name=ev_lin_test3
 
 # 3d experiments w/ 10 RARL adversary
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
 --num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 10 \
---num_adv_strengths 1 --advs_per_rew 10 --num_adv_rews 1 --exp_title linear_RARL_10adv_d3_conc100_h200_r2 --run_transfer_tests \
+--num_adv_strengths 1 --advs_per_rew 10 --num_adv_rews 1 --exp_title linear_RARL_10adv_d3_conc100_h200_r3 --run_transfer_tests \
 --grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.133 --agent_strength 0.4 --regret" \
 --start --stop --tmux --cluster-name=ev_lin_test4
 
 # 3d experiments w/ 20 RARL adversary
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
 --num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 20 \
---num_adv_strengths 1 --advs_per_rew 20 --num_adv_rews 1 --exp_title linear_RARL_10adv_d3_conc100_h200_r2 --run_transfer_tests \
+--num_adv_strengths 1 --advs_per_rew 20 --num_adv_rews 1 --exp_title linear_RARL_10adv_d3_conc100_h200_r3 --run_transfer_tests \
 --grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.133 --agent_strength 0.4 --regret" \
 --start --stop --tmux --cluster-name=ev_lin_test5
 
-# 3d experiments w/ 5 DMALT adversaries and low of -10
+## 3d experiments w/ 5 DMALT adversaries and low of -10
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
 --num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 5 \
---num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 5 --exp_title linear_DAMLT_5adv_d3_h200_low10_r2 --run_transfer_tests \
+--num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 5 --exp_title linear_DAMLT_5adv_d3_h200_low10_r3 --run_transfer_tests \
 --reward_range --low_reward -10 \
 --grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.1333 --agent_strength 0.4 --regret" \
 --start --stop --tmux --cluster-name=ev_lin_test6
@@ -885,7 +885,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 # 3d experiments w/ 10 DMALT adversaries and low of -10
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
 --num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 10 \
---num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 10 --exp_title linear_DAMLT_10adv_d3_h200_low10_r2 --run_transfer_tests \
+--num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 10 --exp_title linear_DAMLT_10adv_d3_h200_low10_r3 --run_transfer_tests \
 --reward_range --low_reward -10 \
 --grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.1333 --agent_strength 0.4 --regret" \
 --start --stop --tmux --cluster-name=ev_lin_test7
@@ -893,7 +893,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 # 3d experiments w/ 20 DMALT adversaries and low of -10
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
 --num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 20 \
---num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 20 --exp_title linear_DAMLT_20adv_d3_h200_low10_r2 --run_transfer_tests \
+--num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 20 --exp_title linear_DAMLT_20adv_d3_h200_low10_r3 --run_transfer_tests \
 --reward_range --low_reward -10 \
 --grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.1333 --agent_strength 0.4 --regret" \
 --start --stop --tmux --cluster-name=ev_lin_test8
@@ -901,7 +901,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 # 3d experiments w/ 5 DMALT adversaries and low of -40
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
 --num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 5 \
---num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 5 --exp_title linear_DAMLT_5adv_d3_h200_low40_r2 --run_transfer_tests \
+--num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 5 --exp_title linear_DAMLT_5adv_d3_h200_low40_r3 --run_transfer_tests \
 --reward_range --low_reward -40 \
 --grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.1333 --agent_strength 0.4 --regret" \
 --start --stop --tmux --cluster-name=ev_lin_test9
@@ -909,7 +909,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 # 3d experiments w/ 10 DMALT adversaries and low of -40
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
 --num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 10 \
---num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 10 --exp_title linear_DAMLT_10adv_d3_h200_low40_r2 --run_transfer_tests \
+--num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 10 --exp_title linear_DAMLT_10adv_d3_h200_low40_r3 --run_transfer_tests \
 --reward_range --low_reward -40 \
 --grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.1333 --agent_strength 0.4 --regret" \
 --start --stop --tmux --cluster-name=ev_lin_test10
@@ -917,7 +917,31 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 # 3d experiments w/ 20 DMALT adversaries and low of -40
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
 --num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 20 \
---num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 20 --exp_title linear_DAMLT_20adv_d3_h200_low40_r2 --run_transfer_tests \
+--num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 20 --exp_title linear_DAMLT_20adv_d3_h200_low40_r3 --run_transfer_tests \
 --reward_range --low_reward -40 \
 --grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.1333 --agent_strength 0.4 --regret" \
 --start --stop --tmux --cluster-name=ev_lin_test11
+
+## 3d experiments w/ 5 DMALT adversaries and low of -40
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
+--num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 5 \
+--num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 5 --exp_title linear_DAMLT_5adv_d3_h200_low40_r3 --run_transfer_tests \
+--reward_range --low_reward -200 \
+--grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.1333 --agent_strength 0.4 --regret" \
+--start --stop --tmux --cluster-name=ev_lin_test12
+
+# 3d experiments w/ 10 DMALT adversaries and low of -40
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
+--num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 10 \
+--num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 10 --exp_title linear_DAMLT_10adv_d3_h200_low40_r3 --run_transfer_tests \
+--reward_range --low_reward -200 \
+--grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.1333 --agent_strength 0.4 --regret" \
+--start --stop --tmux --cluster-name=ev_lin_test13
+
+# 3d experiments w/ 20 DMALT adversaries and low of -40
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \
+--num_iters 500 --train_batch_size 30000 --num_cpus 8 --advs_per_strength 20 \
+--num_adv_strengths 1 --advs_per_rew 1 --num_adv_rews 20 --exp_title linear_DAMLT_20adv_d3_h200_low40_r3 --run_transfer_tests \
+--reward_range --low_reward -200 \
+--grid_search --use_s3 --dim 3 --multi_node --horizon 200 --scaling -0.8 --adv_strength 0.1333 --agent_strength 0.4 --regret" \
+--start --stop --tmux --cluster-name=ev_lin_test14

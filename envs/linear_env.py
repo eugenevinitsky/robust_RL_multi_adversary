@@ -231,11 +231,6 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.curr_pos = (self.A + self.perturbation_matrix) @ self.curr_pos + self.B @ action_dict['agent'] + \
                         self.sigma_w * np.random.normal(size=(self.dim,))
 
-        done = False
-        # if we go off to infinity the episode should end probably
-        if self.step_num == self.horizon or np.linalg.norm(self.curr_pos) > 20:
-            done = True
-
         self.update_observed_obs(np.concatenate((self.curr_pos, action_dict['agent'])))
 
         if self.should_reset:
@@ -259,7 +254,17 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             base_rew = -(np.linalg.norm(self.curr_pos)) - self.action_cost_coeff * (np.linalg.norm(action_dict['agent']))
         self.total_rew += base_rew
         # print(self.total_rew)
-        curr_rew = {'agent': base_rew}
+
+        done = False
+        # if we go off to infinity the episode should end probably
+        if self.step_num == self.horizon or np.linalg.norm(self.curr_pos) > 20:
+            done = True
+
+        # penalize exiting
+        if np.linalg.norm(self.curr_pos) > 20:
+            curr_rew = {'agent': -1000}
+        else:
+            curr_rew = {'agent': base_rew}
 
         if self.adversary_range > 0 and self.curr_adversary >= 0:
 
