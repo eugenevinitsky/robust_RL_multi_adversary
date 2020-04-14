@@ -201,9 +201,7 @@ def setup_exps(args):
         config['model']['fcnet_hiddens'] = [256, 256]
         config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = False
-        config['model']['vf_share_layers'] = True
-        config['model']['vf_loss_coeff'] = tune.grid_search([0.5, 0.05, 0.005, 0.0005])
-        config['model']['lstm_cell_size'] = 64
+        config['model']['lstm_cell_size'] = 256
 
     env_name = "LinearEnv"
     create_env_fn = make_create_env(LinearEnv)
