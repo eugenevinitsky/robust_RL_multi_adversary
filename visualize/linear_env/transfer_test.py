@@ -47,10 +47,10 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         obs = env.reset()
         # here we set the A matrix manually to have eigenvalues that could be outside the unit circle
         # with uniform probability.
-        eigv_range = np.abs(env.adversary_strength * env.dim)
+        eigv_range = np.abs(env.adversary_strength)
         dim = env.dim
         # to make life easy, we sample on the real line and not the complex plane
-        eigs = np.random.uniform(low=-eigv_range, high=eigv_range, size=dim)
+        eigs = np.random.uniform(low=-eigv_range, high=0, size=dim)
         diag_mat = np.diag(eigs)
         # now sample some unitary matrices
         orthonormal_mat = ortho_group.rvs(dim)
@@ -288,6 +288,9 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         env.A = np.array([[1.01, 0.01, 0.0],
                          [0.01, 1.01, 0.01],
                          [0.0, 0.01, 1.01]])
+        # env.A = np.array([[0.9, 0.00, 0.0],
+        #                  [0.00, 0.9, 0.00],
+        #                  [0.0, 0.00, 0.9]])
         rew_list = np.zeros((num_rollouts, env.horizon + 1))
         sample_idx = 0
         while sample_idx < num_rollouts:
