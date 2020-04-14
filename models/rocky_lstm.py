@@ -78,7 +78,7 @@ class RockyLSTM(RecurrentTFModelV2):
 
         # Create the RNN model
         self.value_fn = tf.keras.Model(
-            inputs=[input_layer, seq_in, state_in_h, state_in_c],
+            inputs=[input_layer, seq_in, v_state_in_h, v_state_in_c],
             outputs=[values, v_state_h, v_state_c])
         self.register_variables(self.value_fn.variables)
         self.value_fn.summary()
