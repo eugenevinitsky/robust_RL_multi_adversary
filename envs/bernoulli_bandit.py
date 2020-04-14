@@ -168,8 +168,10 @@ class BernoulliMultiarmBandit(MultiAgentEnv, gym.Env):
 
             if custom_strategy:
                 custom_strategy.reset()
-
-            self.probabilites = self.probabilites[random_arm_order]
+            try:
+                self.probabilites = self.probabilites[random_arm_order]
+            except:
+                import ipdb; ipdb.set_trace()
             # print(self.probabilites)
 
         if custom_strategy:
@@ -186,9 +188,9 @@ class BernoulliMultiarmBandit(MultiAgentEnv, gym.Env):
             base_rew = base_rew - max(self.probabilites)
         done = self.step_num >= self.horizon
 
-        obs = np.zeros(self.num_arms + 1)
+        obs = np.zeros(self.num_arms + 1, dtype=float)
         obs[0] = base_rew
-        obs[arm_choice + 1] = 1
+        obs[arm_choice + 1] = 1.0
         self.update_observed_obs(obs)
 
         curr_obs = {'agent': self.observed_states}
