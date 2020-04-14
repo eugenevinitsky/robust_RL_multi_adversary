@@ -362,6 +362,8 @@ if __name__ == '__main__':
         run_list = cheetah_run_list
     elif rllib_config['env'] == "MultiarmBandit":
         run_list = make_bandit_transfer_list(rllib_config['env_config']['num_arms'])
+    elif rllib_config['env'] == "MAFetchReachEnv":
+        run_list = fetch_reach_run_list
 
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
