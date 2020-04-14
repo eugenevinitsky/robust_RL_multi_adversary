@@ -186,7 +186,7 @@ def setup_exps(args, parser=None):
         config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = False
         config['model']['lstm_cell_size'] = 256
-        config['model']['vf_share_layers'] = False
+        config['model']['vf_share_layers'] = True
 
     env_name = "BernoulliMultiarmBandit"
     create_env_fn = make_create_env(BernoulliMultiarmBandit)

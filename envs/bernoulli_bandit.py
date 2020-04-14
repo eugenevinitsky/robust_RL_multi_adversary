@@ -117,7 +117,7 @@ class BernoulliMultiarmBandit(MultiAgentEnv, gym.Env):
 
     @property
     def observation_space(self):
-        return Box(low=0, high=1, shape=((1 + self.num_arms) * self.num_concat_states, )) 
+        return Box(low=-np.infty, high=np.infty, shape=((1 + self.num_arms) * self.num_concat_states, )) 
 
     @property
     def action_space(self):
