@@ -33,7 +33,7 @@ if not os.path.exists(output_path):
             raise
 
 # now run sync_s3
-os.chmod(os.path.expanduser("~/adversarial_sim2real/run_scripts/s3_sync.sh"), 0o775)
+os.chmod(os.path.expanduser("/adversarial_sim2real/run_scripts/s3_sync.sh"), 0o775)
 p1 = subprocess.Popen(os.path.expanduser("~/adversarial_sim2real/run_scripts/s3_sync.sh {}".format(date)).split(' '))
 p1.wait()
 
@@ -59,7 +59,7 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/s3_test")):
             lerrel_run_list = cheetah_run_list
         elif config['env'] == "MAFetchReachEnv":
             from visualize.mujoco.transfer_tests import fetch_reach_run_list
-
+            import pdb; pdb.set_trace()
             lerrel_run_list = fetch_reach_run_list
             
         ray.shutdown()
