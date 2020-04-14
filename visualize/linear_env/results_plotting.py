@@ -104,26 +104,6 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
     with open('{}/{}_{}.png'.format(output_path, exp_name, "laplacian"),'wb') as result_plot:
         plt.savefig(result_plot)
 
-    for (dirpath, dirnames, filenames) in os.walk(exp_path):
-        results = []
-        titles = []
-        plt.figure()
-        for run in filenames:
-            if "laplacian" in run and not 'png' in run:
-                titles.append(dirpath.split("/")[-1][0:5])
-                import ipdb; ipdb.set_trace()
-                print(np.mean(np.sum(np.load(os.path.join(dirpath, run)), axis=-1)))
-                results.append(np.mean(np.sum(np.load(os.path.join(dirpath, run)), axis=-1)))
-
-        if len(results) > 0:
-            xrange = np.arange(len(results))
-            plt.bar(xrange, results)
-            plt.xticks(range(len(titles)), titles)
-            if show_plots:
-                plt.show()
-            with open('{}/{}_{}.png'.format(dirpath, exp_name, "laplacian"),'wb') as result_plot:
-                plt.savefig(result_plot)
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('experiment_path', type=str, help='Pass the path to the folder containing all your results files')

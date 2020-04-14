@@ -146,7 +146,7 @@ def setup_exps(args):
         config['train_batch_size'] = args.train_batch_size
         config['gamma'] = 0.95
         if args.grid_search:
-            config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
+            config['lambda'] = tune.grid_search([0.5, 0.9])
             config['lr'] = tune.grid_search([5e-4, 5e-5])
         elif args.seed_search:
             config['seed'] = tune.grid_search([i for i in range(10)])
@@ -198,9 +198,11 @@ def setup_exps(args):
     config['model']['fcnet_hiddens'] = [64, 64]
     # TODO(@evinitsky) turn this on
     if args.use_lstm or not args.should_reset:
-        config['model']['fcnet_hiddens'] = [64]
+        config['model']['fcnet_hiddens'] = [256, 256]
         config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = False
+        config['model']['vf_share_layers'] = True
+        config['model']['vf_loss_coeff'] = tune.grid_search([0.5, 0.05, 0.005, 0.0005])
         config['model']['lstm_cell_size'] = 64
 
     env_name = "LinearEnv"
