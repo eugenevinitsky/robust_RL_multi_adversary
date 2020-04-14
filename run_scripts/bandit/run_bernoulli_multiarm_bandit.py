@@ -20,7 +20,7 @@ from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
 from algorithms.custom_kl_distribution import LogitsDist
 from envs.bernoulli_bandit import BernoulliMultiarmBandit
 from visualize.goal_env.visualize_adversaries import visualize_adversaries
-from visualize.pendulum.transfer_tests import run_transfer_tests, make_bandit_transfer_list
+from visualize.pendulum.transfer_tests import run_transfer_tests, make_bernoulli_bandit_transfer_list
 # from visualize.pendulum.visualize_adversaries import visualize_adversaries
 from utils.pendulum_env_creator import make_create_env
 from utils.parsers import init_parser, ray_parser, ma_env_parser
@@ -313,7 +313,7 @@ if __name__ == "__main__":
 
                 ray.shutdown()
                 ray.init()
-                run_transfer_tests(config, checkpoint_path, 1000, args.exp_title, output_path, run_list=make_bandit_transfer_list(args.num_arms))
+                run_transfer_tests(config, checkpoint_path, 1000, args.exp_title, output_path, run_list=make_bernoulli_bandit_transfer_list(args.num_arms))
                 visualize_adversaries(config, checkpoint_path, 100, output_path)
 
                 if args.use_s3:
