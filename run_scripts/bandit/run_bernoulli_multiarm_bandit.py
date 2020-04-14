@@ -26,8 +26,7 @@ from utils.pendulum_env_creator import make_create_env
 from utils.parsers import init_parser, ray_parser, ma_env_parser
 from utils.rllib_utils import get_config_from_path
 
-from models.recurrent_tf_model_v2 import LSTM
-
+from models.rocky_lstm import RockyLSTM
 
 def setup_ma_config(config, create_env):
     env = create_env(config['env_config'])
@@ -38,17 +37,18 @@ def setup_ma_config(config, create_env):
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}}
+    agent_config = {"model": config['model']}
     if config['env_config']['kl_reward']:
         ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
         adversary_config['model']['custom_action_dist'] = "logits_dist"
     # for both of these we need a graph that zeros out agents that weren't active
     if config['env_config']['kl_reward'] or (config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
-        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, agent_config)}
         policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in
                               range(num_adversaries)})
     else:
-        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, agent_config)}
         policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in
                               range(num_adversaries)})
@@ -178,15 +178,11 @@ def setup_exps(args, parser=None):
 
     config['env_config']['run'] = alg_run
 
-    ModelCatalog.register_custom_model("rnn", LSTM)
-    config['model']['fcnet_hiddens'] = []
+    ModelCatalog.register_custom_model("lstm", RockyLSTM)
     # TODO(@evinitsky) turn this on
     if args.use_lstm:
-        config['model']['fcnet_hiddens'] = [64]
-        config['model']['use_lstm'] = True
-        config['model']['lstm_use_prev_action_reward'] = False
+        config['model']['custom_model'] = 'lstm'
         config['model']['lstm_cell_size'] = 256
-        config['model']['vf_share_layers'] = True
 
     env_name = "BernoulliMultiarmBandit"
     create_env_fn = make_create_env(BernoulliMultiarmBandit)
