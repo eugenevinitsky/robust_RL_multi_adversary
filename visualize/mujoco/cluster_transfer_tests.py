@@ -33,7 +33,7 @@ if not os.path.exists(output_path):
             raise
 
 # now run sync_s3
-os.chmod(os.path.expanduser("/adversarial_sim2real/run_scripts/s3_sync.sh"), 0o775)
+os.chmod(os.path.expanduser("~/adversarial_sim2real/run_scripts/s3_sync.sh"), 0o775)
 p1 = subprocess.Popen(os.path.expanduser("~/adversarial_sim2real/run_scripts/s3_sync.sh {}".format(date)).split(' '))
 p1.wait()
 
