@@ -52,6 +52,11 @@ def make_bandit_transfer_example(means, stds):
         env.transfer = [means, stds]
     return set_env_transfer
 
+def make_bernoulli_transfer_example(probabilities):
+    def set_env_transfer(env):
+        env.transfer = [probabilities]
+    return set_env_transfer
+
 def make_bandit_transfer_list(num_arms):
     run_list = [
         ['pseudorandom_base', set_pseudorandom_transfer]
@@ -73,6 +78,19 @@ def make_bandit_transfer_list(num_arms):
         run_list.append(['one_good_boi', make_bandit_transfer_example(means=np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.1]))])
         run_list.append(['needle_in_haystack', make_bandit_transfer_example(means=np.array([-0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 5.0]), stds=np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]))])
         run_list.append(['hard', make_bandit_transfer_example(means=np.array([-5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))])
+    return run_list
+
+def make_bernoulli_bandit_transfer_list(num_arms):
+    run_list = [
+        ['pseudorandom_base', set_pseudorandom_transfer]
+    ]
+    if num_arms == 5:
+        run_list.append(['even_spread', make_bernoulli_transfer_example(np.array([0.0, 0.25, 0.5, 0.75, 1.0]))])
+        run_list.append(['clustered_even', make_bernoulli_transfer_example(np.array([0.3, 0.4, 0.5, 0.6, 0.7]))])
+        run_list.append(['one_good_boi', make_bernoulli_transfer_example(np.array([0.0, 0.0, 0.0, 0.0, 1.0]))])
+        run_list.append(['low_but_not_zero', make_bernoulli_transfer_example(np.array([0.1, 0.1, 0.1, 0.1, 1.0]))])
+        run_list.append(['clustered_low_even', make_bernoulli_transfer_example(np.array([0.0, 0.1, 0.2, 0.3, 0.4]))])
+        run_list.append(['clustered_high_even', make_bernoulli_transfer_example(np.array([0.5, 0.6, 0.7, 0.8, 0.9]))])
     return run_list
 
 # test name, is_env_config, config_value, params_name, params_value
@@ -310,6 +328,8 @@ if __name__ == '__main__':
         lerrel_run_list = cheetah_run_list
     elif rllib_config['env'] == "MultiarmBandit":
         lerrel_run_list = make_bandit_transfer_list(rllib_config['env_config']['num_arms'])
+    elif rllib_config['env'] == "BernoulliMultiarmBandit":
+        lerrel_run_list = make_bernoulli_bandit_transfer_list(rllib_config['env_config']['num_arms'])
 
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})

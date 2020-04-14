@@ -8,7 +8,7 @@ import sys
 from envs.multiarm_bandit import MultiarmBandit
 from envs.bernoulli_bandit import BernoulliMultiarmBandit
 from run_scripts.bandit.run_multiarm_bandit import setup_exps
-from visualize.pendulum.transfer_tests import reset_env, make_bandit_transfer_list, set_pseudorandom_transfer
+from visualize.pendulum.transfer_tests import reset_env, make_bandit_transfer_list, set_pseudorandom_transfer, make_bernoulli_bandit_transfer_list
 from visualize.pendulum.run_rollout import run_non_rl_rollout
 from parsers import init_parser
 import matplotlib.pyplot as plt
@@ -163,7 +163,10 @@ def run_bandit_optimal_transfer_tests(strategy, test_name, config, output_file_n
     if pseudorandom_only:
             run_list = [['pseudorandom_base', set_pseudorandom_transfer]]
     else:
-        run_list = make_bandit_transfer_list(config['num_arms'])
+        if bernoulli:
+            run_list = make_bernoulli_bandit_transfer_list(config['num_arms'])
+        else:
+            run_list = make_bandit_transfer_list(config['num_arms'])
     transfer_results = []
     for transfer in run_list:
         name, env_modifier = transfer

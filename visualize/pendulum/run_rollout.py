@@ -19,6 +19,7 @@ from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.lerrel.adv_cheetah import AdvMAHalfCheetahEnv
 from envs.goal_env import GoalEnv
 from envs.multiarm_bandit import MultiarmBandit
+from envs.bernoulli_bandit import BernoulliMultiarmBandit
 
 from utils.pendulum_env_creator import pendulum_env_creator, lerrel_pendulum_env_creator, make_create_env
 
@@ -63,6 +64,9 @@ def instantiate_rollout(rllib_config, checkpoint):
     elif rllib_config['env'] == "MultiarmBandit":
         env_name = "MultiarmBandit"
         create_env_fn = make_create_env(MultiarmBandit)
+    elif rllib_config['env'] == "BernoulliMultiarmBandit":
+        env_name = "BernoulliMultiarmBandit"
+        create_env_fn = make_create_env(BernoulliMultiarmBandit)
 
     register_env(env_name, create_env_fn)
 
