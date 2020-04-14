@@ -248,7 +248,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             #     import ipdb; ipdb.set_trace()
             #     print(regret)
             #     print(self.total_rew)
-            base_rew = regret / 100.0
+            base_rew = regret / 1000.0
         else:
             # LQR cost with Q and R being the identity. We don't take the square to keep the costs in reasonable size
             base_rew = -(np.linalg.norm(self.curr_pos)) - self.action_cost_coeff * (np.linalg.norm(action_dict['agent']))
@@ -262,7 +262,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
         # penalize exiting
         if np.linalg.norm(self.curr_pos) > 20:
-            curr_rew = {'agent': -1000}
+            curr_rew = {'agent': -200}
         else:
             curr_rew = {'agent': base_rew}
 
