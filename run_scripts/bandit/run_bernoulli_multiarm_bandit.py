@@ -288,7 +288,7 @@ if __name__ == "__main__":
     else:
         ray.init()
 
-    run_tune(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
+    run_tune(**exp_dict, queue_trials=True, raise_on_failed_trial=False)
     num_adversaries = args.num_adv_strengths * args.advs_per_strength
 
     
