@@ -226,7 +226,6 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         except OSError as exc:
             if exc.errno != errno.EEXIST:
                 raise
-
     temp_output = [run_test.remote(test_name=list[0],
                  outdir=outdir, output_file_name=output_file_name,
                  num_rollouts=num_rollouts,
