@@ -836,7 +836,7 @@
 #--start --stop --tmux --cluster-name=ev_lin_test8
 
 ######################################################################
-# 4/12 SOTA tests w/ more sensible reward range
+# 4/13 SOTA tests w/ more sensible reward range
 
 # Pure domain randomization
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/linear_env/run_linear_env.py \

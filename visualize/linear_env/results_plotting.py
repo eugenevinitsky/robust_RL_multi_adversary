@@ -13,12 +13,15 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
     results = []
     titles = []
     plt.figure(figsize=(10, 5))
+    top_valid_score = 10
 
     for (dirpath, dirnames, filenames) in os.walk(exp_path):
         for run in filenames:
-            if "domain_rand_rew" in run and "hard" not in run:
-                titles.append(dirpath.split("/")[-1][0:5])
-                results.append(np.mean(np.load(os.path.join(dirpath, run))))
+            if "domain_rand_rew" in run and "hard" not in run and not 'png' in run:
+                result = np.mean(np.load(os.path.join(dirpath, run)))
+                if np.abs(result) < top_valid_score:
+                    titles.append(dirpath.split("/")[-1][0:5])
+                    results.append(np.mean(np.load(os.path.join(dirpath, run))))
 
     xrange = np.arange(len(results))
     plt.bar(xrange, results)
@@ -34,9 +37,11 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
 
     for (dirpath, dirnames, filenames) in os.walk(exp_path):
         for run in filenames:
-            if "hard_domain_rand_rew" in run:
-                titles.append(dirpath.split("/")[-1][0:5])
-                results.append(np.mean(np.load(os.path.join(dirpath, run))))
+            if "hard_domain_rand_rew" in run  and not 'png' in run:
+                result = np.mean(np.load(os.path.join(dirpath, run)))
+                if np.abs(result) < top_valid_score:
+                    titles.append(dirpath.split("/")[-1][0:5])
+                    results.append(np.mean(np.load(os.path.join(dirpath, run))))
 
     xrange = np.arange(len(results))
     plt.bar(xrange, results)
@@ -51,9 +56,11 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
     plt.figure(figsize=(10, 5))
     for (dirpath, dirnames, filenames) in os.walk(exp_path):
         for run in filenames:
-            if "base_sweep_rew" in run:
-                titles.append(dirpath.split("/")[-1][0:5])
-                results.append(np.mean(np.load(os.path.join(dirpath, run))))
+            if "base_sweep_rew" in run and not 'png' in run:
+                result = np.mean(np.load(os.path.join(dirpath, run)))
+                if np.abs(result) < top_valid_score:
+                    titles.append(dirpath.split("/")[-1][0:5])
+                    results.append(np.mean(np.load(os.path.join(dirpath, run))))
 
     xrange = np.arange(len(results))
     plt.bar(xrange, results)
@@ -94,6 +101,8 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
         for run in filenames:
             if "laplacian" in run and not 'png' in run:
                 titles.append(dirpath.split("/")[-1][0:5])
+                print(np.mean(np.sum(np.load(os.path.join(dirpath, run)), axis=-1)))
+                print(run)
                 results.append(np.mean(np.sum(np.load(os.path.join(dirpath, run)), axis=-1)))
 
     xrange = np.arange(len(results))

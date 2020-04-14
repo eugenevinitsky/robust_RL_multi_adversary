@@ -31,7 +31,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
 
     mapping_cache = {}  # in case policy_agent_mapping is stochastic
 
-    # set the adversary range to zero so that we get domain randomization
+    # # set the adversary range to zero so that we get domain randomization
     env.adversary_range = 0
     env.should_perturb = False
     env.eigval_rand = False
