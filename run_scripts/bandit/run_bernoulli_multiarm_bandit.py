@@ -314,7 +314,7 @@ if __name__ == "__main__":
                 ray.shutdown()
                 ray.init()
                 run_transfer_tests(config, checkpoint_path, 1000, args.exp_title, output_path, run_list=make_bernoulli_bandit_transfer_list(args.num_arms))
-                visualize_adversaries(config, checkpoint_path, 100, output_path)
+                # visualize_adversaries(config, checkpoint_path, 100, output_path)
 
                 if args.use_s3:
                     for i in range(4):
