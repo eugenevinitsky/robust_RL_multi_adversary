@@ -45,7 +45,8 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.sigma_w = 1.0
         self.prime_excitation = 1.0
         self.perturbation_matrix = np.zeros(self.dim)
-        self.scale_factor = 5000
+        self.exit_penalty = 50000
+        self.scale_factor = 50
 
         # agent starting position
         self.start_pos = np.zeros(self.dim)
@@ -252,11 +253,10 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             #     import ipdb; ipdb.set_trace()
             #     print(regret)
             #     print(self.total_rew)
-            base_rew = regret
+            base_rew = regret / self.scale_factor
         else:
             # LQR cost with Q and R being the identity. We don't take the square to keep the costs in reasonable size
             base_rew = -(np.linalg.norm(self.curr_pos)) - self.action_cost_coeff * (np.linalg.norm(action_dict['agent']))
-        self.total_rew += base_rew
         # print(self.total_rew)
 
         done = False
@@ -266,9 +266,11 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
         # penalize exiting
         if np.linalg.norm(self.curr_pos) > 20:
-            curr_rew = {'agent': -self.scale_factor}
+            curr_rew = {'agent': -self.exit_penalty / self.scale_factor}
+            self.total_rew += -self.exit_penalty / self.scale_factor
         else:
             curr_rew = {'agent': base_rew}
+            self.total_rew += base_rew
 
         if self.adversary_range > 0 and self.curr_adversary >= 0:
 

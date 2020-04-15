@@ -146,7 +146,7 @@ def setup_exps(args):
         config['train_batch_size'] = args.train_batch_size
         config['gamma'] = 0.95
         if args.grid_search:
-            config['lambda'] = tune.grid_search([0.5, 0.9])
+            config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
             config['lr'] = tune.grid_search([5e-4, 5e-5])
         elif args.seed_search:
             config['seed'] = tune.grid_search([i for i in range(10)])

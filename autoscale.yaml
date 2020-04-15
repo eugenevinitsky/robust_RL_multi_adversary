@@ -68,7 +68,7 @@ auth:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
-    InstanceType: m4.8xlarge
+    InstanceType: c4.8xlarge
     ImageId: ami-0a80e903adf5cb898 # Adversarial w/ Mujoco Sim2Real AMI
     KeyName: MyKeyPair
 
@@ -87,7 +87,7 @@ head_node:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 worker_nodes:
-    InstanceType: m4.8xlarge
+    InstanceType: c4.8xlarge
     ImageId: ami-0a80e903adf5cb898 # Adversarial w/ Mujoco Sim2Real AMI
     KeyName: MyKeyPair
 

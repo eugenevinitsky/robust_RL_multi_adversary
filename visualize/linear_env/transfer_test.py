@@ -89,14 +89,14 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
 
             for agent_id, r in reward.items():
                 prev_rewards[agent_id] = r
-            rew += reward['agent']
+            rew += (reward['agent'] * env.scale_factor)
         rew_list.append(rew)
         sample_idx += 1
 
     with open('{}/{}_{}_rew'.format(outdir, output_file_name, "domain_rand"),
               'wb') as file:
         np.save(file, np.array(rew_list))
-
+    #
     # set the adversary range to zero so that we get domain randomization.
     # here we specifically focus on unstable systems
     env.adversary_range = 0
@@ -153,10 +153,10 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                     prev_actions[agent_id] = a_action
                     action_dict[agent_id] = a_action
             obs, reward, done, info = env.step(action_dict)
-
             for agent_id, r in reward.items():
                 prev_rewards[agent_id] = r
-            rew += reward['agent']
+            rew += (reward['agent'] * env.scale_factor)
+        # import ipdb; ipdb.set_trace()
         rew_list.append(rew)
         sample_idx += 1
 
@@ -272,7 +272,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                 obs, reward, done, info = env.step(action_dict)
                 for agent_id, r in reward.items():
                     prev_rewards[agent_id] = r
-                rew += reward['agent']
+                rew += (reward['agent'] * env.scale_factor)
             rew_list.append(rew)
             sample_idx += 1
 
@@ -335,7 +335,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                 obs, reward, done, info = env.step(action_dict)
                 for agent_id, r in reward.items():
                     prev_rewards[agent_id] = r
-                rew_list[sample_idx, i] = reward['agent']
+                rew_list[sample_idx, i] = (reward['agent'] * env.scale_factor)
                 i += 1
             sample_idx += 1
 
