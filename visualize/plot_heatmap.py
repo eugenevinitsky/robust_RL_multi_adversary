@@ -117,6 +117,13 @@ def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show
         plt.ylabel("Mass coef", fontsize=fontsize)
         plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
         plt.xlabel("Friction coef", fontsize=fontsize)
+    elif exp_type == 'fetchpush':
+        plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=means.min(), vmax=0)
+        plt.title(file_name, fontsize=title_fontsize)
+        plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x * 6.0) for x in mass_sweep])
+        plt.ylabel("Mass coef", fontsize=fontsize)
+        plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
+        plt.xlabel("Friction coef", fontsize=fontsize)
     plt.colorbar()
     plt.tight_layout()
     plt.savefig('{}/{}_{}.png'.format(output_path.replace(' ', '_'), file_name, "transfer_heatmap"))
