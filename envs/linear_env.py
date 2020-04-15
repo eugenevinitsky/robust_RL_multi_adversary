@@ -147,8 +147,8 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         if self.should_reset:
             return Box(low=-np.inf, high=np.inf, shape=((self.dim + self.action_space.low.shape[0]) * self.num_concat_states, ))
         else:
-            # here we see the K matrix and then the state, action pair at each time-step
-            return Box(low=-np.inf, high=np.inf, shape=(3 * self.dim**2 + self.action_space.low.shape[0] + self.dim, ))
+            # here we see the K matrix and then the state, action pair at each time-step, eigenvalues of A
+            return Box(low=-np.inf, high=np.inf, shape=(3 * self.dim**2 + self.action_space.low.shape[0] + self.dim + self.dim, ))
 
     @property
     def action_space(self):
@@ -226,6 +226,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
                 np.array(x_mat),
                 np.array(u_mat),
                 np.array(trans_mat))
+            self.eig_A = np.abs(np.linalg.eigvals(self.Ahat))
 
         # if np.any(np.linalg.eigvals(self.A) < 1.1):
         #     print('curr pos', self.curr_pos)
@@ -233,15 +234,19 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         #     print('current reward', self.total_rew)
 
         # dynamics update
-        self.curr_pos = (self.A + self.perturbation_matrix) @ self.curr_pos + self.B @ action_dict['agent'] + \
-                        self.sigma_w * np.random.normal(size=(self.dim,))
-
+        if self.should_reset:
+            self.curr_pos = (self.A + self.perturbation_matrix) @ self.curr_pos + self.B @ action_dict['agent'] + \
+                            self.sigma_w * np.random.normal(size=(self.dim,))
+        else:
+            self.curr_pos = (self.A + self.perturbation_matrix + np.diag(action_dict['agent'])) @ self.curr_pos + \
+                            self.sigma_w * np.random.normal(size=(self.dim,))
         self.update_observed_obs(np.concatenate((self.curr_pos, action_dict['agent'])))
 
         if self.should_reset:
             curr_obs = {'agent': self.observed_states}
         else:
             curr_obs = {'agent': np.concatenate((self.Ahat.flatten(), self.Bhat.flatten(), self._current_K.flatten(),
+                                                 self.eig_A.flatten(),
                                                  self.curr_pos, action_dict['agent']))}
         if self.regret_reward:
             # we treat the action as a diagonal K matrix

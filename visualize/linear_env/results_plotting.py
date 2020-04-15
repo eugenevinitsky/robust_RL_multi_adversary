@@ -13,7 +13,7 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
     results = []
     titles = []
     plt.figure(figsize=(10, 5))
-    top_valid_score = 10
+    top_valid_score = 100000
 
     for (dirpath, dirnames, filenames) in os.walk(exp_path):
         for run in filenames:
