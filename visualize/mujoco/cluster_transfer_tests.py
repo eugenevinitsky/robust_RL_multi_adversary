@@ -60,7 +60,10 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/s3_test")):
         elif config['env'] == "MAFetchReachEnv":
             from visualize.mujoco.transfer_tests import fetch_reach_run_list
             lerrel_run_list = fetch_reach_run_list
-            
+        elif config['env'] == "MAFetchPushEnv":
+            from visualize.mujoco.transfer_tests import fetch_push_run_list
+            lerrel_run_list = fetch_push_run_list
+
         ray.shutdown()
         ray.init()
         run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=lerrel_run_list)

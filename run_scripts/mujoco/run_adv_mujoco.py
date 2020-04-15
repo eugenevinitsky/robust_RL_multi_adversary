@@ -30,6 +30,7 @@ from envs.mujoco.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.mujoco.adv_cheetah import AdvMAHalfCheetahEnv
 from envs.mujoco.adv_ant import AdvMAAnt
 from envs.robotics.fetch.reach import MAFetchReachEnv
+from envs.robotics.fetch.push import MAFetchPushEnv
 
 from visualize.mujoco.transfer_tests import run_transfer_tests
 from visualize.mujoco.action_sampler import sample_actions
@@ -312,6 +313,10 @@ def setup_exps(args):
         env_name = "MAFetchReachEnv"
         env_tag = "fetchreach"
         create_env_fn = make_create_env(MAFetchReachEnv)
+    elif args.env_name == "fetchpush":
+        env_name = "MAFetchPushEnv"
+        env_tag = "fetchpush"
+        create_env_fn = make_create_env(MAFetchPushEnv)
 
     config['env'] = env_name
     register_env(env_name, create_env_fn)
@@ -497,6 +502,10 @@ if __name__ == "__main__":
                 elif config['env'] == "MAFetchReachEnv":
                     from visualize.mujoco.transfer_tests import fetch_reach_run_list
                     run_list = fetch_reach_run_list
+                elif config['env'] == "MAFetchPushEnv":
+                    from visualize.mujoco.transfer_tests import fetch_push_run_list
+                    run_list = fetch_push_run_list
+
 
                 ray.shutdown()
                 ray.init()

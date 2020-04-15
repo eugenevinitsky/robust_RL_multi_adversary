@@ -134,10 +134,18 @@ fetch_reach_run_list = [
     ['base', []]
 ]
 
+fetch_push_run_list = [
+    ['base', []]
+]
+
+
 hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
 for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
     hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
 cheetah_grid = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep)
+fetch_grid = np.meshgrid(fetch_mass_sweep, fetch_friction_sweep)
+for mass, fric in np.vstack((fetch_grid[0].ravel(), fetch_grid[1].ravel())).T:
+    fetch_reach_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric_fetch(fric, mass)])
 fetch_grid = np.meshgrid(fetch_mass_sweep, fetch_friction_sweep)
 for mass, fric in np.vstack((fetch_grid[0].ravel(), fetch_grid[1].ravel())).T:
     fetch_reach_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric_fetch(fric, mass)])
@@ -363,6 +371,8 @@ if __name__ == '__main__':
         run_list = make_bandit_transfer_list(rllib_config['env_config']['num_arms'])
     elif rllib_config['env'] == "MAFetchReachEnv":
         run_list = fetch_reach_run_list
+    elif rllib_config['env'] == "MAFetchPushEnv":
+        run_list = fetch_push_run_list
 
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})
