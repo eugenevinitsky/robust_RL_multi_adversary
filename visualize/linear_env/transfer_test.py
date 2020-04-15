@@ -285,7 +285,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     if env.dim == 3:
         env.should_perturb = False
         env.adversary_range = 0
-        env.A = np.array([[1.01, 0.01, 0.0],
+        env.A = -np.array([[1.01, 0.01, 0.0],
                          [0.01, 1.01, 0.01],
                          [0.0, 0.01, 1.01]])
         # env.A = np.array([[0.9, 0.00, 0.0],

@@ -42,8 +42,10 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         self.Q = 10 * np.identity(self.dim)
         self.R = np.identity(self.dim) * self.action_cost_coeff
         # Noise in actions
-        self.sigma_w = 0.1
+        self.sigma_w = 1.0
+        self.prime_excitation = 1.0
         self.perturbation_matrix = np.zeros(self.dim)
+        self.scale_factor = 5000
 
         # agent starting position
         self.start_pos = np.zeros(self.dim)
@@ -173,7 +175,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             if self.l2_memory and self.l2_reward:
                 self.action_list = [action_dict['adversary{}'.format(self.curr_adversary)]]
                 self.local_l2_memory_array[self.curr_adversary] += action_dict['adversary{}'.format(self.curr_adversary)]
-        elif self.step_num == 0 and self.adversary_range == 0:
+        elif self.step_num == 0 and self.adversary_range == 0 and self.should_perturb:
             if self.eigval_rand:
                 eigs = np.random.uniform(low=-self.adversary_strength, high=self.adversary_strength, size=self.dim)
                 diag_mat = np.diag(eigs)
@@ -191,6 +193,8 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             # sign doesn't show up in the regret
             self.X = solve_discrete_are(self.A + self.perturbation_matrix, self.B, self.Q, self.R)
             self.Pstar, self.optimal_K = self.dlqr(self.A, self.B, self.Q, self.R)
+            _, self.rollout_controller = self.dlqr(self.A, self.B, 1e-3*np.eye(self.dim), np.eye(self.dim))
+            assert self.spectral_radius(self.A + self.B.dot(self.rollout_controller)) < 1
             # _J_star is the optimal infinite time reward
             self._J_star = (self.sigma_w ** 2) * np.trace(self.Pstar)
 
@@ -210,7 +214,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             trans_mat = []
             for i in range(100):
                 x_mat.append(curr_pos)
-                inp = self.optimal_K @ curr_pos + np.random.normal(size=(self.dim,))
+                inp = self.rollout_controller @ curr_pos + self.prime_excitation * np.random.normal(size=(self.dim,))
                 u_mat.append(inp)
                 xt_1 = (self.A + self.perturbation_matrix) @ curr_pos + self.B @ inp + \
                     self.sigma_w * np.random.normal(size=(self.dim,))
@@ -248,7 +252,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             #     import ipdb; ipdb.set_trace()
             #     print(regret)
             #     print(self.total_rew)
-            base_rew = regret / 1000.0
+            base_rew = regret
         else:
             # LQR cost with Q and R being the identity. We don't take the square to keep the costs in reasonable size
             base_rew = -(np.linalg.norm(self.curr_pos)) - self.action_cost_coeff * (np.linalg.norm(action_dict['agent']))
@@ -262,7 +266,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
         # penalize exiting
         if np.linalg.norm(self.curr_pos) > 20:
-            curr_rew = {'agent': -200}
+            curr_rew = {'agent': -self.scale_factor}
         else:
             curr_rew = {'agent': base_rew}
 
