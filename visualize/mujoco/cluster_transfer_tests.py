@@ -4,7 +4,7 @@ import argparse
 import errno
 import os
 import subprocess
-
+from datetime import date
 import ray
 
 from visualize.mujoco.transfer_tests import run_transfer_tests
@@ -74,7 +74,7 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/s3_test")):
             try:
                 p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                  "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(
-                                                                     args.date,
+                                                                     date.today().strftime("%m-%d-%Y"),
                                                                      args.exp_title,
                                                                      tune_name)).split(
                     ' '))
