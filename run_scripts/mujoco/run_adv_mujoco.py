@@ -201,6 +201,9 @@ def setup_exps(args):
                 config['lambda'] = tune.grid_search([0.9, 0.95, 1.0])
                 config ['lr'] = tune.grid_search([1e-4, 5e-4])
                 config['gamma'] = tune.grid_search([0.99, 0.995])
+            elif args.env_name == 'fetchpush':
+                config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
+                config['lr'] = tune.grid_search([1e-3, 5e-4])
             else:
                 config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
                 config['lr'] = tune.grid_search([5e-5, 5e-4])

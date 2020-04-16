@@ -276,6 +276,14 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         step_means = np.array(temp_output)[1:, 2].reshape(len(fetch_mass_sweep), len(fetch_friction_sweep))
         output_name = output_file_name + 'steps'
         save_heatmap(step_means, fetch_mass_sweep, fetch_friction_sweep, outdir, output_name, False, 'fetchreach')
+    elif 'MAFetchPushEnv' == rllib_config['env']:
+        reward_means = np.array(temp_output)[1:, 0].reshape(len(fetch_mass_sweep), len(fetch_friction_sweep))
+        output_name = output_file_name + 'rew'
+        save_heatmap(reward_means, fetch_mass_sweep, fetch_friction_sweep, outdir, output_name, False, 'fetchpush')
+
+        step_means = np.array(temp_output)[1:, 2].reshape(len(fetch_mass_sweep), len(fetch_friction_sweep))
+        output_name = output_file_name + 'steps'
+        save_heatmap(step_means, fetch_mass_sweep, fetch_friction_sweep, outdir, output_name, False, 'fetchpush')
 
     elif 'MAPendulumEnv' in rllib_config['env']:
         means = np.array(temp_output)[1:, 0]
