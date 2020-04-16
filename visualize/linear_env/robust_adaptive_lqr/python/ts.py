@@ -3,7 +3,7 @@
 """
 
 import numpy as np
-import utils
+from visualize.linear_env.robust_adaptive_lqr.python import utils
 import logging
 import math
 

@@ -11,7 +11,7 @@ import logging
 import time
 import cvxpy as cvx
 
-import utils
+from visualize.linear_env.robust_adaptive_lqr.python import utils
 
 from visualize.linear_env.robust_adaptive_lqr.python.adaptive import AdaptiveMethod
 

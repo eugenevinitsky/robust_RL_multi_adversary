@@ -15,10 +15,10 @@ from visualize.linear_env.robust_adaptive_lqr.python.nominal import NominalStrat
 from visualize.pendulum.run_rollout import instantiate_rollout, DefaultMapping
 from utils.rllib_utils import get_config_from_path
 
-checkpoint_path = "/Users/eugenevinitsky/Desktop/Research/Data/sim2real/linear/" \
-                  "04-13-2020/linear_dr_d3_h200_r4/linear_dr_d3_h200_r4/PPO_0_lambda=0.5," \
-                  "lr=0.0005_2020-04-14_06-16-3346eyb1_c/"
-checkpoint_num = "250"
+checkpoint_path = "/Users/eugenevinitsky/Desktop/Research/Data/sim2real/linear/04-15-2020/" \
+                  "linear_DAMLT_10adv_d3_h200_low10_r4/linear_DAMLT_10adv_d3_h200_low10_r4/" \
+                  "PPO_4_lambda=0.9,lr=5e-05_2020-04-15_16-07-52w_3gwqqd"
+checkpoint_num = "300"
 
 
 class RLStrategy(NominalStrategy):
@@ -74,7 +74,8 @@ class RLStrategy(NominalStrategy):
         return self.get_action(state)
 
     def get_action(self, state):
-        obs = np.concatenate((self.Ahat.flatten(), self.Bhat.flatten(), self.fixed_K.flatten(), state,
+        obs = np.concatenate((self.Ahat.flatten(), self.Bhat.flatten(), self.fixed_K.flatten(),
+                              np.abs(np.linalg.eigvals(self.Ahat)).flatten(), state,
                               self.prev_action))
         policy_id = self.mapping_cache.setdefault(
             self.agent_id, self.policy_agent_mapping(self.agent_id))
@@ -95,7 +96,7 @@ class RLStrategy(NominalStrategy):
             self.agent_states[self.agent_id] = p_state
         self.prev_actions[self.agent_id] = a_action
         self.prev_action = a_action
-        return a_action
+        return np.diag(a_action) @ state
 
     def reset(self, rng):
         """Reset both the dynamics and internal state.

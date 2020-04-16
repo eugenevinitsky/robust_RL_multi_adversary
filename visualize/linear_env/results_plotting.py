@@ -13,7 +13,7 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
     results = []
     titles = []
     plt.figure(figsize=(10, 5))
-    top_valid_score = 100000
+    top_valid_score = 10000
 
     for (dirpath, dirnames, filenames) in os.walk(exp_path):
         for run in filenames:
@@ -103,7 +103,9 @@ def plot_transfer_scores(output_path, exp_name, exp_path, show_plots):
                 titles.append(dirpath.split("/")[-1][0:5])
                 print(np.mean(np.sum(np.load(os.path.join(dirpath, run)), axis=-1)))
                 print(run)
-                results.append(np.mean(np.sum(np.load(os.path.join(dirpath, run)), axis=-1)))
+                result = np.mean(np.sum(np.load(os.path.join(dirpath, run)), axis=-1))
+                if np.abs(result) < top_valid_score:
+                    results.append(np.mean(np.sum(np.load(os.path.join(dirpath, run)), axis=-1)))
 
     xrange = np.arange(len(results))
     plt.bar(xrange, results)

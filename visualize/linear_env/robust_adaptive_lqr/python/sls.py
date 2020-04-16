@@ -9,7 +9,7 @@ Lyapunov relaxation.
 
 import numpy as np
 import cvxpy as cvx
-import utils
+from visualize.linear_env.robust_adaptive_lqr.python import utils
 import logging
 import math
 import scipy.linalg

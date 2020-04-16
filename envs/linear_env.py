@@ -251,13 +251,9 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         if self.regret_reward:
             # we treat the action as a diagonal K matrix
             agent_cost = self.curr_pos.T @ self.Q  @ self.curr_pos + action_dict['agent'].T @ self.R @ action_dict['agent']
+            # this is the negative regret since we are going to maximize this quantity. We wouldn't want our
+            # agent to maximize regret!
             regret = self._J_star - agent_cost
-            # WARNING, the regret may occasionally be positive as the finite horizon LQR does not guarantee the optimal
-            # 1 step action
-            # if regret > 5:
-            #     import ipdb; ipdb.set_trace()
-            #     print(regret)
-            #     print(self.total_rew)
             base_rew = regret / self.scale_factor
         else:
             # LQR cost with Q and R being the identity. We don't take the square to keep the costs in reasonable size
