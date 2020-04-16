@@ -146,9 +146,10 @@ cheetah_grid = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep)
 fetch_grid = np.meshgrid(fetch_mass_sweep, fetch_friction_sweep)
 for mass, fric in np.vstack((fetch_grid[0].ravel(), fetch_grid[1].ravel())).T:
     fetch_reach_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric_fetch(fric, mass)])
+
 fetch_grid = np.meshgrid(fetch_mass_sweep, fetch_friction_sweep)
 for mass, fric in np.vstack((fetch_grid[0].ravel(), fetch_grid[1].ravel())).T:
-    fetch_reach_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric_fetch(fric, mass)])
+    fetch_push_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric_fetch(fric, mass)])
 
 def reset_env(env, num_active_adv=0):
     """Undo parameters that need to be off"""
@@ -269,7 +270,6 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
 
     elif 'MAFetchReachEnv' == rllib_config['env']:
-        import ipdb; ipdb.set_trace()
         reward_means = np.array(temp_output)[1:, 0].reshape(len(fetch_mass_sweep), len(fetch_friction_sweep))
         output_name = output_file_name + 'rew'
         save_heatmap(reward_means, fetch_mass_sweep, fetch_friction_sweep, outdir, output_name, False, 'fetchreach')
