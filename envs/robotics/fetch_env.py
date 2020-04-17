@@ -61,11 +61,11 @@ class FetchEnv(robot_env.RobotEnv):
                 d2 = goal_distance(achieved_goal, goal) #obj to goal
 
                 if self.reach_obj == -1:
-                    d = -(d1 + d2)
+                    d = d1 + d2
                     if d1 < 0.05:
                         self.reach_obj = d1
                 else:
-                    d = -(self.reach_obj + d2)
+                    d = self.reach_obj + d2
 
             return -d
 
