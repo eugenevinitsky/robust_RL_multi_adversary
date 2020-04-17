@@ -251,7 +251,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         info = {
             'is_success': self._is_success(obs['achieved_goal'], self.goal),
         }
-        reward = self.compute_reward(obs['achieved_goal'], self.goal, info)
+        reward = self.compute_reward(obs['grip_pos'], obs['achieved_goal'], self.goal, info)
         ob = obs['all_obs']
 
         # you are allowed to observe the mass and friction coefficients

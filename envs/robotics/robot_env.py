@@ -35,7 +35,7 @@ class RobotEnv():
         self.seed()
         self._env_setup(initial_qpos=initial_qpos)
         self.initial_state = copy.deepcopy(self.sim.get_state())
-
+        self.reach_obj = -1
         self.goal = self._sample_goal()
         obs = self._get_obs()
         self.n_actions = n_actions
@@ -69,7 +69,7 @@ class RobotEnv():
         info = {
             'is_success': self._is_success(obs['achieved_goal'], self.goal),
         }
-        reward = self.compute_reward(obs['achieved_goal'], self.goal, info)
+        reward = self.compute_reward(obs['grip_pos'], obs['achieved_goal'], self.goal, info)
         return obs, reward, done, info
 
     def reset(self):
@@ -79,6 +79,7 @@ class RobotEnv():
         # In this case, we just keep randomizing until we eventually achieve a valid initial
         # configuration.
         super(RobotEnv, self).reset()
+        self.reach_obj = -1
         did_reset_sim = False
         while not did_reset_sim:
             did_reset_sim = self._reset_sim()
