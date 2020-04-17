@@ -80,11 +80,17 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
         handle_list = []
         real_vals = []
         img_vals = []
-        for matrix in adv_dict['sampled_actions']:
-            eigenvals = np.linalg.eigvals(matrix.reshape((env.dim, env.dim)))
-            for eig in eigenvals:
-                real_vals.append(np.real(eig))
-                img_vals.append(np.imag(eig))
+        if env.adv_action_type == 'perturb':
+            for matrix in adv_dict['sampled_actions']:
+                eigenvals = np.linalg.eigvals(matrix.reshape((env.dim, env.dim)))
+                for eig in eigenvals:
+                    real_vals.append(np.real(eig))
+                    img_vals.append(np.imag(eig))
+        else:
+            for eigvals in adv_dict['sampled_actions']:
+                for eig in eigvals:
+                    real_vals.append(np.real(eig))
+                    img_vals.append(np.imag(eig))
         handle_list.append(plt.scatter(real_vals, img_vals, color=colors[i], label=adversary, s=15))
         plt.title('Scatter of eigenvalues for {}'.format(adversary))
         i += 1
@@ -101,10 +107,15 @@ def visualize_adversaries(rllib_config, checkpoint, num_samples, outdir):
     magnitudes = []
     for adversary, adv_dict in adversary_grid_dict.items():
         magnitude = []
-        for matrix in adv_dict['sampled_actions']:
-            eigenvals = np.linalg.eigvals(matrix.reshape((env.dim, env.dim)))
-            for eig in eigenvals:
-                magnitude.append(np.linalg.norm(eig))
+        if env.adv_action_type == 'perturb':
+            for matrix in adv_dict['sampled_actions']:
+                eigenvals = np.linalg.eigvals(matrix.reshape((env.dim, env.dim)))
+                for eig in eigenvals:
+                    magnitude.append(np.linalg.norm(eig))
+        else:
+            for eigvals in adv_dict['sampled_actions']:
+                for eig in eigvals:
+                    magnitude.append(np.linalg.norm(eig))
         magnitudes.append([adversary, np.mean(magnitude)])
     output_str = '{}/{}'.format(outdir, 'action_bar_plot.png')
     plt.bar(indices, [val[1] for val in magnitudes])

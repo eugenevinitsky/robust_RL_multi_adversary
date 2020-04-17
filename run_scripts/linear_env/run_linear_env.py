@@ -124,6 +124,9 @@ def setup_exps(args):
                         help='PPO lambda value')
     parser.add_argument('--should_reset', action='store_true', default=False,
                         help='If true, the env is reset ever N steps back to the original point')
+    parser.add_argument('--adv_action_type', type=str, default='eigs',
+                        help='Whether the adversaries should output perturbation matrices or sample eigenvalues.'
+                             'Options are `eigs` and `perturb`')
 
     args = parser.parse_args(args)
 
@@ -191,6 +194,7 @@ def setup_exps(args):
     config['env_config']['regret'] = args.regret
     config['env_config']['eigval_rand'] = args.eigval_rand
     config['env_config']['should_reset'] = args.should_reset
+    config['env_config']['adv_action_type'] = args.adv_action_type
 
     config['env_config']['run'] = alg_run
 

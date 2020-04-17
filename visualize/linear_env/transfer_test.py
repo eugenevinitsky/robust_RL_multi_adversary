@@ -282,12 +282,14 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
 
     # run things on the example from the "regret bounds for LQR paper"
     # turn on the perturbations we are going to compute adversary scores
+    env.should_perturb = False
+    env.adversary_range = 0
     if env.dim == 3:
-        env.should_perturb = False
-        env.adversary_range = 0
         env.A = -np.array([[1.01, 0.01, 0.0],
                          [0.01, 1.01, 0.01],
                          [0.0, 0.01, 1.01]])
+    else:
+        env.A = -np.diag(1.01 * np.ones(env.dim))
         # env.A = np.array([[0.9, 0.00, 0.0],
         #                  [0.00, 0.9, 0.00],
         #                  [0.0, 0.00, 0.9]])

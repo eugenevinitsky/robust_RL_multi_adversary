@@ -100,6 +100,8 @@ class LinearEnv(MultiAgentEnv, gym.Env):
         # this tells us if we should reset the rollout or just continue. If true,
         # our actions are also added as perturbations to a stabilizing controller
         self.should_reset = config['should_reset']
+        # if this is eigs the adversary outputs eigenvalues otherwise
+        self.adv_action_type = config['adv_action_type']
 
         print('reward targets are', self.reward_targets)
 
@@ -160,7 +162,19 @@ class LinearEnv(MultiAgentEnv, gym.Env):
 
     @property
     def adv_action_space(self):
-        return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(int(self.dim ** 2), ))
+        if self.adv_action_type == 'eigs':
+            return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(self.dim, ))
+        elif self.adv_action_type == 'perturb':
+            return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(int(self.dim ** 2), ))
+
+    def adv_action_to_perturb(self, action):
+        if self.adv_action_type == 'eigs':
+            diag_mat = np.diag(action)
+            # now sample some unitary matrices
+            orthonormal_mat = ortho_group.rvs(self.dim)
+            return orthonormal_mat.T @ diag_mat @ orthonormal_mat
+        elif self.adv_action_type == 'perturb':
+            return action.reshape((self.dim, self.dim))
 
     def step(self, action_dict):
 
@@ -169,7 +183,7 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             self.curr_pos = self.start_pos
 
         if self.step_num == 0 and self.adversary_range > 0:
-            self.perturbation_matrix = action_dict['adversary{}'.format(self.curr_adversary)].reshape((self.dim, self.dim))
+            self.perturbation_matrix = self.adv_action_to_perturb(action_dict['adversary{}'.format(self.curr_adversary)])
             # store this since the adversary won't get a reward until the last step
             if self.l2_reward and not self.l2_memory:
                 self.action_list = [action_dict['adversary{}'.format(i)] for i in range(self.adversary_range)]

@@ -15,9 +15,10 @@ from visualize.linear_env.robust_adaptive_lqr.python.nominal import NominalStrat
 from visualize.pendulum.run_rollout import instantiate_rollout, DefaultMapping
 from utils.rllib_utils import get_config_from_path
 
-checkpoint_path = "/Users/eugenevinitsky/Desktop/Research/Data/sim2real/linear/04-15-2020/" \
-                  "linear_DAMLT_10adv_d3_h200_low10_r4/linear_DAMLT_10adv_d3_h200_low10_r4/" \
-                  "PPO_4_lambda=0.9,lr=5e-05_2020-04-15_16-07-52w_3gwqqd"
+checkpoint_path = "/Users/eugenevinitsky/Desktop/Research/Data/sim2real/linear/04-16-2020/" \
+                  "linear_DAMLT_20adv_d3_h200_low10_smallbatch/" \
+                  "linear_DAMLT_20adv_d3_h200_low10_smallbatch/" \
+                  "PPO_4_lambda=0.9,lr=5e-05_2020-04-16_07-36-54xhl7izdk"
 checkpoint_num = "300"
 
 
