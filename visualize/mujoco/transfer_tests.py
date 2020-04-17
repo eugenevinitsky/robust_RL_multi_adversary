@@ -214,7 +214,6 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     elif len(env_modifier) > 0:
         setattr(env, env_modifier[0], env_modifier[1])
 
-    import ipdb; ipdb.set_trace()
     rewards, step_num = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                  state_init, action_init, num_rollouts, render, adv_num)
 
