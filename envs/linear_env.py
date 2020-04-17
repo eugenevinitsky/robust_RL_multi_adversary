@@ -207,9 +207,10 @@ class LinearEnv(MultiAgentEnv, gym.Env):
             # NOTE, this does not have sign included. It's not really important though since the
             # sign doesn't show up in the regret
             self.X = solve_discrete_are(self.A + self.perturbation_matrix, self.B, self.Q, self.R)
-            self.Pstar, self.optimal_K = self.dlqr(self.A, self.B, self.Q, self.R)
-            _, self.rollout_controller = self.dlqr(self.A, self.B, 1e-3*np.eye(self.dim), np.eye(self.dim))
-            assert self.spectral_radius(self.A + self.B.dot(self.rollout_controller)) < 1
+            self.Pstar, self.optimal_K = self.dlqr(self.A + self.perturbation_matrix, self.B, self.Q, self.R)
+            _, self.rollout_controller = self.dlqr(self.A + self.perturbation_matrix,
+                                                   self.B, 1e-3*np.eye(self.dim), np.eye(self.dim))
+            assert self.spectral_radius(self.A + self.perturbation_matrix + self.B.dot(self.rollout_controller)) < 1
             # _J_star is the optimal infinite time reward
             self._J_star = (self.sigma_w ** 2) * np.trace(self.Pstar)
 

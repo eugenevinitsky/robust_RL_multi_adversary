@@ -214,7 +214,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             obs, reward, done, info = env.step(action_dict)
             for agent_id, r in reward.items():
                 prev_rewards[agent_id] = r
-            rew += reward['agent']
+            rew += (reward['agent'] * env.scaling)
         rew_list.append(rew)
         sample_idx += 1
 
