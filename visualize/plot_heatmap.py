@@ -20,7 +20,7 @@ cheetah_mass_sweep = np.linspace(.5, 1.5, 11)
 cheetah_friction_sweep = np.linspace(0.1, 0.9, 11)
 
 fetch_mass_sweep = np.linspace(.01, 10.0, 11) #TODO: test what values work?
-fetch_friction_sweep = np.linspace(0.001, 10.0, 11)
+fetch_friction_sweep = np.linspace(0.01, 20.0, 11)
 
 def load_data(results_path):
     all_file_names = OrderedDict()

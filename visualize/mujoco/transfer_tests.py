@@ -47,7 +47,7 @@ def make_set_mass_and_fric(friction_coef, mass_coef, mass_body='pole'):
 def make_set_mass_and_fric_fetch(friction_coef, mass_coef):
     def set_mass(env):
         env.sim.model.body_mass[:] = (env.sim.model.body_mass[:] * mass_coef)
-        env.sim.model.geom_friction[:] = (env.sim.model.geom_friction * friction_coef)
+        env.sim.model.dof_damping[:] = (env.sim.model.dof_damping * friction_coef)
     return set_mass
 
 def make_set_fric_hard(max_fric_coeff, min_fric_coeff, high_fric_idx, mass_body='pole'):
@@ -213,6 +213,8 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
         env.transfer = env_modifier
     elif len(env_modifier) > 0:
         setattr(env, env_modifier[0], env_modifier[1])
+
+    import ipdb; ipdb.set_trace()
     rewards, step_num = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
                                  state_init, action_init, num_rollouts, render, adv_num)
 
