@@ -212,7 +212,6 @@ class AdaptiveMethod(ABC):
                utils.quad_form(self._R, inp)
 
         # advance to next state
-        import ipdb; ipdb.set_trace()
         xnext = self._A_star.dot(self._state_cur) + \
                 self._B_star.dot(inp) + \
                 self._sigma_w * self._get_rng(rng).normal(size=(self._n,))

@@ -8,6 +8,8 @@ from os import path
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from visualize.plot_heatmap import hopper_friction_sweep, hopper_mass_sweep
 from copy import deepcopy
+
+
 class AdvMAHopper(HopperEnv, MultiAgentEnv):
     def __init__(self, config):
         self.horizon = 1000

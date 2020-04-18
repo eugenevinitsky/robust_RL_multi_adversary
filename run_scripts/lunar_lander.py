@@ -25,10 +25,7 @@ from ray.tune.registry import register_env
 
 from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
 from algorithms.custom_kl_distribution import LogitsDist
-from envs.lerrel.adv_hopper import AdvMAHopper
-from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
-from envs.lerrel.adv_cheetah import AdvMAHalfCheetahEnv
-from envs.lerrel.adv_ant import AdvMAAnt
+from envs.lunar_lander import LunarLander
 
 from visualize.pendulum.transfer_tests import run_transfer_tests
 from visualize.pendulum.action_sampler import sample_actions
@@ -39,6 +36,7 @@ from utils.rllib_utils import get_config_from_path
 
 from models.recurrent_tf_model_v2 import LSTM
 
+
 def setup_ma_config(config, create_env):
     env = create_env(config['env_config'])
     policies_to_train = ['agent']
@@ -47,13 +45,15 @@ def setup_ma_config(config, create_env):
     if num_adversaries == 0:
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}, "entropy_coeff": config['env_config']['entropy_coeff']}
+    adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False},
+                        "entropy_coeff": config['env_config']['entropy_coeff']}
     if config['env_config']['run'] == 'PPO':
         if config['env_config']['kl_reward']:
             ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
             adversary_config['model']['custom_action_dist'] = "logits_dist"
         # for both of these we need a graph that zeros out agents that weren't active
-        if config['env_config']['kl_reward'] or (config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
+        if config['env_config']['kl_reward'] or (
+                config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
             policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
             policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
                                                     env.adv_action_space, adversary_config) for i in
@@ -61,12 +61,14 @@ def setup_ma_config(config, create_env):
         else:
             policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
             policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
-                                                    env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+                                                    env.adv_action_space, adversary_config) for i in
+                                  range(num_adversaries)})
     elif config['env_config']['run'] == 'TD3':
         policy_graphs = {'agent': (DDPGTFPolicy, env.observation_space, env.action_space, {})}
         policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
-                                                env.adv_action_space, adversary_config) for i in range(num_adversaries)})
-    
+                                                env.adv_action_space, adversary_config) for i in
+                              range(num_adversaries)})
+
     # TODO(@evinitsky) put this back
     # policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
     #                                         env.adv_action_space, adversary_config) for i in range(num_adversaries)})
@@ -87,23 +89,26 @@ def setup_ma_config(config, create_env):
         }
     })
     print({'multiagent': {
-            'policies': policy_graphs,
-            'policy_mapping_fn': policy_mapping_fn,
-            'policies_to_train': policies_to_train
-        }})
+        'policies': policy_graphs,
+        'policy_mapping_fn': policy_mapping_fn,
+        'policies_to_train': policies_to_train
+    }})
 
 
 def setup_exps(args):
     parser = init_parser()
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
-    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper', 'cheetah', 'ant'])
+    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?',
+                        choices=['pendulum', 'hopper', 'cheetah', 'ant'])
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO, SAC, TD3')
-    parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
+    parser.add_argument('--custom_ppo', action='store_true', default=False,
+                        help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
                                                                          'Multiply this by `advs_per_strength` to get the total number of adversaries'
                                                                          'Default - retrain lerrel, single agent')
-    parser.add_argument('--advs_per_strength', type=int, default=1, help='How many adversaries exist at each strength level')
+    parser.add_argument('--advs_per_strength', type=int, default=1,
+                        help='How many adversaries exist at each strength level')
     parser.add_argument('--adv_strength', type=float, default=5.0, help='Strength of active adversaries in the env')
     parser.add_argument('--alternate_training', action='store_true', default=False)
     parser.add_argument('--curriculum', action='store_true', default=False,
@@ -128,7 +133,8 @@ def setup_exps(args):
     parser.add_argument('--reward_range', action='store_true', default=False,
                         help='If true, the adversaries try to get agents to goals evenly spaced between `low_reward`'
                              'and `high_reward')
-    parser.add_argument('--num_adv_rews', type=int, default=1, help='Number of adversary rews ranges if reward ranges is on')
+    parser.add_argument('--num_adv_rews', type=int, default=1,
+                        help='Number of adversary rews ranges if reward ranges is on')
     parser.add_argument('--advs_per_rew', type=int, default=1,
                         help='How many adversaries exist at a given reward level')
     parser.add_argument('--low_reward', type=float, default=0.0, help='The lower range that adversaries try'
@@ -154,7 +160,7 @@ def setup_exps(args):
     parser.add_argument('--kl_reward', action='store_true', default=False,
                         help='If true, each adversary gets a reward for being close to the adversaries in '
                              'KL space.')
-    parser.add_argument('--kl_reward_coeff',  type=float, default=1.0,
+    parser.add_argument('--kl_reward_coeff', type=float, default=1.0,
                         help='Scaling on the kl_reward')
     parser.add_argument('--no_end_if_fall', action='store_true', default=False,
                         help='If true, the env continues even after a fall ')
@@ -175,7 +181,7 @@ def setup_exps(args):
     if args.alternate_training and args.advs_per_strength > 1:
         sys.exit('You can only have 1 adversary if you are alternating training')
     if args.cheating and not args.domain_randomization:
-        sys.exit('cheating should not be enabled without domain randomization' )
+        sys.exit('cheating should not be enabled without domain randomization')
     if args.reward_range and args.num_adv_strengths * args.advs_per_strength <= 0:
         sys.exit('must specify number of strength levels, number of adversaries when using reward range')
     if (args.num_adv_strengths * args.advs_per_strength != args.num_adv_rews * args.advs_per_rew) and args.reward_range:
@@ -198,7 +204,7 @@ def setup_exps(args):
         if args.grid_search:
             if args.env_name == 'cheetah':
                 config['lambda'] = tune.grid_search([0.9, 0.95, 1.0])
-                config ['lr'] = tune.grid_search([1e-4, 5e-4])
+                config['lr'] = tune.grid_search([1e-4, 5e-4])
                 config['gamma'] = tune.grid_search([0.99, 0.995])
             else:
                 config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
@@ -458,7 +464,8 @@ if __name__ == "__main__":
 
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
-        output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), date), args.exp_title)
+        output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), date),
+                                   args.exp_title)
         if not os.path.exists(output_path):
             try:
                 os.makedirs(output_path)
@@ -480,24 +487,29 @@ if __name__ == "__main__":
                 # TODO(@ev) gross find somewhere else to put this
                 if config['env'] == "MALerrelPendulumEnv":
                     from visualize.pendulum.transfer_tests import pendulum_run_list
+
                     lerrel_run_list = pendulum_run_list
                 elif config['env'] == "MALerrelHopperEnv":
                     from visualize.pendulum.transfer_tests import hopper_run_list, hopper_test_list
+
                     lerrel_run_list = hopper_run_list
                     test_list = hopper_test_list
                 elif config['env'] == "MALerrelCheetahEnv":
                     from visualize.pendulum.transfer_tests import cheetah_run_list
+
                     lerrel_run_list = cheetah_run_list
                 elif config['env'] == "MALerrelAntEnv":
                     # TODO(@kparvate) this needs to change
                     from visualize.pendulum.transfer_tests import cheetah_run_list
+
                     lerrel_run_list = cheetah_run_list
 
                 ray.shutdown()
                 ray.init()
                 run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=lerrel_run_list)
                 if len(test_list) > 0:
-                    run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=test_list, is_test=True)
+                    run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=test_list,
+                                       is_test=True)
 
                 sample_actions(config, checkpoint_path, min(2 * args.train_batch_size, 20000), output_path)
 
@@ -506,10 +518,11 @@ if __name__ == "__main__":
                     for i in range(4):
                         try:
                             p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                             "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(date,
-                                                                                                                              args.exp_title,
-                                                                                                                              tune_name)).split(
+                                                                             "s3://sim2real/transfer_results/adv_robust/{}/{}/{}".format(
+                                                                                 date,
+                                                                                 args.exp_title,
+                                                                                 tune_name)).split(
                                 ' '))
-                            p1.wait(200)
+                            p1.wait(50)
                         except Exception as e:
                             print('This is the error ', e)

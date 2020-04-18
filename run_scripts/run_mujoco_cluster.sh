@@ -821,21 +821,21 @@
 #--start --stop --tmux --cluster-name=ev_pend_test1
 
 #######################################################################################################################
-# 4/17 experiments
+# 4/18 experiments
 #######################################################################################################################
 # Run multi-RARL experiments
 
 # 5 ADV RARL w/ agent memory
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
---train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
+--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
 --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 5 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
---exp_title hop_RARL_5adv_concat1_str0p25_grid --num_cpus 9 --run_transfer_tests --multi_node \
+--exp_title hop_RARL_5adv_concat8_str0p25_grid --num_cpus 9 --run_transfer_tests --multi_node \
 --adv_strength 0.25 --adv_all_actions" \
 --start --stop --tmux --cluster-name=ev_hop_test1
 
 # 5 ADV RARL w/o agent memory
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
---train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
 --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 5 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_RARL_5adv_concat1_str0p25_grid --num_cpus 9 --run_transfer_tests --multi_node \
 --adv_strength 0.25 --adv_all_actions" \
@@ -843,15 +843,15 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 
 # 5 ADV DMALT w/ agent memory
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
---train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
+--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 8 --concat_actions \
 --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
---exp_title hop_DMALT_5adv_concat1_str0p25_grid --num_cpus 9 --run_transfer_tests --multi_node \
+--exp_title hop_DMALT_5adv_concat8_str0p25_grid --num_cpus 9 --run_transfer_tests --multi_node \
 --adv_strength 0.25 --adv_all_actions --reward_range" \
 --start --stop --tmux --cluster-name=ev_hop_test3
 
 # 5 ADV RARL w/o agent memory
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
---train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
 --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_DMALT_5adv_concat1_str0p25_grid --num_cpus 9 --run_transfer_tests --multi_node \
 --adv_strength 0.25 --adv_all_actions --reward_range" \

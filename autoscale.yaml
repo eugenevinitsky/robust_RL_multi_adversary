@@ -130,6 +130,7 @@ setup_commands:
 head_setup_commands:
     - pip install boto3==1.10.45  # 1.4.8 adds InstanceMarketOptions
     - pip install awscli==1.16.309
+    - pip install seaborn
 
 # Custom commands that will be run on worker nodes after common setup.
 worker_setup_commands: []
