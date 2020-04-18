@@ -18,6 +18,8 @@ from envs.mujoco.adv_hopper import AdvMAHopper
 from envs.mujoco.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.mujoco.adv_cheetah import AdvMAHalfCheetahEnv
 from envs.robotics.fetch.reach import MAFetchReachEnv
+from envs.robotics.fetch.push import MAFetchPushEnv
+
 from envs.mujoco.adv_ant import AdvMAAnt
 
 from envs.linear_env import LinearEnv
@@ -69,6 +71,9 @@ def instantiate_rollout(rllib_config, checkpoint):
     elif rllib_config['env'] == "MAFetchReachEnv":
         env_name = "MAFetchReachEnv"
         create_env_fn = make_create_env(MAFetchReachEnv)
+    elif rllib_config['env'] == "MAFetchPushEnv":
+        env_name = "MAFetchPushEnv"
+        create_env_fn = make_create_env(MAFetchPushEnv)
 
     register_env(env_name, create_env_fn)
 
