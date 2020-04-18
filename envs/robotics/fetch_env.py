@@ -56,16 +56,16 @@ class FetchEnv(robot_env.RobotEnv):
         if self.reward_type == 'sparse':
             return -(d > self.distance_threshold).astype(np.float32)
         else:
-            # if self.has_object:
-            #     d1 = goal_distance(grip_pos, achieved_goal) #obj to gripper
-            #     d2 = goal_distance(achieved_goal, goal) #obj to goal
-            #
-            #     if self.reach_obj == -1:
-            #         d = d1 + d2
-            #         if d1 < 0.05:
-            #             self.reach_obj = d1
-            #     else:
-            #         d = self.reach_obj + d2
+            if self.has_object:
+                d1 = goal_distance(grip_pos, achieved_goal) #obj to gripper
+                d2 = goal_distance(achieved_goal, goal) #obj to goal
+
+                if self.reach_obj == -1:
+                    d = d1 + d2
+                    if d1 < 0.05:
+                        self.reach_obj = d1
+                else:
+                    d = self.reach_obj + d2
 
             return -d
 

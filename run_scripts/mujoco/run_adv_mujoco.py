@@ -237,10 +237,13 @@ def setup_exps(args):
             config["critic_lr"] = tune.grid_search([1e-3, 1e-4, 1e-5])
             config["tau"] = tune.grid_search([5e-3, 5e-4])
             if 'fetch' in args.env_name:
+                config["train_batch_size"] = 256
                 config["actor_lr"] = tune.grid_search([1e-3, 1e-4])
                 config["critic_lr"] = tune.grid_search([1e-3, 1e-4])
                 config["buffer_size"] = int(1e6)
-                config["tau"] = 0.05
+                config["tau"] = tune.grid_search([5e-2, 5e-3])
+                config["actor_hiddens"] = [256, 256, 256]
+                config["critic_hiddens"] = [256, 256, 256]
 
 
         elif args.seed_search:
