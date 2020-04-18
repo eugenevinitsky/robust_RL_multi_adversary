@@ -847,7 +847,7 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_DMALT_5adv_concat1_str0p25_grid --num_cpus 9 --run_transfer_tests --multi_node \
 --adv_strength 0.25 --adv_all_actions --reward_range" \
---start --stop --tmux --cluster-name=ev_hop_test1
+--start --stop --tmux --cluster-name=ev_hop_test3
 
 # 5 ADV RARL w/o agent memory
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
@@ -855,4 +855,4 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
 --exp_title hop_DMALT_5adv_concat1_str0p25_grid --num_cpus 9 --run_transfer_tests --multi_node \
 --adv_strength 0.25 --adv_all_actions --reward_range" \
---start --stop --tmux --cluster-name=ev_hop_test2
+--start --stop --tmux --cluster-name=ev_hop_test4
