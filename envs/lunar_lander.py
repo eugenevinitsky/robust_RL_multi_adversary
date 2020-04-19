@@ -387,7 +387,7 @@ class LunarLanderRandomized(MultiAgentEnv, EzPickle):
 
 class AdvLunarLander(LunarLanderRandomized):
     """Just lunar lander, but configured to work with adversaries"""
-    continuous = True
+    continuous = False
     def __init__(self, config):
         super().__init__(config)
         self.total_reward = 0

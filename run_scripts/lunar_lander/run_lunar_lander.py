@@ -43,7 +43,7 @@ def setup_ma_config(config, create_env):
     if num_adversaries == 0:
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}}
+    adversary_config = {"model": {'fcnet_hiddens': [100, 100], 'use_lstm': False}}
     if config['env_config']['run'] == 'PPO':
         if config['env_config']['kl_reward']:
             ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
@@ -203,7 +203,6 @@ def setup_exps(args):
         config = deepcopy(DEFAULT_PPO_CONFIG)
         config['seed'] = 0
         config['train_batch_size'] = args.train_batch_size
-        config['gamma'] = 0.99
         if args.grid_search:
                 config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
                 config['lr'] = tune.grid_search([5e-5, 5e-4])
@@ -239,6 +238,7 @@ def setup_exps(args):
         config['evaluation_num_episodes'] = 10
     else:
         sys.exit('Only PPO, TD3, and SAC are supported')
+    config['gamma'] = 0.99
 
     if config['observation_filter'] == 'MeanStdFilter' and args.l2_reward:
         sys.exit('Mean std filter MUST be off if using the l2 reward')
@@ -317,7 +317,7 @@ def setup_exps(args):
 
     stop_dict = {}
     stop_dict.update({
-        'timesteps_total': 1000000
+        'timesteps_total': int(1e6)
     })
 
     exp_dict = {

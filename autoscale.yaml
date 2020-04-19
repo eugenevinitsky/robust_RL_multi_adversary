@@ -120,7 +120,7 @@ setup_commands:
     - cd ~/adversarial_sim2real && git fetch; git checkout sota_linear && git pull
     - source activate sim2real && pip install psutil && pip install tensorflow==1.15.0 && pip install ray==0.8.0 && pip install seaborn
     - echo PATH="$HOME/anaconda3/envs/sim2real/bin:$PATH" >> /home/ubuntu/.bashrc && source /home/ubuntu/.bashrc
-
+    - pip install Box2D-py
     # Consider uncommenting these if you also want to run apt-get commands during setup
     # - sudo pkill -9 apt-get || true
     # - sudo pkill -9 dpkg || true
@@ -131,7 +131,6 @@ head_setup_commands:
     - pip install boto3==1.10.45  # 1.4.8 adds InstanceMarketOptions
     - pip install awscli==1.16.309
     - pip install seaborn
-    - pip install Box2D-py
 
 # Custom commands that will be run on worker nodes after common setup.
 worker_setup_commands: []

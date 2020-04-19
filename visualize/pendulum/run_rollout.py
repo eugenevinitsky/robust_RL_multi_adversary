@@ -155,7 +155,7 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id)
                     # handle the tuple case
-                    if len(a_action) > 1:
+                    if hasattr(a_action, 'len') and len(a_action) > 1:
                         if isinstance(a_action[0], np.ndarray):
                             a_action[0] = a_action[0].flatten()
                     action_dict[agent_id] = a_action
