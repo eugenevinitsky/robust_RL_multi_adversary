@@ -94,8 +94,8 @@ def setup_exps(args):
     parser = init_parser()
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
-    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?',
-                        choices=['pendulum', 'hopper', 'cheetah', 'ant'])
+    # parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?',
+    #                     choices=['pendulum', 'hopper', 'cheetah', 'ant'])
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO, SAC, TD3')
     parser.add_argument('--custom_ppo', action='store_true', default=False,
                         help='If true, we use the PPO with a KL penalty')
@@ -191,31 +191,13 @@ def setup_exps(args):
         config['seed'] = 0
         config['train_batch_size'] = args.train_batch_size
         config['gamma'] = 0.995
-        if args.env_name == 'cheetah':
-            config['kl_coeff'] = 1.0
-            config['clip_param'] = 0.2
-            config['grad_clip'] = 0.5
-        config['vf_clip_param'] = 100.0
         if args.grid_search:
-            if args.env_name == 'cheetah':
-                config['lambda'] = tune.grid_search([0.9, 0.95, 1.0])
-                config['lr'] = tune.grid_search([1e-4, 5e-4])
-                config['gamma'] = tune.grid_search([0.99, 0.995])
-            else:
                 config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
                 config['lr'] = tune.grid_search([5e-5, 5e-4])
-
         elif args.seed_search:
             config['seed'] = tune.grid_search([i for i in range(10)])
             config['lr'] = args.lr
             config['lambda'] = args.lambda_val
-        else:
-            if args.env_name == 'hopper':
-                config['lambda'] = 0.9
-                config['lr'] = 5e-4
-            else:
-                config['lambda'] = 0.9
-                config['lr'] = 5e-5
         config['sgd_minibatch_size'] = 64 * max(int(args.train_batch_size / 1e4), 1)
         if args.use_lstm:
             config['sgd_minibatch_size'] *= 5

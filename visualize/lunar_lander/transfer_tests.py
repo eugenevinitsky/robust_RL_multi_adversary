@@ -21,8 +21,9 @@ from utils.rllib_utils import get_config
 from visualize.pendulum.run_rollout import run_rollout, instantiate_rollout
 import errno
 
-engine_strength_grid = np.linspace(7.5, 20.0, 30)
-engine_strength_hard = np.linspace(7.5, 11, 30)
+# TODO(@evinitsky) put back
+engine_strength_grid = np.linspace(7.5, 20.0, 20)
+engine_strength_hard = np.linspace(7.5, 11, 20)
 
 
 def make_set_engine_strength(engine_strength):
@@ -42,7 +43,7 @@ def get_plot_config(environment):
             'metrics': ['ref_learning_curve_{}', 'hard_learning_curve_{}', 'rand_learning_curve_{}'],
             'solved': 200,
             'xlim': (7.5, 20.0),
-            'ylim': (0, 330),
+            'ylim': (-200, 330),
             'start_index': 0,
             'environment': environment,
             # 'labels': ['baseline', 'UDR', 'oracle', 'ADR (ours)'],
@@ -222,7 +223,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                  num_rollouts=num_rollouts,
                  rllib_config=rllib_config, checkpoint=checkpoint, env_modifier=list[1], render=render) for list in run_list]
     temp_output = ray.get(temp_output)
-    data = [[len(engine_strength_grid), np.array(temp_output)[:, 0], np.array(temp_output)[:, 1], None]]
+    data = [[engine_strength_grid, np.array(temp_output)[:, 0], np.array(temp_output)[:, 1], None]]
     gen_plot(get_plot_config(rllib_config['env']), '{}/{}_{}'.format(outdir, output_file_name, "grid_search.png"),
              data, 'engine_strength')
 
@@ -232,13 +233,14 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                  num_rollouts=num_rollouts,
                  rllib_config=rllib_config, checkpoint=checkpoint, env_modifier=list[1], render=render) for list in run_list]
     temp_output = ray.get(temp_output)
-    data = [[len(engine_strength_grid), np.array(temp_output)[:, 0], np.array(temp_output)[:, 1], None]]
+    data = [[engine_strength_hard, np.array(temp_output)[:, 0], np.array(temp_output)[:, 1], None]]
     gen_plot(get_plot_config(rllib_config['env']), '{}/{}_{}'.format(outdir, output_file_name, "hard_grid_search.png"),
              data, 'engine_strength')
+
     # Now save the adversary results if we have any
     num_advs = rllib_config['env_config']['advs_per_strength'] * rllib_config['env_config']['num_adv_strengths']
     adv_names = ["adversary{}".format(adv_num) for adv_num in range(num_advs)]
-    if num_advs:
+    if num_advs > 0:
         temp_output = [run_test.remote(test_name="adversary{}".format(adv_num),
                     outdir=outdir, output_file_name=output_file_name,
                     num_rollouts=num_rollouts,
@@ -264,7 +266,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         with open('{}/{}_{}'.format(outdir, output_file_name, "adv_steps.png"),
                 'wb') as file:
             steps = np.array(temp_output)[:,2]
-            adv_names = ["adversary{}" for adv_num in range(num_advs)]
+            adv_names = ["adversary{}".format(adv_num) for adv_num in range(num_advs)]
             fig = plt.figure()
             plt.bar(np.arange(num_advs), steps)
             plt.title("Steps under each adversary")

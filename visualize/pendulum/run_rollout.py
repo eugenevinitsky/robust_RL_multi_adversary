@@ -128,7 +128,7 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
         step_num = 0
         while not done:
             step_num += 1
-            if adv_num is not None:
+            if adv_num is not None and len(obs.keys()) > 1:
                 multi_obs = {'agent': obs['agent'], 'adversary{}'.format(adv_num): obs['adversary{}'.format(adv_num)]}
             else:
                 multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
@@ -165,7 +165,7 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
 
-            if adv_num is not None:
+            if adv_num is not None and len(obs.keys()) > 1:
                 action = {'agent': action['agent'], 'adversary{}'.format(adv_num): action['adversary{}'.format(adv_num)]}
             
             # we turn the adversaries off so you only send in the pendulum keys

@@ -482,7 +482,7 @@ class AdvLunarLander(LunarLander):
 
     @property
     def adv_action_space(self):
-        return spaces.Box(low=self.min_main_engine_power, high=self.max_engine_power, shape=(1,))
+        return spaces.Box(low=0, high=1, shape=(1,))
 
     def step(self, dict_action):
         if self.continuous:
@@ -492,7 +492,10 @@ class AdvLunarLander(LunarLander):
 
         if self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in dict_action.keys() and \
             self.step_num == 0:
-            self.main_engine_power = dict_action['adversary{}'.format(self.curr_adversary)]
+            print(dict_action['adversary{}'.format(self.curr_adversary)])
+            self.main_engine_power = self.min_main_engine_power + \
+                                     (self.max_engine_power - self.min_main_engine_power) \
+                                     * dict_action['adversary{}'.format(self.curr_adversary)][0]
 
         # Engines
         tip = (math.sin(self.lander.angle), math.cos(self.lander.angle))
@@ -568,7 +571,7 @@ class AdvLunarLander(LunarLander):
         reward -= s_power * 0.03
 
         done = False
-        if self.game_over or abs(state[0]) >= 1.0:
+        if self.game_over or abs(state[0]) >= 1.0 or self.step_num > 1000:
             done = True
             reward = -100
         if not self.lander.awake:
@@ -610,6 +613,7 @@ class AdvLunarLander(LunarLander):
     def reset(self):
         obs = super().reset()
         self.total_reward = 0
+        self.step_num = 0
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
         if self.concat_actions:
             self.update_observed_obs(obs['agent'])
