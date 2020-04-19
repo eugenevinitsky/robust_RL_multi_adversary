@@ -376,13 +376,16 @@ def on_episode_end(info):
     # store info about how many adversaries there are
     if hasattr(info["env"], 'envs'):
         env = info["env"].envs[0]
+        episode = info["episode"]
+        if env.adversary_range > 0:
+            episode.custom_metrics["adv{}_score".format(env.curr_adversary)] = env.total_reward
+            episode.custom_metrics["adv{}_engine_strength".format(env.curr_adversary)] = env.main_engine_power
         if hasattr(env, 'select_new_adversary'):
             env.select_new_adversary()
         if hasattr(env, 'domain_randomization') and env.domain_randomization:
             env.randomize_domain()
         elif hasattr(env, 'extreme_domain_randomization') and env.extreme_domain_randomization:
             env.extreme_randomize_domain()
-        episode = info["episode"]
         if hasattr(env, 'adversary_range'):
             episode.custom_metrics["num_active_advs"] = env.adversary_range
 
