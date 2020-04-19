@@ -604,7 +604,8 @@ class AdvLunarLander(LunarLander):
         if self.should_render:
             self.render()
 
-        return obs_dict, rew_dict, done_dict, {}
+        info = {'agent': {'agent_reward': reward}}
+        return obs_dict, rew_dict, done_dict, info
 
     def reset(self):
         obs = super().reset()

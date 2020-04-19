@@ -424,7 +424,7 @@ if __name__ == "__main__":
                 folder = os.path.dirname(dirpath)
                 tune_name = folder.split("/")[-1]
                 outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
+                script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/lunar_lander/transfer_tests.py"))
                 config, checkpoint_path = get_config_from_path(folder, dirpath.split('_')[-1])
 
                 ray.shutdown()

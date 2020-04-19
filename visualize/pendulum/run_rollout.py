@@ -18,6 +18,7 @@ from envs.lerrel.adv_hopper import AdvMAHopper
 from envs.lerrel.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.lerrel.adv_cheetah import AdvMAHalfCheetahEnv
 from envs.lerrel.adv_ant import AdvMAAnt
+from envs.lunar_lander import AdvLunarLander
 
 from envs.goal_env import GoalEnv
 from envs.linear_env import LinearEnv
@@ -68,6 +69,9 @@ def instantiate_rollout(rllib_config, checkpoint):
     elif rllib_config['env'] == "LinearEnv":
         env_name = "LinearEnv"
         create_env_fn = make_create_env(LinearEnv)
+    elif rllib_config['env'] == "AdvLunarLander":
+        env_name = "AdvLunarLander"
+        create_env_fn = make_create_env(AdvLunarLander)
 
     register_env(env_name, create_env_fn)
 
@@ -125,7 +129,7 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
         while not done:
             step_num += 1
             if adv_num is not None:
-                multi_obs = {'agent': obs['agent'], 'adversary{}'.format(adv_num): obs['agent']}
+                multi_obs = {'agent': obs['agent'], 'adversary{}'.format(adv_num): obs['adversary{}'.format(adv_num)]}
             else:
                 multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
             action_dict = {}
@@ -162,7 +166,7 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
             action = action if multiagent else action[_DUMMY_AGENT_ID]
 
             if adv_num is not None:
-                action = {'agent': action['agent'], 'adversary0': action['adversary{}'.format(adv_num)]}
+                action = {'agent': action['agent'], 'adversary{}'.format(adv_num): action['adversary{}'.format(adv_num)]}
             
             # we turn the adversaries off so you only send in the pendulum keys
             next_obs, reward, done, info = env.step(action)

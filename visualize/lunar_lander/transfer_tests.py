@@ -216,7 +216,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             if exc.errno != errno.EEXIST:
                 raise
 
-    run_list = engine_strength_grid
+    run_list = engine_strength_run_list
     temp_output = [run_test.remote(test_name=list[0],
                  outdir=outdir, output_file_name=output_file_name,
                  num_rollouts=num_rollouts,
@@ -225,7 +225,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
     data = [len(engine_strength_grid), np.array(temp_output)[:, 0], np.array(temp_output)[:, 1], None]
     gen_plot(get_plot_config(rllib_config['env']), data, 'engine_strength')
 
-    run_list = engine_strength_hard
+    run_list = engine_strength_run_list_hard
     temp_output = [run_test.remote(test_name=list[0],
                  outdir=outdir, output_file_name=output_file_name,
                  num_rollouts=num_rollouts,
