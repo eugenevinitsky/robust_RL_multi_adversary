@@ -222,8 +222,9 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                  num_rollouts=num_rollouts,
                  rllib_config=rllib_config, checkpoint=checkpoint, env_modifier=list[1], render=render) for list in run_list]
     temp_output = ray.get(temp_output)
-    data = [len(engine_strength_grid), np.array(temp_output)[:, 0], np.array(temp_output)[:, 1], None]
-    gen_plot(get_plot_config(rllib_config['env']), data, 'engine_strength')
+    data = [[len(engine_strength_grid), np.array(temp_output)[:, 0], np.array(temp_output)[:, 1], None]]
+    gen_plot(get_plot_config(rllib_config['env']), '{}/{}_{}'.format(outdir, output_file_name, "grid_search.png"),
+             data, 'engine_strength')
 
     run_list = engine_strength_run_list_hard
     temp_output = [run_test.remote(test_name=list[0],
@@ -231,19 +232,9 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                  num_rollouts=num_rollouts,
                  rllib_config=rllib_config, checkpoint=checkpoint, env_modifier=list[1], render=render) for list in run_list]
     temp_output = ray.get(temp_output)
-    # now save the file as a png
-    with open('{}/{}_{}'.format(outdir, output_file_name, "engine_strength_hard_plot.png"),
-              'wb') as file:
-        means = np.array(temp_output)[:, 0]
-        fig = plt.figure()
-        plt.plot(engine_strength_grid, means)
-        plt.title("Avg. Score vs. engine strength")
-        plt.xlabel("")
-        plt.ylabel("Score")
-        plt.savefig(file)
-        plt.close(fig)
-    gen_plot(get_plot_config(rllib_config['env']), data, 'engine_strength_hard')
-
+    data = [[len(engine_strength_grid), np.array(temp_output)[:, 0], np.array(temp_output)[:, 1], None]]
+    gen_plot(get_plot_config(rllib_config['env']), '{}/{}_{}'.format(outdir, output_file_name, "hard_grid_search.png"),
+             data, 'engine_strength')
     # Now save the adversary results if we have any
     num_advs = rllib_config['env_config']['advs_per_strength'] * rllib_config['env_config']['num_adv_strengths']
     adv_names = ["adversary{}".format(adv_num) for adv_num in range(num_advs)]
