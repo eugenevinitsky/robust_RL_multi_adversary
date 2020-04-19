@@ -6,6 +6,7 @@ import errno
 import logging
 import os
 
+from gym.spaces import Box, Discrete
 import matplotlib.pyplot as plt
 import numpy as np
 import ray
@@ -32,7 +33,10 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
         # each adversary grid is a map of agent action versus observation dimension
         adversary_grid_dict[adversary_str] = {'sampled_actions': np.zeros((num_samples, env.adv_action_space.shape[0]))}
     agent_dict = {}
-    agent_dict['agent'] = {'sampled_actions': np.zeros((num_samples, env.action_space.shape[0]))}
+    if isinstance(env.action_space, Discrete):
+        agent_dict['agent'] = {'sampled_actions': np.zeros((num_samples, 1))}
+    elif isinstance(env.action_space, Box):
+        agent_dict['agent'] = {'sampled_actions': np.zeros((num_samples, env.action_space.shape[0]))}
 
     mapping_cache = {}  # in case policy_agent_mapping is stochastic
 
@@ -95,14 +99,15 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
             plt.close(fig)
 
 
-        fig = plt.figure()
-        plt.hist2d(sampled_actions[:, 0], sampled_actions[:, 1])
-        output_str = '{}/{}'.format(outdir, adversary + 'action_2dhistogram.png')
-        plt.xlabel('Action 1 magnitude')
-        plt.ylabel('Action 2 magnitude')
-        plt.title('Histograms of actions over {} sampled obs'.format(num_samples))
-        plt.savefig(output_str)
-        plt.close(fig)
+        if hasattr(env.adv_action_space, 'shape') and env.adv_action_space.shape[0] > 1:
+            fig = plt.figure()
+            plt.hist2d(sampled_actions[:, 0], sampled_actions[:, 1])
+            output_str = '{}/{}'.format(outdir, adversary + 'action_2dhistogram.png')
+            plt.xlabel('Action 1 magnitude')
+            plt.ylabel('Action 2 magnitude')
+            plt.title('Histograms of actions over {} sampled obs'.format(num_samples))
+            plt.savefig(output_str)
+            plt.close(fig)
 
     for agent, agent_dict in agent_dict.items():
         sampled_actions = agent_dict['sampled_actions']
@@ -116,14 +121,15 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
             plt.savefig(output_str)
             plt.close(fig)
 
-        fig = plt.figure()
-        plt.hist2d(sampled_actions[:, 0], sampled_actions[:, 1])
-        output_str = '{}/{}'.format(outdir, agent + 'action_2dhistogram.png')
-        plt.xlabel('Action 1 magnitude')
-        plt.ylabel('Action 2 magnitude')
-        plt.title('Histograms of actions over {} sampled obs'.format(num_samples))
-        plt.savefig(output_str)
-        plt.close(fig)
+        if hasattr(env.adv_action_space, 'shape') and env.adv_action_space.shape[0] > 1:
+            fig = plt.figure()
+            plt.hist2d(sampled_actions[:, 0], sampled_actions[:, 1])
+            output_str = '{}/{}'.format(outdir, agent + 'action_2dhistogram.png')
+            plt.xlabel('Action 1 magnitude')
+            plt.ylabel('Action 2 magnitude')
+            plt.title('Histograms of actions over {} sampled obs'.format(num_samples))
+            plt.savefig(output_str)
+            plt.close(fig)
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')

@@ -28,6 +28,8 @@ from algorithms.custom_kl_distribution import LogitsDist
 from envs.lunar_lander import AdvLunarLander, LunarLanderRandomized
 
 from visualize.lunar_lander.transfer_tests import run_transfer_tests
+from visualize.pendulum.action_sampler import sample_actions
+
 from utils.pendulum_env_creator import make_create_env
 from utils.parsers import init_parser, ray_parser, ma_env_parser
 from utils.rllib_utils import get_config_from_path
@@ -317,7 +319,7 @@ def setup_exps(args):
 
     stop_dict = {}
     stop_dict.update({
-        'timesteps_total': int(1e6)
+        'timesteps_total': args.timesteps_total
     })
 
     exp_dict = {
@@ -429,6 +431,9 @@ if __name__ == "__main__":
                 ray.shutdown()
                 ray.init()
                 run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path)
+
+                sample_actions(config, checkpoint_path, min(2 * args.train_batch_size, 20000), output_path)
+
 
                 if args.use_s3:
                     for i in range(4):

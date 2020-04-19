@@ -43,7 +43,7 @@ def get_plot_config(environment):
             'metrics': ['ref_learning_curve_{}', 'hard_learning_curve_{}', 'rand_learning_curve_{}'],
             'solved': 200,
             'xlim': (7.5, 20.0),
-            'ylim': (-200, 330),
+            'ylim': (0, 330),
             'start_index': 0,
             'environment': environment,
             # 'labels': ['baseline', 'UDR', 'oracle', 'ADR (ours)'],
