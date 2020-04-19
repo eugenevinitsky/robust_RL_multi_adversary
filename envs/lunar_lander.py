@@ -34,13 +34,14 @@ from ray.rllib.env import MultiAgentEnv
 #
 # Created by Oleg Klimov. Licensed on the same terms as the rest of OpenAI Gym.
 
+
 FPS = 50
 SCALE = 30.0  # affects how fast-paced the game is, forces should be adjusted as well
 
 MAIN_ENGINE_POWER = 13.0
 SIDE_ENGINE_POWER = 0.6
 
-INITIAL_RANDOM = 1000.0  # Set 1500 to make game harder
+INITIAL_RANDOM = 1500.0  # Set 1500 to make game harder
 
 LANDER_POLY = [
     (-14, +17), (-17, 0), (-17, -10),
@@ -76,19 +77,18 @@ class ContactDetector(contactListener):
                 self.env.legs[i].ground_contact = False
 
 
-class LunarLander(MultiAgentEnv, EzPickle):
+class LunarLanderRandomized(MultiAgentEnv, EzPickle):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second': FPS
     }
 
-    continuous = True
+    continuous = True  # False
 
     def __init__(self, config):
-        EzPickle.__init__(self, config)
+        EzPickle.__init__(self)
         self.seed()
         self.viewer = None
-        self.main_engine_power = MAIN_ENGINE_POWER
 
         self.world = Box2D.b2World()
         self.moon = None
@@ -109,6 +109,19 @@ class LunarLander(MultiAgentEnv, EzPickle):
             # Nop, fire left engine, main engine, right engine
             self.action_space = spaces.Discrete(4)
 
+        self.config_file = config
+        self.main_engine_power = 13.0
+        self.side_engine_power = 6.0
+
+        self.step_num = 0
+
+        # self.reset()
+
+    def _update_randomized_params(self):
+        self.main_engine_power = self.dimensions[0].current_value
+        if len(self.dimensions) == 2:
+            self.side_engine_power = self.dimensions[1].current_value
+
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
@@ -125,8 +138,6 @@ class LunarLander(MultiAgentEnv, EzPickle):
         self.world.DestroyBody(self.legs[1])
 
     def reset(self):
-        self.step_num = 0
-        self.total_reward = 0
         self._destroy()
         self.world.contactListener_keepref = ContactDetector(self)
         self.world.contactListener = self.world.contactListener_keepref
@@ -242,15 +253,15 @@ class LunarLander(MultiAgentEnv, EzPickle):
         while self.particles and (all or self.particles[0].ttl < 0):
             self.world.DestroyBody(self.particles.pop(0))
 
-    def step(self, dict_action):
+    def step(self, action):
         if self.continuous:
-            action = np.clip(dict_action['agent'], -1, +1).astype(np.float32)
+            action = np.clip(action['agent'], -1, +1).astype(np.float32)
         else:
-            action = dict_action['agent']
+            assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
         # Engines
         tip = (math.sin(self.lander.angle), math.cos(self.lander.angle))
-        side = (-tip[1], tip[0])
+        side = (-tip[1], tip[0]);
         dispersion = [self.np_random.uniform(-1.0, +1.0) / SCALE for _ in range(2)]
 
         m_power = 0.0
@@ -267,10 +278,10 @@ class LunarLander(MultiAgentEnv, EzPickle):
             impulse_pos = (self.lander.position[0] + ox, self.lander.position[1] + oy)
             p = self._create_particle(3.5, impulse_pos[0], impulse_pos[1],
                                       m_power)  # particles are just a decoration, 3.5 is here to make particle speed adequate
-            p.ApplyLinearImpulse((ox * self.main_engine_power * m_power, oy * self.main_engine_power * m_power), impulse_pos,
-                                 True)
-            self.lander.ApplyLinearImpulse((-ox * self.main_engine_power * m_power, -oy * self.main_engine_power * m_power),
-                                           impulse_pos, True)
+            p.ApplyLinearImpulse((ox * self.main_engine_power * m_power, oy * self.main_engine_power * m_power),
+                                 impulse_pos, True)
+            self.lander.ApplyLinearImpulse(
+                (-ox * self.main_engine_power * m_power, -oy * self.main_engine_power * m_power), impulse_pos, True)
 
         s_power = 0.0
         if (self.continuous and np.abs(action[1]) > 0.5) or (not self.continuous and action in [1, 3]):
@@ -287,10 +298,10 @@ class LunarLander(MultiAgentEnv, EzPickle):
             impulse_pos = (self.lander.position[0] + ox - tip[0] * 17 / SCALE,
                            self.lander.position[1] + oy + tip[1] * SIDE_ENGINE_HEIGHT / SCALE)
             p = self._create_particle(0.7, impulse_pos[0], impulse_pos[1], s_power)
-            p.ApplyLinearImpulse((ox * SIDE_ENGINE_POWER * s_power, oy * SIDE_ENGINE_POWER * s_power), impulse_pos,
-                                 True)
-            self.lander.ApplyLinearImpulse((-ox * SIDE_ENGINE_POWER * s_power, -oy * SIDE_ENGINE_POWER * s_power),
-                                           impulse_pos, True)
+            p.ApplyLinearImpulse((ox * self.side_engine_power * s_power, oy * self.side_engine_power * s_power),
+                                 impulse_pos, True)
+            self.lander.ApplyLinearImpulse(
+                (-ox * self.side_engine_power * s_power, -oy * self.side_engine_power * s_power), impulse_pos, True)
 
         self.world.Step(1.0 / FPS, 6 * 30, 2 * 30)
 
@@ -373,8 +384,10 @@ class LunarLander(MultiAgentEnv, EzPickle):
             self.viewer.close()
             self.viewer = None
 
-class AdvLunarLander(LunarLander):
+
+class AdvLunarLander(LunarLanderRandomized):
     """Just lunar lander, but configured to work with adversaries"""
+    continuous = True
     def __init__(self, config):
         super().__init__(config)
         self.total_reward = 0
@@ -492,386 +505,9 @@ class AdvLunarLander(LunarLander):
 
         if self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in dict_action.keys() and \
             self.step_num == 0:
-            print(dict_action['adversary{}'.format(self.curr_adversary)])
             self.main_engine_power = self.min_main_engine_power + \
                                      (self.max_engine_power - self.min_main_engine_power) \
                                      * dict_action['adversary{}'.format(self.curr_adversary)][0]
-
-        # Engines
-        tip = (math.sin(self.lander.angle), math.cos(self.lander.angle))
-        side = (-tip[1], tip[0])
-        dispersion = [self.np_random.uniform(-1.0, +1.0) / SCALE for _ in range(2)]
-
-        m_power = 0.0
-        if (self.continuous and action[0] > 0.0) or (not self.continuous and action == 2):
-            # Main engine
-            if self.continuous:
-                m_power = (np.clip(action[0], 0.0, 1.0) + 1.0) * 0.5  # 0.5..1.0
-                assert m_power >= 0.5 and m_power <= 1.0
-            else:
-                m_power = 1.0
-            ox = tip[0] * (4 / SCALE + 2 * dispersion[0]) + side[0] * dispersion[
-                1]  # 4 is move a bit downwards, +-2 for randomness
-            oy = -tip[1] * (4 / SCALE + 2 * dispersion[0]) - side[1] * dispersion[1]
-            impulse_pos = (self.lander.position[0] + ox, self.lander.position[1] + oy)
-            p = self._create_particle(3.5, impulse_pos[0], impulse_pos[1],
-                                      m_power)  # particles are just a decoration, 3.5 is here to make particle speed adequate
-            p.ApplyLinearImpulse((ox * self.main_engine_power * m_power, oy * self.main_engine_power * m_power), impulse_pos,
-                                 True)
-            self.lander.ApplyLinearImpulse((-ox * self.main_engine_power * m_power, -oy * self.main_engine_power * m_power),
-                                           impulse_pos, True)
-
-        s_power = 0.0
-        if (self.continuous and np.abs(action[1]) > 0.5) or (not self.continuous and action in [1, 3]):
-            # Orientation engines
-            if self.continuous:
-                direction = np.sign(action[1])
-                s_power = np.clip(np.abs(action[1]), 0.5, 1.0)
-                assert s_power >= 0.5 and s_power <= 1.0
-            else:
-                direction = action - 2
-                s_power = 1.0
-            ox = tip[0] * dispersion[0] + side[0] * (3 * dispersion[1] + direction * SIDE_ENGINE_AWAY / SCALE)
-            oy = -tip[1] * dispersion[0] - side[1] * (3 * dispersion[1] + direction * SIDE_ENGINE_AWAY / SCALE)
-            impulse_pos = (self.lander.position[0] + ox - tip[0] * 17 / SCALE,
-                           self.lander.position[1] + oy + tip[1] * SIDE_ENGINE_HEIGHT / SCALE)
-            p = self._create_particle(0.7, impulse_pos[0], impulse_pos[1], s_power)
-            p.ApplyLinearImpulse((ox * SIDE_ENGINE_POWER * s_power, oy * SIDE_ENGINE_POWER * s_power), impulse_pos,
-                                 True)
-            self.lander.ApplyLinearImpulse((-ox * SIDE_ENGINE_POWER * s_power, -oy * SIDE_ENGINE_POWER * s_power),
-                                           impulse_pos, True)
-
-        self.world.Step(1.0 / FPS, 6 * 30, 2 * 30)
-
-        pos = self.lander.position
-        vel = self.lander.linearVelocity
-        state = [
-            (pos.x - VIEWPORT_W / SCALE / 2) / (VIEWPORT_W / SCALE / 2),
-            (pos.y - (self.helipad_y + LEG_DOWN / SCALE)) / (VIEWPORT_H / SCALE / 2),
-            vel.x * (VIEWPORT_W / SCALE / 2) / FPS,
-            vel.y * (VIEWPORT_H / SCALE / 2) / FPS,
-            self.lander.angle,
-            20.0 * self.lander.angularVelocity / FPS,
-            1.0 if self.legs[0].ground_contact else 0.0,
-            1.0 if self.legs[1].ground_contact else 0.0
-        ]
-        assert len(state) == 8
-
-        reward = 0
-        shaping = \
-            - 100 * np.sqrt(state[0] * state[0] + state[1] * state[1]) \
-            - 100 * np.sqrt(state[2] * state[2] + state[3] * state[3]) \
-            - 100 * abs(state[4]) + 10 * state[6] + 10 * state[7]  # And ten points for legs contact, the idea is if you
-        # lose contact again after landing, you get negative reward
-        if self.prev_shaping is not None:
-            reward = shaping - self.prev_shaping
-        self.prev_shaping = shaping
-
-        reward -= m_power * 0.30  # less fuel spent is better, about -30 for heurisic landing
-        reward -= s_power * 0.03
-
-        done = False
-        if self.game_over or abs(state[0]) >= 1.0 or self.step_num > 1000:
-            done = True
-            reward = -100
-        if not self.lander.awake:
-            done = True
-            reward = +100
-        self.total_reward += reward
-        if self.concat_actions:
-            if isinstance(dict_action['agent'], np.ndarray):
-                agent_action = dict_action['agent']
-            else:
-                agent_action = [dict_action['agent']]
-            self.update_observed_obs(np.concatenate((np.array(state, dtype=np.float32), agent_action)))
-        else:
-            self.update_observed_obs(np.array(state, dtype=np.float32))
-        obs_dict = {'agent': np.array(self.observed_states, dtype=np.float32)}
-        rew_dict = {'agent': reward}
-        done_dict = {'__all__': done}
-        if self.adversary_range > 0 and self.curr_adversary >= 0 and done:
-            # the adversaries get observations on the final steps and on the first step
-            if self.reward_range:
-                # we don't want to give the adversaries an incentive to end the rollout early
-                # so we make a positively shaped reward that peaks at self.reward_targets[i]
-                adv_reward = [self.reward_targets[i]-np.abs(self.reward_targets[i] - self.total_reward) for i in range(self.adversary_range)]
-            else:
-                adv_reward = [-self.total_reward for _ in range(self.adversary_range)]
-            obs_dict.update({
-                'adversary{}'.format(self.curr_adversary):
-                    np.concatenate((np.array(state, dtype=np.float32), dict_action['agent']))})
-            adv_rew_dict = {'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]}
-            rew_dict.update(adv_rew_dict)
-        self.step_num += 1
-
-        if self.should_render:
-            self.render()
-
-        info = {'agent': {'agent_reward': reward}}
-        return obs_dict, rew_dict, done_dict, info
-
-    def reset(self):
-        obs = super().reset()
-        self.total_reward = 0
-        self.step_num = 0
-        self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
-        if self.concat_actions:
-            self.update_observed_obs(obs['agent'])
-        curr_obs = {'agent': self.observed_states}
-        if self.adversary_range > 0 and self.curr_adversary >= 0:
-            if self.kl_reward or (self.l2_reward and not self.l2_memory):
-                is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
-                curr_obs.update({
-                    'adversary{}'.format(i): {"obs": obs['agent'],
-                                              "is_active": np.array([is_active[i]])}
-                                              for i in range(self.adversary_range)})
-            else:
-                curr_obs.update({
-                    'adversary{}'.format(self.curr_adversary): obs['agent']
-                })
-
-            # track how many times each adversary was used
-            if self.l2_memory:
-                self.local_num_observed_l2_samples[self.curr_adversary] += 1
-        return curr_obs
-
-    def update_observed_obs(self, new_obs):
-        """Add in the new observations and overwrite the stale ones"""
-        original_shape = new_obs.shape[0]
-        self.observed_states = np.roll(self.observed_states, shift=original_shape, axis=-1)
-        self.observed_states[0: original_shape] = new_obs
-        return self.observed_states
-
-    def select_new_adversary(self):
-        if self.adversary_range > 0:
-            # the -1 corresponds to not having any adversary on at all
-            self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
-
-    def domain_randomization(self):
-        self.set_engine_power(np.random.uniform(self.min_main_engine_power, self.max_engine_power))
-
-    def set_engine_power(self, power):
-        self.main_engine_power = power
-
-
-class LunarLanderContinuous(LunarLander):
-    continuous = True
-
-
-def heuristic(env, s):
-    # Heuristic for:
-    # 1. Testing.
-    # 2. Demonstration rollout.
-    angle_targ = s[0] * 0.5 + s[
-        2] * 1.0  # angle should point towards center (s[0] is horizontal coordinate, s[2] hor speed)
-    if angle_targ > 0.4: angle_targ = 0.4  # more than 0.4 radians (22 degrees) is bad
-    if angle_targ < -0.4: angle_targ = -0.4
-    hover_targ = 0.55 * np.abs(s[0])  # target y should be proporional to horizontal offset
-
-    # PID controller: s[4] angle, s[5] angularSpeed
-    angle_todo = (angle_targ - s[4]) * 0.5 - (s[5]) * 1.0
-    # print("angle_targ=%0.2f, angle_todo=%0.2f" % (angle_targ, angle_todo))
-
-    # PID controller: s[1] vertical coordinate s[3] vertical speed
-    hover_todo = (hover_targ - s[1]) * 0.5 - (s[3]) * 0.5
-    # print("hover_targ=%0.2f, hover_todo=%0.2f" % (hover_targ, hover_todo))
-
-    if s[6] or s[7]:  # legs have contact
-        angle_todo = 0
-        hover_todo = -(s[3]) * 0.5  # override to reduce fall speed, that's all we need after contact
-
-    if env.continuous:
-        a = np.array([hover_todo * 20 - 1, -angle_todo * 20])
-        a = np.clip(a, -1, +1)
-    else:
-        a = 0
-        if hover_todo > np.abs(angle_todo) and hover_todo > 0.05:
-            a = 2
-        elif angle_todo < -0.05:
-            a = 3
-        elif angle_todo > +0.05:
-            a = 1
-    print(a)
-    return a
-
-
-class LunarLanderRandomized(gym.Env, EzPickle):
-    metadata = {
-        'render.modes': ['human', 'rgb_array'],
-        'video.frames_per_second': FPS
-    }
-
-    continuous = True  # False
-
-    def __init__(self, **kwargs):
-        EzPickle.__init__(self)
-        self.seed()
-        self.viewer = None
-
-        self.world = Box2D.b2World()
-        self.moon = None
-        self.lander = None
-        self.particles = []
-
-        self.prev_reward = None
-
-        # useful range is -1 .. +1, but spikes can be higher
-        self.observation_space = spaces.Box(-np.inf, np.inf, shape=(8,), dtype=np.float32)
-
-        if self.continuous:
-            # Action is two floats [main engine, left-right engines].
-            # Main engine: -1..0 off, 0..+1 throttle from 50% to 100% power. Engine can't work with less than 50% power.
-            # Left-right:  -1.0..-0.5 fire left engine, +0.5..+1.0 fire right engine, -0.5..0.5 off
-            self.action_space = spaces.Box(-1, +1, (2,), dtype=np.float32)
-        else:
-            # Nop, fire left engine, main engine, right engine
-            self.action_space = spaces.Discrete(4)
-
-        self.config_file = kwargs.get('config')
-        self.main_engine_power = 13.0
-        self.min_main_engine_power = 7.5
-        self.max_engine_power = 20.0
-        self.side_engine_power = 6.0
-
-        self.reset()
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
-
-    def _destroy(self):
-        if not self.moon: return
-        self.world.contactListener = None
-        self._clean_particles(True)
-        self.world.DestroyBody(self.moon)
-        self.moon = None
-        self.world.DestroyBody(self.lander)
-        self.lander = None
-        self.world.DestroyBody(self.legs[0])
-        self.world.DestroyBody(self.legs[1])
-
-    def reset(self):
-        self.step_num = 0
-        self._destroy()
-        self.world.contactListener_keepref = ContactDetector(self)
-        self.world.contactListener = self.world.contactListener_keepref
-        self.game_over = False
-        self.prev_shaping = None
-
-        W = VIEWPORT_W / SCALE
-        H = VIEWPORT_H / SCALE
-
-        # terrain
-        CHUNKS = 11
-        height = self.np_random.uniform(0, H / 2, size=(CHUNKS + 1,))
-        chunk_x = [W / (CHUNKS - 1) * i for i in range(CHUNKS)]
-        self.helipad_x1 = chunk_x[CHUNKS // 2 - 1]
-        self.helipad_x2 = chunk_x[CHUNKS // 2 + 1]
-        self.helipad_y = H / 4
-        height[CHUNKS // 2 - 2] = self.helipad_y
-        height[CHUNKS // 2 - 1] = self.helipad_y
-        height[CHUNKS // 2 + 0] = self.helipad_y
-        height[CHUNKS // 2 + 1] = self.helipad_y
-        height[CHUNKS // 2 + 2] = self.helipad_y
-        smooth_y = [0.33 * (height[i - 1] + height[i + 0] + height[i + 1]) for i in range(CHUNKS)]
-
-        self.moon = self.world.CreateStaticBody(shapes=edgeShape(vertices=[(0, 0), (W, 0)]))
-        self.sky_polys = []
-        for i in range(CHUNKS - 1):
-            p1 = (chunk_x[i], smooth_y[i])
-            p2 = (chunk_x[i + 1], smooth_y[i + 1])
-            self.moon.CreateEdgeFixture(
-                vertices=[p1, p2],
-                density=0,
-                friction=0.1)
-            self.sky_polys.append([p1, p2, (p2[0], H), (p1[0], H)])
-
-        self.moon.color1 = (0.0, 0.0, 0.0)
-        self.moon.color2 = (0.0, 0.0, 0.0)
-
-        initial_y = VIEWPORT_H / SCALE
-        self.lander = self.world.CreateDynamicBody(
-            position=(VIEWPORT_W / SCALE / 2, initial_y),
-            angle=0.0,
-            fixtures=fixtureDef(
-                shape=polygonShape(vertices=[(x / SCALE, y / SCALE) for x, y in LANDER_POLY]),
-                density=5.0,
-                friction=0.1,
-                categoryBits=0x0010,
-                maskBits=0x001,  # collide only with ground
-                restitution=0.0)  # 0.99 bouncy
-        )
-        self.lander.color1 = (0.5, 0.4, 0.9)
-        self.lander.color2 = (0.3, 0.3, 0.5)
-        self.lander.ApplyForceToCenter((
-            self.np_random.uniform(-INITIAL_RANDOM, INITIAL_RANDOM),
-            self.np_random.uniform(-INITIAL_RANDOM, INITIAL_RANDOM)
-        ), True)
-
-        self.legs = []
-        for i in [-1, +1]:
-            leg = self.world.CreateDynamicBody(
-                position=(VIEWPORT_W / SCALE / 2 - i * LEG_AWAY / SCALE, initial_y),
-                angle=(i * 0.05),
-                fixtures=fixtureDef(
-                    shape=polygonShape(box=(LEG_W / SCALE, LEG_H / SCALE)),
-                    density=1.0,
-                    restitution=0.0,
-                    categoryBits=0x0020,
-                    maskBits=0x001)
-            )
-            leg.ground_contact = False
-            leg.color1 = (0.5, 0.4, 0.9)
-            leg.color2 = (0.3, 0.3, 0.5)
-            rjd = revoluteJointDef(
-                bodyA=self.lander,
-                bodyB=leg,
-                localAnchorA=(0, 0),
-                localAnchorB=(i * LEG_AWAY / SCALE, LEG_DOWN / SCALE),
-                enableMotor=True,
-                enableLimit=True,
-                maxMotorTorque=LEG_SPRING_TORQUE,
-                motorSpeed=+0.3 * i  # low enough not to jump back into the sky
-            )
-            if i == -1:
-                rjd.lowerAngle = +0.9 - 0.5  # Yes, the most esoteric numbers here, angles legs have freedom to travel within
-                rjd.upperAngle = +0.9
-            else:
-                rjd.lowerAngle = -0.9
-                rjd.upperAngle = -0.9 + 0.5
-            leg.joint = self.world.CreateJoint(rjd)
-            self.legs.append(leg)
-
-        self.drawlist = [self.lander] + self.legs
-
-        return self.step(np.array([0, 0]) if self.continuous else 0)[0]
-
-    def _create_particle(self, mass, x, y, ttl):
-        p = self.world.CreateDynamicBody(
-            position=(x, y),
-            angle=0.0,
-            fixtures=fixtureDef(
-                shape=circleShape(radius=2 / SCALE, pos=(0, 0)),
-                density=mass,
-                friction=0.1,
-                categoryBits=0x0100,
-                maskBits=0x001,  # collide only with ground
-                restitution=0.3)
-        )
-        p.ttl = ttl
-        self.particles.append(p)
-        self._clean_particles(False)
-        return p
-
-    def _clean_particles(self, all):
-        while self.particles and (all or self.particles[0].ttl < 0):
-            self.world.DestroyBody(self.particles.pop(0))
-
-    def step(self, action):
-        if self.continuous:
-            action = np.clip(action, -1, +1).astype(np.float32)
-        else:
-            assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
         # Engines
         tip = (math.sin(self.lander.angle), math.cos(self.lander.angle))
@@ -937,7 +573,8 @@ class LunarLanderRandomized(gym.Env, EzPickle):
         shaping = \
             - 100 * np.sqrt(state[0] * state[0] + state[1] * state[1]) \
             - 100 * np.sqrt(state[2] * state[2] + state[3] * state[3]) \
-            - 100 * abs(state[4]) + 10 * state[6] + 10 * state[7]  # And ten points for legs contact, the idea is if you
+            - 100 * abs(state[4]) + 10 * state[6] + 10 * state[
+                7]  # And ten points for legs contact, the idea is if you
         # lose contact again after landing, you get negative reward
         if self.prev_shaping is not None:
             reward = shaping - self.prev_shaping
@@ -947,56 +584,136 @@ class LunarLanderRandomized(gym.Env, EzPickle):
         reward -= s_power * 0.03
 
         done = False
-        if self.game_over or abs(state[0]) >= 1.0:
+        if self.game_over or abs(state[0]) >= 1.0 or self.step_num > 1000:
             done = True
             reward = -100
         if not self.lander.awake:
             done = True
             reward = +100
-        return np.array(state, dtype=np.float32), reward, done, {}
+        self.total_reward += reward
+        if self.concat_actions:
+            if isinstance(dict_action['agent'], np.ndarray):
+                agent_action = dict_action['agent']
+            else:
+                agent_action = [dict_action['agent']]
+            self.update_observed_obs(np.concatenate((np.array(state, dtype=np.float32), agent_action)))
+        else:
+            self.update_observed_obs(np.array(state, dtype=np.float32))
+        obs_dict = {'agent': np.array(self.observed_states, dtype=np.float32)}
+        rew_dict = {'agent': reward}
+        done_dict = {'__all__': done}
+        if self.adversary_range > 0 and self.curr_adversary >= 0 and done:
+            # the adversaries get observations on the final steps and on the first step
+            if self.reward_range:
+                # we don't want to give the adversaries an incentive to end the rollout early
+                # so we make a positively shaped reward that peaks at self.reward_targets[i]
+                adv_reward = [self.reward_targets[i]-np.abs(self.reward_targets[i] - self.total_reward) for i in range(self.adversary_range)]
+            else:
+                adv_reward = [-self.total_reward for _ in range(self.adversary_range)]
+            if self.concat_actions:
+                obs_dict.update({
+                    'adversary{}'.format(self.curr_adversary):
+                        np.concatenate((np.array(state, dtype=np.float32), dict_action['agent']))})
+            else:
+                obs_dict.update({'adversary{}'.format(self.curr_adversary): np.array(state, dtype=np.float32)})
+            adv_rew_dict = {'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]}
+            rew_dict.update(adv_rew_dict)
+        self.step_num += 1
 
-    def render(self, mode='human'):
-        from gym.envs.classic_control import rendering
-        if self.viewer is None:
-            self.viewer = rendering.Viewer(VIEWPORT_W, VIEWPORT_H)
-            self.viewer.set_bounds(0, VIEWPORT_W / SCALE, 0, VIEWPORT_H / SCALE)
+        if self.should_render:
+            self.render()
 
-        for obj in self.particles:
-            obj.ttl -= 0.15
-            obj.color1 = (max(0.2, 0.2 + obj.ttl), max(0.2, 0.5 * obj.ttl), max(0.2, 0.5 * obj.ttl))
-            obj.color2 = (max(0.2, 0.2 + obj.ttl), max(0.2, 0.5 * obj.ttl), max(0.2, 0.5 * obj.ttl))
+        info = {'agent': {'agent_reward': reward}}
+        self.state = state
+        return obs_dict, rew_dict, done_dict, info
 
-        self._clean_particles(False)
+    def reset(self):
+        obs = super().reset()
+        self.total_reward = 0
+        self.step_num = 0
+        self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
+        if self.concat_actions:
+            self.update_observed_obs(obs['agent'])
+        curr_obs = {'agent': self.observed_states}
+        if self.adversary_range > 0 and self.curr_adversary >= 0:
+            if self.concat_actions:
+                adv_state = np.concatenate((self.state, np.zeros(self.action_space.shape[0])))
+            else:
+                adv_state = self.state
+            if self.kl_reward or (self.l2_reward and not self.l2_memory):
+                is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
+                curr_obs.update({
+                    'adversary{}'.format(i): {"obs": adv_state,
+                                              "is_active": np.array([is_active[i]])}
+                                              for i in range(self.adversary_range)})
+            else:
+                curr_obs.update({
+                    'adversary{}'.format(self.curr_adversary): adv_state
+                })
 
-        for p in self.sky_polys:
-            self.viewer.draw_polygon(p, color=(0, 0, 0))
+            # track how many times each adversary was used
+            if self.l2_memory:
+                self.local_num_observed_l2_samples[self.curr_adversary] += 1
+        return curr_obs
 
-        for obj in self.particles + self.drawlist:
-            for f in obj.fixtures:
-                trans = f.body.transform
-                if type(f.shape) is circleShape:
-                    t = rendering.Transform(translation=trans * f.shape.pos)
-                    self.viewer.draw_circle(f.shape.radius, 20, color=obj.color1).add_attr(t)
-                    self.viewer.draw_circle(f.shape.radius, 20, color=obj.color2, filled=False, linewidth=2).add_attr(t)
-                else:
-                    path = [trans * v for v in f.shape.vertices]
-                    self.viewer.draw_polygon(path, color=obj.color1)
-                    path.append(path[0])
-                    self.viewer.draw_polyline(path, color=obj.color2, linewidth=2)
+    def update_observed_obs(self, new_obs):
+        """Add in the new observations and overwrite the stale ones"""
+        original_shape = new_obs.shape[0]
+        self.observed_states = np.roll(self.observed_states, shift=original_shape, axis=-1)
+        self.observed_states[0: original_shape] = new_obs
+        return self.observed_states
 
-        for x in [self.helipad_x1, self.helipad_x2]:
-            flagy1 = self.helipad_y
-            flagy2 = flagy1 + 50 / SCALE
-            self.viewer.draw_polyline([(x, flagy1), (x, flagy2)], color=(1, 1, 1))
-            self.viewer.draw_polygon([(x, flagy2), (x, flagy2 - 10 / SCALE), (x + 25 / SCALE, flagy2 - 5 / SCALE)],
-                                     color=(0.8, 0.8, 0))
+    def select_new_adversary(self):
+        if self.adversary_range > 0:
+            # the -1 corresponds to not having any adversary on at all
+            self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
 
-        return self.viewer.render(return_rgb_array=mode == 'rgb_array')
+    def randomize_domain(self):
+        self.set_engine_power(np.random.uniform(self.min_main_engine_power, self.max_engine_power))
 
-    def close(self):
-        if self.viewer is not None:
-            self.viewer.close()
-            self.viewer = None
+    def set_engine_power(self, power):
+        self.main_engine_power = power
+
+
+class LunarLanderContinuous(LunarLanderRandomized):
+    continuous = True
+
+
+def heuristic(env, s):
+    # Heuristic for:
+    # 1. Testing.
+    # 2. Demonstration rollout.
+    angle_targ = s[0] * 0.5 + s[
+        2] * 1.0  # angle should point towards center (s[0] is horizontal coordinate, s[2] hor speed)
+    if angle_targ > 0.4: angle_targ = 0.4  # more than 0.4 radians (22 degrees) is bad
+    if angle_targ < -0.4: angle_targ = -0.4
+    hover_targ = 0.55 * np.abs(s[0])  # target y should be proporional to horizontal offset
+
+    # PID controller: s[4] angle, s[5] angularSpeed
+    angle_todo = (angle_targ - s[4]) * 0.5 - (s[5]) * 1.0
+    # print("angle_targ=%0.2f, angle_todo=%0.2f" % (angle_targ, angle_todo))
+
+    # PID controller: s[1] vertical coordinate s[3] vertical speed
+    hover_todo = (hover_targ - s[1]) * 0.5 - (s[3]) * 0.5
+    # print("hover_targ=%0.2f, hover_todo=%0.2f" % (hover_targ, hover_todo))
+
+    if s[6] or s[7]:  # legs have contact
+        angle_todo = 0
+        hover_todo = -(s[3]) * 0.5  # override to reduce fall speed, that's all we need after contact
+
+    if env.continuous:
+        a = np.array([hover_todo * 20 - 1, -angle_todo * 20])
+        a = np.clip(a, -1, +1)
+    else:
+        a = 0
+        if hover_todo > np.abs(angle_todo) and hover_todo > 0.05:
+            a = 2
+        elif angle_todo < -0.05:
+            a = 3
+        elif angle_todo > +0.05:
+            a = 1
+    print(a)
+    return a
 
 
 def demo_heuristic_lander(env, seed=None, render=False):

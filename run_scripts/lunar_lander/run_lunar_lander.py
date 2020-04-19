@@ -11,6 +11,9 @@ import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 from ray.rllib.agents.ppo.ppo import PPOTrainer, DEFAULT_CONFIG as DEFAULT_PPO_CONFIG
 from ray.rllib.agents.sac.sac import DEFAULT_CONFIG as DEFAULT_SAC_CONFIG
+from ray.rllib.agents.ddpg.ddpg import DEFAULT_CONFIG as DEFAULT_DDPG_CONFIG
+from ray.rllib.agents.a3c.a2c import A2C_DEFAULT_CONFIG
+from ray.rllib.agents.a3c.a2c import A3CTFPolicy
 
 from ray.rllib.agents.ddpg.td3 import TD3_DEFAULT_CONFIG as DEFAULT_TD3_CONFIG
 from ray.rllib.agents.ddpg.ddpg_policy import DDPGTFPolicy
@@ -22,7 +25,7 @@ from ray.tune.registry import register_env
 
 from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
 from algorithms.custom_kl_distribution import LogitsDist
-from envs.lunar_lander import LunarLander, AdvLunarLander
+from envs.lunar_lander import AdvLunarLander, LunarLanderRandomized
 
 from visualize.lunar_lander.transfer_tests import run_transfer_tests
 from utils.pendulum_env_creator import make_create_env
@@ -40,8 +43,7 @@ def setup_ma_config(config, create_env):
     if num_adversaries == 0:
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False},
-                        "entropy_coeff": config['env_config']['entropy_coeff']}
+    adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}}
     if config['env_config']['run'] == 'PPO':
         if config['env_config']['kl_reward']:
             ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
@@ -60,6 +62,17 @@ def setup_ma_config(config, create_env):
                                   range(num_adversaries)})
     elif config['env_config']['run'] == 'TD3':
         policy_graphs = {'agent': (DDPGTFPolicy, env.observation_space, env.action_space, {})}
+        policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
+                                                env.adv_action_space, adversary_config) for i in
+                              range(num_adversaries)})
+    elif config['env_config']['run'] == 'DDPG':
+        # adversary_config = A2C_DEFAULT_CONFIG
+        adversary_config.update({"model": {'fcnet_hiddens': [100, 100], 'use_lstm': False},
+                                 "lr": .0003})
+        policy_graphs = {'agent': (DDPGTFPolicy, env.observation_space, env.action_space, {})}
+        # policy_graphs.update({adv_policies[i]: (A3CTFPolicy, env.adv_observation_space,
+        #                                         env.adv_action_space, adversary_config) for i in
+        #                       range(num_adversaries)})
         policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in
                               range(num_adversaries)})
@@ -96,7 +109,7 @@ def setup_exps(args):
     parser = ma_env_parser(parser)
     # parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?',
     #                     choices=['pendulum', 'hopper', 'cheetah', 'ant'])
-    parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO, SAC, TD3')
+    parser.add_argument('--algorithm', default='DDPG', type=str, help='Options are PPO, SAC, TD3')
     parser.add_argument('--custom_ppo', action='store_true', default=False,
                         help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
@@ -190,7 +203,7 @@ def setup_exps(args):
         config = deepcopy(DEFAULT_PPO_CONFIG)
         config['seed'] = 0
         config['train_batch_size'] = args.train_batch_size
-        config['gamma'] = 0.995
+        config['gamma'] = 0.99
         if args.grid_search:
                 config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
                 config['lr'] = tune.grid_search([5e-5, 5e-4])
@@ -198,7 +211,6 @@ def setup_exps(args):
             config['seed'] = tune.grid_search([i for i in range(10)])
             config['lr'] = args.lr
             config['lambda'] = args.lambda_val
-        config['sgd_minibatch_size'] = 64 * max(int(args.train_batch_size / 1e4), 1)
         if args.use_lstm:
             config['sgd_minibatch_size'] *= 5
         config['num_sgd_iter'] = 10
@@ -206,6 +218,10 @@ def setup_exps(args):
     elif args.algorithm == 'SAC':
         config = DEFAULT_SAC_CONFIG
         config['target_network_update_freq'] = 1
+    elif args.algorithm == 'DDPG':
+        config = DEFAULT_DDPG_CONFIG
+        config['lr'] = .001
+        config['tau'] = .005
     elif args.algorithm == 'TD3':
         config = DEFAULT_TD3_CONFIG
         # === Exploration ===
@@ -266,7 +282,7 @@ def setup_exps(args):
     config['env_config']['run'] = alg_run
 
     ModelCatalog.register_custom_model("rnn", LSTM)
-    config['model']['fcnet_hiddens'] = [64, 64]
+    config['model']['fcnet_hiddens'] = [400, 300]
     # TODO(@evinitsky) turn this on
     if args.use_lstm:
         config['model']['fcnet_hiddens'] = [64]
@@ -274,8 +290,12 @@ def setup_exps(args):
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 64
 
+    # if args.num_adv_rews >= 1 or args.domain_randomization:
     create_env_fn = make_create_env(AdvLunarLander)
     env_name = "AdvLunarLander"
+    # else:
+    #     create_env_fn = make_create_env(LunarLanderRandomized)
+    #     env_name = "LunarLanderRandomized"
 
     config['env'] = env_name
     register_env(env_name, create_env_fn)
@@ -296,14 +316,9 @@ def setup_exps(args):
         runner = args.algorithm
 
     stop_dict = {}
-    if args.algorithm == 'PPO':
-        stop_dict.update({
-            'training_iteration': args.num_iters
-        })
-    elif args.algorithm == 'TD3':
-        stop_dict.update({
-            'timesteps_total': args.num_iters * 10000
-        })
+    stop_dict.update({
+        'timesteps_total': 1000000
+    })
 
     exp_dict = {
         'name': args.exp_title,
@@ -359,13 +374,15 @@ def on_episode_end(info):
     # store info about how many adversaries there are
     if hasattr(info["env"], 'envs'):
         env = info["env"].envs[0]
-        env.select_new_adversary()
+        if hasattr(env, 'select_new_adversary'):
+            env.select_new_adversary()
         if hasattr(env, 'domain_randomization') and env.domain_randomization:
             env.randomize_domain()
         elif hasattr(env, 'extreme_domain_randomization') and env.extreme_domain_randomization:
             env.extreme_randomize_domain()
         episode = info["episode"]
-        episode.custom_metrics["num_active_advs"] = env.adversary_range
+        if hasattr(env, 'adversary_range'):
+            episode.custom_metrics["num_active_advs"] = env.adversary_range
 
 
 if __name__ == "__main__":
