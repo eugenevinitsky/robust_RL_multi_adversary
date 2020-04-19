@@ -62,7 +62,7 @@ class FetchEnv(robot_env.RobotEnv):
 
                 if self.reach_obj == -1:
                     d = d1 + d2
-                    if d1 < 0.05:
+                    if d1 < self.distance_threshold:
                         self.reach_obj = d1
                 else:
                     d = self.reach_obj + d2
