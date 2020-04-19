@@ -128,6 +128,9 @@ def setup_exps(args):
     parser.add_argument('--reward_range', action='store_true', default=False,
                         help='If true, the adversaries try to get agents to goals evenly spaced between `low_reward`'
                              'and `high_reward')
+    parser.add_argument('--sparse', action='store_true', default=False,
+                        help='If true, the adversaries only recieve a terminal reward measuring how close'
+                             'they were to hitting their reward range')
     parser.add_argument('--num_adv_rews', type=int, default=1, help='Number of adversary rews ranges if reward ranges is on')
     parser.add_argument('--advs_per_rew', type=int, default=1,
                         help='How many adversaries exist at a given reward level')
@@ -259,6 +262,7 @@ def setup_exps(args):
     config['env_config']['reward_range'] = args.reward_range
     config['env_config']['num_adv_rews'] = args.num_adv_rews
     config['env_config']['advs_per_rew'] = args.advs_per_rew
+    config['env_config']['sparse'] = args.sparse
 
     config['env_config']['low_reward'] = args.low_reward
     config['env_config']['high_reward'] = args.high_reward

@@ -28,6 +28,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.low_reward = config["low_reward"]
         # This sets wthe adversaries high reward range
         self.high_reward = config["high_reward"]
+        # Whether there is only a terminal reward for the adversaries
+        self.sparse = config["sparse"]
 
         # How frequently we check whether to increase the adversary range
         self.adv_incr_freq = config["adv_incr_freq"]
@@ -297,9 +299,16 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     # we then subtract this value off from the linear function again. This creates a reward
                     # that peaks at the target value. We then scale it by (1 / max(1, self.step_num)) because
                     # if we are not actually able to hit the target, this reward can blow up.
-                    adv_reward = [((float(self.step_num) / self.horizon) * self.reward_targets[
-                       i] - 1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
-                       i] - self.total_reward)) * (1 / max(1, self.step_num)) for i in range(self.adversary_range)]
+                    if self.sparse:
+                        if done:
+                            adv_reward = [self.reward_targets[i] -np.abs(self.reward_targets[i] - self.total_reward)
+                                          for i in range(self.adversary_range)]
+                        else:
+                            adv_reward = [0.0 for i in range(self.adversary_range)]
+                    else:
+                        adv_reward = [((float(self.step_num) / self.horizon) * self.reward_targets[
+                           i] - 1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
+                           i] - self.total_reward)) * (1 / max(1, self.step_num)) for i in range(self.adversary_range)]
                 else:
                     adv_reward = [-reward for _ in range(self.adversary_range)]
 
