@@ -358,6 +358,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         self.step_num = 0
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
         self.total_reward = 0
+        self.reach_obj = -1
         did_reset_sim = False
         while not did_reset_sim:
             did_reset_sim = self._reset_sim()
