@@ -16,7 +16,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         has_object, target_in_the_air, target_offset, obj_range, target_range,
         distance_threshold, initial_qpos, reward_type):
 
-        self.horizon = 1000
+        self.horizon = 100
         self.step_num = 0
 
         self.total_reward = 0
@@ -171,7 +171,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
 
     def update_push_curriculum(self, iter):
         self.num_iters = iter
-        # self.obj_range = max(min(1.0, self.num_iters / self.num_push_curriculum_iters) * self.max_object_range, 0.001)
+        self.obj_range = max(min(1.0, self.num_iters / self.num_push_curriculum_iters) * self.max_object_range, 0.03)
         self.target_range = max(min(1.0, self.num_iters / self.num_push_curriculum_iters) * self.max_target_range, 0.001)
         print(self.target_range)
 
@@ -409,3 +409,23 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
                 self.local_num_observed_l2_samples[self.curr_adversary] += 1
 
         return curr_obs
+
+    def _reset_sim(self):
+        self.sim.set_state(self.initial_state)
+
+        # Randomize start position of object.
+        if self.has_object:
+            object_xpos = self.initial_gripper_xpos[:2]
+            if self.push_curriculum and self.num_iters < self.num_push_curriculum_iters:
+                while np.linalg.norm(object_xpos - self.initial_gripper_xpos[:2]) < max(0.1 * 0.5 * (self.num_iters / self.num_push_curriculum_iters), 0.03):
+                    object_xpos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range, size=2)
+            else:
+                while np.linalg.norm(object_xpos - self.initial_gripper_xpos[:2]) < 0.1:
+                    object_xpos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range, size=2)
+            object_qpos = self.sim.data.get_joint_qpos('object0:joint')
+            assert object_qpos.shape == (7,)
+            object_qpos[:2] = object_xpos
+            self.sim.data.set_joint_qpos('object0:joint', object_qpos)
+
+        self.sim.forward()
+        return True

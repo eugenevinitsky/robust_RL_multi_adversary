@@ -25,6 +25,7 @@ from ray.tune.registry import register_env
 
 from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
 from algorithms.custom_kl_distribution import LogitsDist
+from algorithms.her.her_trainer import HERTrainer
 from envs.mujoco.adv_hopper import AdvMAHopper
 from envs.mujoco.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.mujoco.adv_cheetah import AdvMAHalfCheetahEnv
@@ -66,6 +67,11 @@ def setup_ma_config(config, create_env):
                                                     env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     elif config['env_config']['run'] == 'TD3':
         policy_graphs = {'agent': (DDPGTFPolicy, env.observation_space, env.action_space, {})}
+        policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
+                                                env.adv_action_space, adversary_config) for i in range(num_adversaries)})
+    elif config['env_config']['run'] == 'HER':
+        policy_graphs = {'agent': (None, env.observation_space, env.action_space, {})}
+        # you don't want the adversaries to get HER policies
         policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     
@@ -236,8 +242,8 @@ def setup_exps(args):
     elif args.algorithm == 'TD3':
         config = DEFAULT_TD3_CONFIG
         # === Exploration ===
-        config['learning_starts'] = 10000
-        config['pure_exploration_steps'] = 10000
+        config['learning_starts'] = 1000
+        config['pure_exploration_steps'] = 1000
         if args.grid_search:
             config["actor_lr"] = tune.grid_search([1e-3, 1e-4, 1e-5])
             config["critic_lr"] = tune.grid_search([1e-3, 1e-4, 1e-5])
@@ -249,13 +255,15 @@ def setup_exps(args):
                 config["tau"] = tune.grid_search([5e-2, 5e-3])
                 config["actor_hiddens"] = [256, 256, 256]
                 config["critic_hiddens"] = [256, 256, 256]
-
-
         elif args.seed_search:
             config['seed'] = tune.grid_search([i for i in range(9)])
-        # === Evaluation ===
+            # === Evaluation ===
         config['evaluation_interval'] = 5
         config['evaluation_num_episodes'] = 10
+    elif args.algorithm == 'HER':
+        from algorithms.her.her_trainer import DEFAULT_CONFIG as DEFAULT_HER_CONFIG
+        config = DEFAULT_HER_CONFIG.copy()
+
     else:
         sys.exit('Only PPO, TD3, and SAC are supported')
 
@@ -356,6 +364,9 @@ def setup_exps(args):
 
     if args.kl_reward or (args.l2_reward and not args.l2_memory):
         runner = CustomPPOTrainer
+    elif args.algorithm == 'HER':
+        from algorithms.her.her_trainer import HERTrainer
+        runner = HERTrainer
     else:
         runner = args.algorithm
 

@@ -8,7 +8,7 @@ MODEL_XML_PATH = os.path.join('fetch', 'push.xml')
 
 
 class MAFetchPushEnv(adv_fetch_env.AdvMAFetchEnv, utils.EzPickle):
-    def __init__(self, config, reward_type='dense'):
+    def __init__(self, config, reward_type='sparse'):
         initial_qpos = {
             'robot0:slide0': 0.405,
             'robot0:slide1': 0.48,
