@@ -134,6 +134,8 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
                 (self.adversary_range, self.adv_action_space.low.shape[0], self.horizon + 1))
             self.local_num_observed_l2_samples = np.zeros(self.adversary_range)
 
+        self.success = False
+
     @property
     def adv_action_space(self):
         """ 2D adversarial action. Maximum of self.adversary_strength in each dimension.
@@ -251,6 +253,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         info = {
             'is_success': self._is_success(obs['achieved_goal'], self.goal),
         }
+        self.success = self._is_success(obs['achieved_goal'], self.goal)
         reward = self.compute_reward(obs['grip_pos'], obs['achieved_goal'], self.goal, info)
         ob = obs['all_obs']
 
@@ -356,6 +359,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
 
     def reset(self):
         self.step_num = 0
+        self.success = False
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
         self.total_reward = 0
         self.reach_obj = -1
