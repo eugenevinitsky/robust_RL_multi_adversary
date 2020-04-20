@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from copy import copy
 import logging
 import collections
 import numpy as np
@@ -149,10 +150,10 @@ class HEROptimizer(PolicyOptimizer):
                 distance_threshold = 0.05
                 for row in row_list:
                     rew = - int(np.linalg.norm(desired_goal - row["obs"][-6:-3]) > distance_threshold)
-                    obs = row["obs"]
+                    obs = copy(row["obs"])
                     # override the desired goal in all of the obs with the achieved goal
                     obs[-3:] = desired_goal
-                    new_obs = row["new_obs"]
+                    new_obs = copy(row["new_obs"])
                     new_obs[-3:] = desired_goal
                     self.replay_buffers[policy_id].add(
                         pack_if_needed(obs),

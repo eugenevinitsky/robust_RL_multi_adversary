@@ -71,7 +71,7 @@ def setup_ma_config(config, create_env):
                                                 env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     elif config['env_config']['run'] == 'HER':
         policy_graphs = {'agent': (None, env.observation_space, env.action_space, {})}
-        # you don't want the adversaries to get HER policies
+
         policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     
@@ -265,6 +265,14 @@ def setup_exps(args):
         from algorithms.her.her_trainer import DEFAULT_CONFIG as DEFAULT_HER_CONFIG
         config = DEFAULT_HER_CONFIG.copy()
         config["sample_batch_size"] = args.horizon
+        config["n_step"] = 10
+        if args.local_mode:
+            config['learning_starts'] = 5000
+            config['pure_exploration_steps'] = 5000
+        if args.grid_search:
+            config["n_step"] = tune.grid_search([1, 5])
+            config["actor_lr"] = tune.grid_search([1e-3, 1e-4, 1e-5])
+            config["critic_lr"] = tune.grid_search([1e-3, 1e-4, 1e-5])
 
     else:
         sys.exit('Only PPO, TD3, and SAC are supported')
@@ -374,7 +382,7 @@ def setup_exps(args):
         runner = args.algorithm
 
     stop_dict = {}
-    if args.algorithm == 'PPO':
+    if args.algorithm == 'PPO' or args.algorithm == 'HER':
         stop_dict.update({
             'training_iteration': args.num_iters
         })

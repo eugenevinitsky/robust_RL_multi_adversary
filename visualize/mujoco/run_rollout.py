@@ -50,7 +50,11 @@ def instantiate_rollout(rllib_config, checkpoint):
 
     # Determine agent and checkpoint
     assert rllib_config['env_config']['run'], "No RL algorithm specified in env config!"
-    agent_cls = get_agent_class(rllib_config['env_config']['run'])
+    if rllib_config['env_config']['run'] == 'HER':
+        from algorithms.her.her_trainer import HERTrainer
+        agent_cls = HERTrainer
+    else:
+        agent_cls = get_agent_class(rllib_config['env_config']['run'])
     # configure the env
 
     if rllib_config['env'] == "MAPendulumEnv":
