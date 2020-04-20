@@ -171,6 +171,12 @@ def setup_exps(args):
     parser.add_argument('--lr', type=float, default=5e-4,
                         help='PPO lambda value')
 
+    # parameters for the curriculum
+    parser.add_argument('--push_curriculum', action='store_true', default=False,
+                        help='If true, we use the particular curriculum for the given env ')
+    parser.add_argument('--num_push_curriculum_iters', type=int, default=100,
+                        help='How many iterations the curriculum should run over')
+
     args = parser.parse_args(args)
 
     if args.alternate_training and args.advs_per_strength > 1:
@@ -265,6 +271,7 @@ def setup_exps(args):
     # config['kl_diff_target'] = args.kl_diff_target
     # config['kl_diff_clip'] = 5.0
 
+    config['env_config']['should_render'] = args.render
     config['env_config']['num_adv_strengths'] = args.num_adv_strengths
     config['env_config']['advs_per_strength'] = args.advs_per_strength
     config['env_config']['adversary_strength'] = args.adv_strength
@@ -293,6 +300,11 @@ def setup_exps(args):
     config['env_config']['adv_all_actions'] = args.adv_all_actions
     config['env_config']['entropy_coeff'] = args.entropy_coeff
     config['env_config']['clip_actions'] = args.clip_actions
+
+    # curriculum config
+    config['env_config']['push_curriculum'] = args.push_curriculum
+    config['env_config']['num_push_curriculum_iters'] = args.num_push_curriculum_iters
+
 
     config['env_config']['run'] = alg_run
 
@@ -382,6 +394,15 @@ def on_train_result(info):
             trainer.workers.foreach_worker(
                 lambda ev: ev.foreach_env(
                     lambda env: env.update_curriculum(pendulum_reward)))
+
+    # run the fetch push curriculum
+    if result["config"]["env_config"]['push_curriculum']:
+        trainer = info["trainer"]
+        num_iters = trainer._iteration
+
+        trainer.workers.foreach_worker(
+            lambda ev: ev.foreach_env(
+                lambda env: env.update_push_curriculum(num_iters)))
 
     if info["result"]["config"]["env_config"]["l2_memory"]:
         trainer = info["trainer"]

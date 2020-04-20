@@ -47,6 +47,16 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         self.domain_randomization = config["domain_randomization"]
         self.extreme_domain_randomization = config["extreme_domain_randomization"]
 
+        # push curriculum stuff
+        self.num_iters = 0
+        self.push_curriculum = config["push_curriculum"]
+        self.num_push_curriculum_iters = config["num_push_curriculum_iters"]
+        self.max_object_range = obj_range
+        self.max_target_range = target_range
+        if self.push_curriculum:
+            self.update_push_curriculum(0)
+        self.should_render = config["should_render"]
+
         self.cheating = config["cheating"]
         # whether the adversaries are receiving penalties for being too similar
         self.l2_reward = config['l2_reward']
@@ -134,6 +144,8 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
                 (self.adversary_range, self.adv_action_space.low.shape[0], self.horizon + 1))
             self.local_num_observed_l2_samples = np.zeros(self.adversary_range)
 
+        self.success = False
+
     @property
     def adv_action_space(self):
         """ 2D adversarial action. Maximum of self.adversary_strength in each dimension.
@@ -151,12 +163,18 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
     @property
     def adv_observation_space(self):
         if self.kl_reward or (self.l2_reward and not self.l2_memory):
-            dict_space = Dict({'obs': Box(low=-np.inf, high=np.inf, shape=(self.obs_size, )),
+            dict_space = Dict({'obs': self.observation_space,
                                'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
             return dict_space
         else:
-            return Box(low=-np.inf, high=np.inf, shape=(self.obs_size, ))
+            return self.observation_space
 
+    def update_push_curriculum(self, iter):
+        self.num_iters = iter
+        self.obj_range = max(min(1.0, self.num_iters / self.num_push_curriculum_iters) * self.max_object_range, 0.001)
+        self.target_range = max(min(1.0, self.num_iters / self.num_push_curriculum_iters) * self.max_target_range, 0.001)
+        print(self.obj_range)
+        print(self.target_range)
 
     def update_curriculum(self, mean_rew):
         self.mean_rew = mean_rew
@@ -175,8 +193,8 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
 
     def update_global_action_mean(self, mean_array):
         """Use polyak averaging to generate an estimate of the current mean actions at each time step"""
-        self.global_l2_memory_array = (1 - self.l2_memory_target_coeff) * self.global_l2_memory_array + \
-                                      self.l2_memory_target_coeff * mean_array
+        self.global_l2_memory_array = (
+                                                  1 - self.l2_memory_target_coeff) * self.global_l2_memory_array + self.l2_memory_target_coeff * mean_array
         self.local_l2_memory_array = np.zeros(self.local_l2_memory_array.shape)
         self.local_num_observed_l2_samples = np.zeros(self.adversary_range)
 
@@ -212,7 +230,10 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
     def step(self, actions):
         self.step_num += 1
 
-
+        # img_size = 256
+        #         # img = self.sim.render(width=img_size, height=img_size, camera_name="external_camera_0")[::-1]
+        if self.should_render:
+            self.render()
         if isinstance(actions, dict):
             # the robot action before any adversary modifies it
             obs_fetch_action = actions['agent']
@@ -251,6 +272,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         info = {
             'is_success': self._is_success(obs['achieved_goal'], self.goal),
         }
+        self.success = self._is_success(obs['achieved_goal'], self.goal)
         reward = self.compute_reward(obs['grip_pos'], obs['achieved_goal'], self.goal, info)
         ob = obs['all_obs']
 
@@ -273,18 +295,14 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             if self.adversary_range > 0 and self.curr_adversary >= 0:
                 # to do the kl or l2 reward we have to get actions from all the agents and so we need
                 # to pass them all obs
-                if self.concat_actions:
-                    adv_obs = np.concatenate((ob, obs_fetch_action))
-                else:
-                    adv_obs = obs
                 if self.kl_reward or (self.l2_reward and not self.l2_memory):
                     is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
                     obs_dict.update({
-                        'adversary{}'.format(i): {"obs": adv_obs, "is_active": np.array([is_active[i]])}
+                        'adversary{}'.format(i): {"obs": self.observed_states, "is_active": np.array([is_active[i]])}
                         for i in range(self.adversary_range)})
                 else:
                     obs_dict.update({
-                        'adversary{}'.format(self.curr_adversary): adv_obs
+                        'adversary{}'.format(self.curr_adversary): self.observed_states
                     })
 
                 if self.reward_range:
@@ -354,12 +372,14 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
                     reward_dict.update({'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]})
 
             done_dict = {'__all__': done}
+            print(done_dict)
             return obs_dict, reward_dict, done_dict, info
         else:
             return ob, reward, done, {}
 
     def reset(self):
         self.step_num = 0
+        self.success = False
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
         self.total_reward = 0
         self.reach_obj = -1
@@ -376,18 +396,14 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
 
         curr_obs = {'agent': self.observed_states}
         if self.adversary_range > 0 and self.curr_adversary >= 0:
-            if self.concat_actions:
-                adv_obs = np.concatenate((obs,  [0.0] * 3))
-            else:
-                adv_obs = obs
             if self.kl_reward or (self.l2_reward and not self.l2_memory):
                 is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
                 curr_obs.update({
-                    'adversary{}'.format(i): {"obs": adv_obs, "is_active": np.array([is_active[i]])}
+                    'adversary{}'.format(i): {"obs": self.observed_states, "is_active": np.array([is_active[i]])}
                     for i in range(self.adversary_range)})
             else:
                 curr_obs.update({
-                    'adversary{}'.format(self.curr_adversary): adv_obs
+                    'adversary{}'.format(self.curr_adversary): self.observed_states
                 })
 
             # track how many times each adversary was used
@@ -395,5 +411,3 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
                 self.local_num_observed_l2_samples[self.curr_adversary] += 1
 
         return curr_obs
-
-
