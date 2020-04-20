@@ -633,7 +633,10 @@ class AdvLunarLander(LunarLanderRandomized):
         self.step_num = 0
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
         if self.concat_actions:
+            self.update_observed_obs(np.concatenate((obs['agent'], np.zeros(self.action_space.shape[0]))))
+        else:
             self.update_observed_obs(obs['agent'])
+
         curr_obs = {'agent': self.observed_states}
         if self.adversary_range > 0 and self.curr_adversary >= 0:
             if self.concat_actions:

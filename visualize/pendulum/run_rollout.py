@@ -121,6 +121,8 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
             lambda agent_id: action_init[mapping_cache[agent_id]])
         if adv_num is not None:
             env.curr_adversary = adv_num
+        else:
+            env.adversary_range = 0
         obs = env.reset()
         prev_rewards = collections.defaultdict(lambda: 0.)
         done = False
