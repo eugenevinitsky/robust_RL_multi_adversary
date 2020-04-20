@@ -1,4 +1,4 @@
-# adversarial_sim2real
+# D-MALT: Diverse Multi-Adversarial Learning for Transfer
 We investigate the effect of sim2real via multiple types of parametrized adversaries
 
 ## Setup instructions
