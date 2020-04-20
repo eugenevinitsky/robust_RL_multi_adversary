@@ -548,7 +548,7 @@ if __name__ == "__main__":
                 if len(test_list) > 0:
                     run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=test_list, is_test=True)
 
-                sample_actions(config, checkpoint_path, min(2 * args.train_batch_size, 20000), output_path)
+                # sample_actions(config, checkpoint_path, min(2 * args.train_batch_size, 20000), output_path)
 
                 if args.use_s3:
                     # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
