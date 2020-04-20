@@ -182,6 +182,7 @@ def setup_exps(args):
                         help='If true, we use the particular curriculum for the given env ')
     parser.add_argument('--num_push_curriculum_iters', type=int, default=100,
                         help='How many iterations the curriculum should run over')
+    parser.add_argument('--horizon', type=int, default=100)
 
     args = parser.parse_args(args)
 
@@ -263,6 +264,7 @@ def setup_exps(args):
     elif args.algorithm == 'HER':
         from algorithms.her.her_trainer import DEFAULT_CONFIG as DEFAULT_HER_CONFIG
         config = DEFAULT_HER_CONFIG.copy()
+        config["sample_batch_size"] = args.horizon
 
     else:
         sys.exit('Only PPO, TD3, and SAC are supported')
@@ -279,6 +281,7 @@ def setup_exps(args):
     # config['kl_diff_target'] = args.kl_diff_target
     # config['kl_diff_clip'] = 5.0
 
+    config['env_config']['horizon'] = args.horizon
     config['env_config']['should_render'] = args.render
     config['env_config']['num_adv_strengths'] = args.num_adv_strengths
     config['env_config']['advs_per_strength'] = args.advs_per_strength

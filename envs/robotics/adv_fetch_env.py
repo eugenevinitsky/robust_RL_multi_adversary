@@ -16,7 +16,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         has_object, target_in_the_air, target_offset, obj_range, target_range,
         distance_threshold, initial_qpos, reward_type):
 
-        self.horizon = 100
+        self.horizon = config["horizon"]
         self.step_num = 0
 
         self.total_reward = 0

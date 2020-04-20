@@ -122,7 +122,7 @@ def make_optimizer(workers, config):
 
 
 HERTrainer = GenericOffPolicyTrainer.with_updates(
-    name="DDPG",
+    name="HER",
     default_config=DEFAULT_CONFIG,
     default_policy=DDPGTFPolicy,
     before_init=setup_ddpg_exploration,

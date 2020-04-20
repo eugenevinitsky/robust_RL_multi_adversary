@@ -142,6 +142,7 @@ class HEROptimizer(PolicyOptimizer):
                         row["dones"],
                         weight=None)
 
+                row_list = sorted(row_list, key=lambda x: int(x['t']))
                 final_state = row_list[-1]
                 # this is the goal that was actually achieved
                 desired_goal = final_state["obs"][-6:-3]
