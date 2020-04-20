@@ -932,7 +932,7 @@
 ###########################################################################
 
 # The pusher robot w/ no adversaries
-ray exec autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --algorithm TD3 \
 --num_adv_strengths 0 --advs_per_strength 0 --advs_per_rew 0 --num_adv_rews 0 --use_s3 --env_name fetchpush \
 --exp_title fetchpush_0adv_concat1_grid --num_cpus 10 --run_transfer_tests --multi_node \
@@ -940,20 +940,20 @@ ray exec autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mu
 --start --stop --tmux --cluster-name=fetchp_td3_test1
 
 # The pusher robot w/ 5 DMALT adversaries
-ray exec autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
 --num_iters10700 --checkpoint_freq 100 --num_concat_states 1 --algorithm TD3 \
 --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --use_s3 --env_name fetchpush \
 --exp_title fetchpush_5adv_lstm_grid_DMALT --num_cpus 10 --run_transfer_tests --multi_node \
---grid_search --adv_all_actions --concat_actions --use_lstm --push_curriculum --num_push_curriculum_iters 200
+--grid_search --adv_all_actions --concat_actions --use_lstm --push_curriculum --num_push_curriculum_iters 200 \
 --adv_strength 0.25 --low_reward -200 --high_reward 0.0 --reward_range --use_lstm" \
 --start --stop --tmux --cluster-name=fetchp_td3_test2
 
 # The pusher robot w/ 5 RARL adversaries
-ray exec autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
 --num_iters 1000 --checkpoint_freq 100 --num_concat_states 1 --algorithm TD3 \
 --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --use_s3 --env_name fetchpush \
 --exp_title fetchpush_5adv_lstm_grid_RARL --num_cpus 10 --run_transfer_tests --multi_node \
---grid_search --adv_all_actions --concat_actions --use_lstm --push_curriculum --num_push_curriculum_iters 200
+--grid_search --adv_all_actions --concat_actions --use_lstm --push_curriculum --num_push_curriculum_iters 200 \
 --adv_strength 0.25 --use_lstm" \
 --start --stop --tmux --cluster-name=fetchp_td3_test3
 
@@ -962,12 +962,12 @@ ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts
 --train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
 --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 5 --num_adv_rews 1 --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat1_seed_str0p25rew_l1000_h3500_lv0p9_lr00005_RARL --num_cpus 9 --run_transfer_tests --multi_node \
---adv_strength 0.25 --adv_all_actions --seed_search
+--adv_strength 0.25 --adv_all_actions --seed_search \
 --lambda_val 0.9 --lr .00005" \
 --start --stop --tmux --cluster-name=ev_hop_test2
 
 # 5 ADV DMALT w/o agent memory
-ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_mujoco.py \
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 700 --checkpoint_freq 100 --num_concat_states 1 \
 --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --use_s3 --env_name hopper \
 --exp_title hop_5adv_concat1_seed_str0p25rew_l1000_h3500_lv0p9_lr0005_DMALT --num_cpus 6 --run_transfer_tests --multi_node --adv_strength 0.25 \

@@ -20,6 +20,9 @@ hopper_friction_sweep = np.linspace(0.7, 1.3, 11)
 cheetah_mass_sweep = np.linspace(.5, 1.5, 11)
 cheetah_friction_sweep = np.linspace(0.1, 0.9, 11)
 
+fetch_mass_sweep = np.linspace(.01, 10.0, 1) #TODO: test what values work?
+fetch_friction_sweep = np.linspace(0.01, 20.0, 1)
+
 def load_data(results_path):
     all_file_names = OrderedDict()
     for (dirpath, dirnames, filenames) in os.walk(results_path):
@@ -93,6 +96,13 @@ def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show
         plt.xlabel("Friction coef")
     elif exp_type == 'cheetah':
         plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=2000, vmax=6000)
+        plt.title(file_name)
+        plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x * 6.0) for x in mass_sweep])
+        plt.ylabel("Mass coef")
+        plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
+        plt.xlabel("Friction coef")
+    elif exp_type == 'fetchpush':
+        plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=-600, vmax=100)
         plt.title(file_name)
         plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x * 6.0) for x in mass_sweep])
         plt.ylabel("Mass coef")
