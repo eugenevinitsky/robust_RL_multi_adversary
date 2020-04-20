@@ -171,9 +171,8 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
 
     def update_push_curriculum(self, iter):
         self.num_iters = iter
-        self.obj_range = max(min(1.0, self.num_iters / self.num_push_curriculum_iters) * self.max_object_range, 0.001)
+        # self.obj_range = max(min(1.0, self.num_iters / self.num_push_curriculum_iters) * self.max_object_range, 0.001)
         self.target_range = max(min(1.0, self.num_iters / self.num_push_curriculum_iters) * self.max_target_range, 0.001)
-        print(self.obj_range)
         print(self.target_range)
 
     def update_curriculum(self, mean_rew):
@@ -372,7 +371,6 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
                     reward_dict.update({'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]})
 
             done_dict = {'__all__': done}
-            print(done_dict)
             return obs_dict, reward_dict, done_dict, info
         else:
             return ob, reward, done, {}
