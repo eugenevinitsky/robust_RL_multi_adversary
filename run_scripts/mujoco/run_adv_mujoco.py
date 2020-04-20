@@ -266,6 +266,13 @@ def setup_exps(args):
         config = DEFAULT_HER_CONFIG.copy()
         config["sample_batch_size"] = args.horizon
         config["n_step"] = 10
+        config["actor_hiddens"] = [256, 256, 256]
+        config["critic_hiddens"] = [256, 256, 256]
+        config["exploration_gaussian_sigma"] = 0.2
+        config["tau"] = 0.05
+        config["observation_filter"] = "MeanStdFilter"
+
+
         if args.local_mode:
             config['learning_starts'] = 5000
             config['pure_exploration_steps'] = 5000
@@ -319,6 +326,7 @@ def setup_exps(args):
     config['env_config']['adv_all_actions'] = args.adv_all_actions
     config['env_config']['entropy_coeff'] = args.entropy_coeff
     config['env_config']['clip_actions'] = args.clip_actions
+    config['env_config']['random_eps'] = 0.3
 
     # curriculum config
     config['env_config']['push_curriculum'] = args.push_curriculum

@@ -56,6 +56,9 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         if self.push_curriculum:
             self.update_push_curriculum(0)
         self.should_render = config["should_render"]
+        # match the DDPG version in HER baselines
+        # https://github.com/openai/baselines/blob/master/baselines/her/ddpg.py
+        self.random_eps = config["random_eps"]
 
         self.cheating = config["cheating"]
         # whether the adversaries are receiving penalties for being too similar
@@ -226,6 +229,10 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         self.observed_states[0: original_shape] = new_obs
         return self.observed_states
 
+    def _random_action(self, n):
+        return np.random.uniform(low=-np.abs(self.action_space.low),
+                                 high=self.action_space.high, size=(n))
+
     def step(self, actions):
         self.step_num += 1
 
@@ -236,7 +243,10 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         if isinstance(actions, dict):
             # the robot action before any adversary modifies it
             obs_fetch_action = actions['agent']
-            fetch_action = actions['agent']
+            # fetch_action = actions['agent']
+            obs_fetch_action += np.random.binomial(1, self.random_eps, obs_fetch_action.shape[0]) * (
+                    self._random_action(obs_fetch_action.shape[0]) - obs_fetch_action)  # eps-greedy
+            fetch_action = obs_fetch_action
 
             if self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in actions.keys():
                 if self.adv_all_actions:
