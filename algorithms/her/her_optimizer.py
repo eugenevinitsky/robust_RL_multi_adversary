@@ -81,6 +81,9 @@ class HEROptimizer(PolicyOptimizer):
         self.before_learn_on_batch = before_learn_on_batch
         self.synchronize_sampling = synchronize_sampling
 
+        # how many HER samples should be in the buffer relative to the normal number
+        self.HER_ratio = 4
+
         # Stats
         self.update_weights_timer = TimerStat()
         self.sample_timer = TimerStat()
@@ -135,13 +138,15 @@ class HEROptimizer(PolicyOptimizer):
 
                 for row in s.rows():
                     row_list.append(row)
-                    self.replay_buffers[policy_id].add(
-                        pack_if_needed(row["obs"]),
-                        row["actions"],
-                        row["rewards"],
-                        pack_if_needed(row["new_obs"]),
-                        row["dones"],
-                        weight=None)
+                    should_add = np.random.uniform(low=0.0, high=1.0) < (1.0 / self.HER_ratio)
+                    if should_add:
+                        self.replay_buffers[policy_id].add(
+                            pack_if_needed(row["obs"]),
+                            row["actions"],
+                            row["rewards"],
+                            pack_if_needed(row["new_obs"]),
+                            row["dones"],
+                            weight=None)
 
                 row_list = sorted(row_list, key=lambda x: int(x['t']))
                 final_state = row_list[-1]

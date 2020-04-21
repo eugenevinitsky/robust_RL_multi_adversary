@@ -270,6 +270,7 @@ def setup_exps(args):
         config["critic_hiddens"] = [256, 256, 256]
         config["exploration_gaussian_sigma"] = 0.2
         config["tau"] = 0.05
+        config["buffer_size"] = int(1e6)
         config["observation_filter"] = "MeanStdFilter"
 
 
