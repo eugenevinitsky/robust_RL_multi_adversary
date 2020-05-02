@@ -93,11 +93,11 @@ def setup_exps(args):
 
     ModelCatalog.register_custom_model("rnn", LSTM)
     config['model']['fcnet_hiddens'] = [64, 64]
-    # TODO(@evinitsky) turn this on
-    config['model']['use_lstm'] = False
-    # config['model']['custom_model'] = "rnn"
-    config['model']['lstm_use_prev_action_reward'] = False
-    config['model']['lstm_cell_size'] = 128
+    if args.use_lstm:
+        config['model']['use_lstm'] = False
+        # config['model']['custom_model'] = "rnn"
+        config['model']['lstm_use_prev_action_reward'] = False
+        config['model']['lstm_cell_size'] = 128
     if args.grid_search:
         config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
@@ -107,12 +107,7 @@ def setup_exps(args):
     setup_ma_config(config)
 
     # add the callbacks
-    config["callbacks"] = {"on_train_result": on_train_result,
-                           "on_episode_end": on_episode_end}
-
-    # config["eager_tracing"] = True
-    config["eager"] = True
-    config["eager_tracing"] = True
+    config["callbacks"] = {"on_episode_end": on_episode_end}
 
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
@@ -133,17 +128,17 @@ def setup_exps(args):
     return exp_dict, args
 
 
-def on_train_result(info):
-    """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
-    result = info["result"]
-    # agent_reward = result['policy_reward_mean']['agent']
-    trainer = info["trainer"]
-
-    # TODO(should we do this every episode or every training iteration)?
-    return
-    trainer.workers.foreach_worker(
-        lambda ev: ev.foreach_env(
-            lambda env: env.select_new_adversary()))
+# def on_train_result(info):
+#     """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
+#     result = info["result"]
+#     # agent_reward = result['policy_reward_mean']['agent']
+#     trainer = info["trainer"]
+#
+#     # TODO(should we do this every episode or every training iteration)?
+#     return
+#     trainer.workers.foreach_worker(
+#         lambda ev: ev.foreach_env(
+#             lambda env: env.select_new_adversary()))
 
 
 def on_episode_end(info):
@@ -198,9 +193,10 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
                 if args.num_adv > 0:
-                    run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
+                    from visualize.pendulum.transfer_tests import pendulum_run_list
+                    run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path, pendulum_run_list)
 
-                    visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
+                    # visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
                                                                                                                       args.exp_title,

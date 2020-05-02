@@ -397,7 +397,7 @@ def setup_exps(args):
         })
     elif args.algorithm == 'TD3':
         stop_dict.update({
-            'timesteps_total': args.num_iters * 10000
+            'timesteps_total': args.num_iters
         })
 
     exp_dict = {
@@ -572,9 +572,11 @@ if __name__ == "__main__":
                     from visualize.mujoco.transfer_tests import fetch_push_run_list
                     run_list = fetch_push_run_list
 
-
                 ray.shutdown()
-                ray.init()
+                if args.local_mode:
+                    ray.init(local_mode=True)
+                else:
+                    ray.init()
                 run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=run_list)
                 if len(test_list) > 0:
                     run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=test_list, is_test=True)

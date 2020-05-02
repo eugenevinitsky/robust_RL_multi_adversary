@@ -26,6 +26,13 @@ def make_set_friction(friction_coef):
             env.fric_coef = friction_coef
     return set_friction
 
+def make_set_mass_all(mass_coef):
+    def set_mass(env):
+        env.model.body_mass[:] = (env.model.body_mass[:] * mass_coef)
+        if hasattr(env, 'mass_coef'):
+            env.fric_coef = mass_coef
+    return set_mass
+
 def make_set_mass(mass_coef, mass_body='pole'):
     def set_mass(env):
         bnames = env.model.body_names
@@ -99,15 +106,12 @@ run_list = [
 ]
 
 # test name, is_env_config, config_value, params_name, params_value
-mass_list = [0.5, 0.75, 1.0, 1.25, 1.5]
+pendulum_mass_list = np.linspace(0.5, 2.0, 15)
 pendulum_run_list = [
     ['base', []],
-    ['mass05', make_set_mass(mass_list[0])],
-    ['mass075', make_set_mass(mass_list[1])],
-    ['mass10', make_set_mass(mass_list[2])],
-    ['mass125', make_set_mass(mass_list[3])],
-    ['mass15', make_set_mass(mass_list[4])],
 ]
+for mass in pendulum_mass_list:
+    pendulum_run_list.append(['mass{}'.format(mass), make_set_mass_all(mass)])
 
 #hopper geoms: floor, torso, thigh, leg, foot
 hopper_run_list = [
@@ -291,9 +295,9 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         means = np.array(temp_output)[1:, 0]
         with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"), 'wb') as transfer_robustness:
             fig = plt.figure()
-            plt.bar(np.arange(len(mass_list)), means)
+            plt.plot(pendulum_mass_list, means)
             plt.title("Pendulum performance across mass values")
-            plt.xticks(ticks=np.arange(len(mass_list)), labels=["{:0.2f}".format(x) for x in mass_list])
+            # plt.xticks(ticks=np.arange(len(mass_list)), labels=["{:0.2f}".format(x) for x in mass_list])
             plt.xlabel("Mass coef")
             plt.savefig(transfer_robustness)
             plt.close(fig)

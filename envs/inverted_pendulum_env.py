@@ -16,6 +16,7 @@ class PendulumEnv(gym.Env):
 
     def __init__(self, g=10.0, horizon=200):
         self.max_speed=8
+        self.mass = 1.0
         self.max_torque=2.
         self.dt=.05
         self.g = g
@@ -47,7 +48,7 @@ class PendulumEnv(gym.Env):
         th, thdot = self.state # th := theta
 
         g = self.g
-        m = 1.
+        m = self.mass
         l = 1.
         dt = self.dt
 
@@ -145,18 +146,15 @@ class MAPendulumEnv(MultiAgentEnv, PendulumEnv):
         if 'adversary{}'.format(self.curr_adversary) in actions.keys():
             adv_action = actions['adversary{}'.format(self.curr_adversary)]
             agent_action += adv_action * self.adversary_strength
-            agent_action = np.clip(agent_action, a_min=self.action_space.low, a_max=self.action_space.high)
         obs, reward, done, info = super().step(agent_action)
         info = {'agent': {'agent_reward': reward}}
-
 
         obs_dict = {'agent': obs}
         reward_dict = {'agent': reward}
 
         for i in range(self.num_adversaries):
-            is_active = 1 if self.curr_adversary == i else 0
             obs_dict.update({
-                'adversary{}'.format(i): {'obs': obs, 'is_active': np.array([is_active])}
+                'adversary{}'.format(i): obs
             })
 
             reward_dict.update({'adversary{}'.format(i): -reward})
@@ -168,10 +166,6 @@ class MAPendulumEnv(MultiAgentEnv, PendulumEnv):
         obs = super().reset()
         curr_obs = {'agent': obs}
         for i in range(self.num_adversaries):
-            is_active = 1 if self.curr_adversary == i else 0
-            curr_obs.update({'adversary{}'.format(i):
-                                 {'obs': obs,
-                                  'is_active': np.array([is_active])
-                                 }})
+            curr_obs.update({'adversary{}'.format(i): obs})
 
         return curr_obs

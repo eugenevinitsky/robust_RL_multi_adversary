@@ -80,24 +80,19 @@ def setup_exps(args):
     config['num_envs_per_worker'] = 10
     config['num_sgd_iter'] = 10
 
-    if args.custom_ppo:
-        config['num_adversaries'] = args.num_adv
-        config['kl_diff_weight'] = args.kl_diff_weight
-        config['kl_diff_target'] = args.kl_diff_target
-        config['kl_diff_clip'] = 5.0
-
     config['env_config']['num_adversaries'] = args.num_adv
     config['env_config']['adversary_strength'] = args.adv_strength
 
     config['env_config']['run'] = alg_run
 
     ModelCatalog.register_custom_model("rnn", LSTM)
-    config['model']['fcnet_hiddens'] = [64, 64]
-    # TODO(@evinitsky) turn this on
-    config['model']['use_lstm'] = False
-    # config['model']['custom_model'] = "rnn"
-    config['model']['lstm_use_prev_action_reward'] = False
-    config['model']['lstm_cell_size'] = 128
+    if args.use_lstm:
+        config['model']['fcnet_hiddens'] = [64, 64]
+        # TODO(@evinitsky) turn this on
+        config['model']['use_lstm'] = False
+        # config['model']['custom_model'] = "rnn"
+        config['model']['lstm_use_prev_action_reward'] = False
+        config['model']['lstm_cell_size'] = 128
     if args.grid_search:
         config['vf_loss_coeff'] = tune.grid_search([1e-4, 1e-3])
 
@@ -123,7 +118,7 @@ def setup_exps(args):
         # 'run_or_experiment': KLPPOTrainer,
         'run_or_experiment': 'PPO',
         'trial_name_creator': trial_str_creator,
-        'checkpoint_freq': args.checkpoint_freq,
+        'checkpoint_at_end': True,
         'stop': {
             'training_iteration': args.num_iters
         },
@@ -189,7 +184,7 @@ if __name__ == "__main__":
                 if exc.errno != errno.EEXIST:
                     raise
         for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
-            if "checkpoint_{}".format(args.num_iters) in dirpath:
+            if "checkpoint" in dirpath:
                 # grab the experiment name
                 folder = os.path.dirname(dirpath)
                 tune_name = folder.split("/")[-1]
@@ -198,9 +193,10 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
                 if args.num_adv > 0:
-                    run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path)
+                    from visualize.pendulum.transfer_tests import pendulum_run_list
+                    run_transfer_tests(config, checkpoint_path, 200, args.exp_title, output_path, pendulum_run_list)
 
-                    visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
+                    # visualize_adversaries(config, checkpoint_path, 10, 200, output_path)
                     p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                      "s3://sim2real/transfer_results/pendulum/{}/{}/{}".format(date,
                                                                                                                       args.exp_title,

@@ -17,6 +17,10 @@ from visualize.pendulum.run_rollout import run_rollout, instantiate_rollout
 from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep
 import errno
 
+def make_set_pendulum_mass(mass):
+    def set_mass(env):
+        env.mass = mass
+    return set_mass
 
 def make_set_friction(friction_coef):
     def set_friction(env):
@@ -62,15 +66,12 @@ run_list = [
 ]
 
 # test name, is_env_config, config_value, params_name, params_value
-mass_list = [0.5, 0.75, 1.0, 1.25, 1.5]
+mass_list = np.linspace(0.5, 2.0, 20)
 pendulum_run_list = [
     ['base', []],
-    ['mass05', make_set_mass(mass_list[0])],
-    ['mass075', make_set_mass(mass_list[1])],
-    ['mass10', make_set_mass(mass_list[2])],
-    ['mass125', make_set_mass(mass_list[3])],
-    ['mass15', make_set_mass(mass_list[4])],
 ]
+for mass in mass_list:
+    pendulum_run_list.append(['mass_{}'.format(mass), make_set_pendulum_mass(mass)])
 
 #hopper geoms: floor, torso, thigh, leg, foot
 hopper_run_list = [

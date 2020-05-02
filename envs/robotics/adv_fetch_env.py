@@ -298,7 +298,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         self.total_reward += reward
         if isinstance(actions, dict):
             info = {'agent': {'agent_reward': reward}}
-            obs_dict = {'agent': self.observed_states}
+            obs_dict = {'agent': ob / 100.0}
             reward_dict = {'agent': reward}
 
             if self.adversary_range > 0 and self.curr_adversary >= 0:
@@ -402,7 +402,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         else:
             self.update_observed_obs(obs)
 
-        curr_obs = {'agent': self.observed_states}
+        curr_obs = {'agent': obs / 100.0}
         if self.adversary_range > 0 and self.curr_adversary >= 0:
             if self.kl_reward or (self.l2_reward and not self.l2_memory):
                 is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]

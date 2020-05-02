@@ -127,8 +127,8 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
             assert actions in self.action_space
             agent_action = actions
         
-        self.sim.data.qvel[0] = np.clip(self.sim.data.qvel[0], -self.max_cart_vel, self.max_cart_vel)
-        self.sim.data.qvel[1] = np.clip(self.sim.data.qvel[1], -self.max_pole_vel, self.max_pole_vel)
+        # self.sim.data.qvel[0] = np.clip(self.sim.data.qvel[0], -self.max_cart_vel, self.max_cart_vel)
+        # self.sim.data.qvel[1] = np.clip(self.sim.data.qvel[1], -self.max_pole_vel, self.max_pole_vel)
 
         reward = 1.0
         self.do_simulation(agent_action, self.frame_skip)
@@ -140,7 +140,7 @@ class AdvMAPendulumEnv(InvertedPendulumEnv, MultiAgentEnv):
             self.update_observed_obs(ob)
 
         done = not np.isfinite(ob).all() or np.abs(ob[1]) > .2 or self.step_num > self.horizon
-        
+
         if isinstance(actions, dict):
             info = {'agent': {'agent_reward': reward}}
             obs_dict = {'agent': self.observed_states}
