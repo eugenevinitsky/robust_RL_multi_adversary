@@ -8,6 +8,7 @@ import sys
 import pytz
 import numpy as np
 import ray
+from ray.rllib.agents.ppo import DEFAULT_CONFIG
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 
 from ray.rllib.models import ModelCatalog
@@ -15,53 +16,31 @@ from ray import tune
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
-from algorithms.custom_ppo import KLPPOTrainer, CustomPPOPolicy, DEFAULT_CONFIG
-from visualize.visualize_adversaries import visualize_adversaries
 from visualize.transfer_test import run_transfer_tests
 from utils.env_creator import ma_env_creator, construct_config
 
-from utils.parsers import init_parser, env_parser, ray_parser, ma_env_parser
+from utils.parsers import init_parser, env_parser, ray_parser
 from utils.rllib_utils import get_config_from_path
 
 from ray.rllib.models.catalog import MODEL_DEFAULTS
-from models.conv_lstm import ConvLSTM
-from models.recurrent_tf_model_v2 import LSTM
 
 
 def setup_ma_config(config):
     env = ma_env_creator(config['env_config'])
     policies_to_train = ['robot']
 
-    num_adversaries = config['env_config']['num_adversaries']
-    adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
+    adv_policies = ['adversary']
     adversary_config = {"model": {'fcnet_hiddens': [32, 32], 'use_lstm': False}}
-    # TODO(@evinitsky) put this back
-    policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
-    policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
-                                                 env.adv_action_space, adversary_config) for i in range(num_adversaries)})
-    # policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
-    #                                         env.adv_action_space, adversary_config) for i in range(num_adversaries)})
-    # if config['env_config']['run'] == 'DDPG':
-    #     policy_graphs = {'robot': (DDPGTFPolicy, env.observation_space, env.action_space, {})}
-    #     policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
-    #                                             env.adv_action_space, adversary_config) for i in range(num_adversaries)})
-    # elif config['env_config']['run'] == 'PPO':
-    #     policy_graphs = {'robot': (PPOTFPolicy, env.observation_space, env.action_space, {})}
-    #     policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
-    #                                             env.adv_action_space, adversary_config) for i in range(num_adversaries)})
-    # else:
-    #     sys.exit('How did you get here friend? Was there no error catching before this?')
-
+    policy_graphs = {'robot': (None, env.observation_space, env.action_space, {})}
+    policy_graphs.update({'adversary': (None, env.adv_observation_space,
+                                                 env.adv_action_space, adversary_config)})
     policies_to_train += adv_policies
 
     def policy_mapping_fn(agent_id):
-        return agent_id
-
-    # def policy_mapping_fn(agent_id):
-    #     if agent_id == 'robot':
-    #         return agent_id
-    #     if agent_id.startswith('adversary'):
-    #         return random.choice(adv_policies)
+        if 'human' in agent_id:
+            return 'adversary'
+        else:
+            return 'robot'
 
     config.update({
         'multiagent': {
@@ -76,7 +55,6 @@ def setup_exps(args):
     parser = init_parser()
     parser = env_parser(parser)
     parser = ray_parser(parser)
-    parser = ma_env_parser(parser)
     args = parser.parse_args(args)
 
     alg_run = 'PPO'
@@ -85,11 +63,6 @@ def setup_exps(args):
     config = DEFAULT_CONFIG
     config['gamma'] = 0.99
     config["batch_mode"] = "complete_episodes"
-    config['num_adversaries'] = args.num_adv
-    config['kl_diff_weight'] = args.kl_diff_weight
-    config['kl_diff_target'] = args.kl_diff_target
-    # Keep in mind that kl_diff_clip is also the maximum value that kl_diff can take on
-    config['kl_diff_clip'] = 5.0
     config['train_batch_size'] = args.train_batch_size
 
     with open(args.env_params, 'r') as file:
@@ -99,18 +72,12 @@ def setup_exps(args):
         policy_params = file.read()
     config['env_config'] = construct_config(env_params, policy_params, args)
 
-    config['env_config']['perturb_state'] = args.perturb_state
-    config['env_config']['perturb_actions'] = args.perturb_actions
     config['env_config']['num_adversaries'] = args.num_adv
     config['env_config']['run'] = alg_run
-
-    if not args.perturb_state and not args.perturb_actions:
-        sys.exit('You need to select at least one of perturb actions or perturb state')
 
     # pick out the right model
     if args.train_on_images:
         # register the custom model
-        ModelCatalog.register_custom_model("rnn", ConvLSTM)
 
         conv_filters = [
             [32, [3, 3], 2],
@@ -127,11 +94,8 @@ def setup_exps(args):
         config['model']['custom_model'] = "rnn"
         config['vf_share_layers'] = True
     else:
-        ModelCatalog.register_custom_model("rnn", LSTM)
         config['model']['custom_options']['fcnet_hiddens'] = [64, 64]
-        # TODO(@evinitsky) turn this on
         config['model']['use_lstm'] = False
-        # config['model']['custom_model'] = "rnn"
         config['model']['lstm_use_prev_action_reward'] = False
         config['model']['lstm_cell_size'] = 128
         config['vf_share_layers'] = True
@@ -143,11 +107,7 @@ def setup_exps(args):
 
     setup_ma_config(config)
 
-    # add the callbacks
-    config["callbacks"] = {"on_train_result": on_train_result,
-                           "on_episode_end": on_episode_end}
-
-    # config["eager_tracing"] = True
+    # You don't have to do this, but it does make replay a little cleaner
     config["eager"] = True
     config["eager_tracing"] = True
 
@@ -157,7 +117,7 @@ def setup_exps(args):
 
     exp_dict = {
         'name': args.exp_title,
-        'run_or_experiment': KLPPOTrainer,
+        'run_or_experiment': "PPO",
         'trial_name_creator': trial_str_creator,
         'checkpoint_freq': args.checkpoint_freq,
         'stop': {
@@ -167,44 +127,6 @@ def setup_exps(args):
         'num_samples': args.num_samples,
     }
     return exp_dict, args
-
-
-def on_train_result(info):
-    """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
-    result = info["result"]
-    robot_reward = result['policy_reward_mean']['robot']
-    trainer = info["trainer"]
-    trainer.workers.foreach_worker(
-        lambda ev: ev.foreach_env(
-            lambda env: env.update_mean_rew(robot_reward)))
-
-    trainer.workers.foreach_worker(
-        lambda ev: ev.foreach_env(
-            lambda env: env.update_adversary_range()))
-
-    # TODO(should we do this every episode or every training iteration)?
-    pass
-    trainer.workers.foreach_worker(
-        lambda ev: ev.foreach_env(
-            lambda env: env.select_new_adversary()))
-
-
-def on_episode_end(info):
-    """Select the currently active adversary"""
-
-    # store info about how many adversaries there are
-    env = info["env"].envs[0]
-    episode = info["episode"]
-    episode.custom_metrics["num_active_adversaries"] = env.adversary_range
-
-    if env.prediction_reward and env.adversary_range > 1:
-        episode.custom_metrics["predict_frac"] = env.num_correct_predict / episode.length
-
-    # select a new adversary every episode. Currently disabled.
-    if env.adversary_range > 0:
-        env.curr_adversary = np.random.randint(low=0, high=env.adversary_range)
-    else:
-        env.curr_adversary = 0
 
 
 if __name__=="__main__":
@@ -220,6 +142,8 @@ if __name__=="__main__":
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
+    elif args.local_mode:
+        ray.init(local_mode=True)
     else:
         ray.init()
 
@@ -243,8 +167,6 @@ if __name__=="__main__":
                 script_path = os.path.expanduser(os.path.join(outer_folder, "visualize/transfer_test.py"))
                 config, checkpoint_path = get_config_from_path(folder, str(args.num_iters))
 
-                # run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)
-                # TODO(@evinitsky) this will break for state adversaries
-                visualize_adversaries(config, checkpoint_path, 10, 20, output_path)
+                run_transfer_tests(config, checkpoint_path, 500, args.exp_title, output_path, save_trajectory=False)
                 p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path, "s3://sim2real/transfer_results/{}/{}/{}".format(date, args.exp_title, tune_name)).split(' '))
                 p1.wait()
