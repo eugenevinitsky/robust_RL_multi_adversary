@@ -1002,12 +1002,22 @@
 #--start --stop --tmux --cluster-name=ev_hop_test3
 
 
+############################################################################
+################## 5/11 experiments
+############################################################################
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
+#--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_DMALT_5adv_concat1_str0p25_grid_l2000_h4000 --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 1.0 --adv_all_actions --reward_range --low_reward 2000 --high_reward 4000" \
+#--start --stop --tmux --cluster-name=ev_hop_test3
+
 ###########################################################################
-################# 5/11 experiments
+################# 5/12 experiments
 ###########################################################################
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_lerrel.py \
 --train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
 --num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
---exp_title hop_DMALT_5adv_concat1_str0p25_grid_l2000_h4000 --num_cpus 9 --run_transfer_tests --multi_node \
---adv_strength 1.0 --adv_all_actions --reward_range --low_reward 2000 --high_reward 4000" \
+--exp_title hop_DMALT_5adv_concat1_str0p25_grid_l1000_h4000_srew --num_cpus 9 --run_transfer_tests --multi_node \
+--adv_strength 1.0 --adv_all_actions --reward_range --low_reward 2000 --high_reward 4000 --simple_adv_reward" \
 --start --stop --tmux --cluster-name=ev_hop_test3

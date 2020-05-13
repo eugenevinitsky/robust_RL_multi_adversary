@@ -406,6 +406,8 @@ def on_episode_end(info):
             env.extreme_randomize_domain()
         episode = info["episode"]
         episode.custom_metrics["num_active_advs"] = env.adversary_range
+        if env.adversary_range > 0:
+            episode.custom_metrics["adv_{}_rew".format(env.curr_adversary)] = env.total_reward
 
 
 class AlternateTraining(Trainable):
