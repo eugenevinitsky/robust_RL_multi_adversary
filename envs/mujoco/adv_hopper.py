@@ -27,6 +27,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.low_reward = config["low_reward"]
         # This sets wthe adversaries high reward range
         self.high_reward = config["high_reward"]
+        # which dmalt reward to use
+        self.simple_adv_reward = config["simple_adv_reward"]
 
         # How frequently we check whether to increase the adversary range
         self.adv_incr_freq = config["adv_incr_freq"]
@@ -280,7 +282,11 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                         'adversary{}'.format(self.curr_adversary): self.observed_states
                     })
 
-                if self.reward_range:
+                if self.simple_adv_reward:
+
+                    adv_reward = [(self.reward_targets[i] / self.horizon) -
+                                  abs(reward - (self.reward_targets[i] / self.horizon)) for i in range(self.adversary_range)]
+                elif self.reward_range:
                     # we make this a positive reward that peaks at the reward target so that the adversary
                     # isn't trying to make the rollout end as fast as possible. It wants the rollout to continue.
 

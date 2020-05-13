@@ -138,6 +138,8 @@ def setup_exps(args):
                                                                       'to push you to')
     parser.add_argument('--high_reward', type=float, default=4000.0, help='The upper range that adversaries try'
                                                                           'to push you to')
+    parser.add_argument('--simple_adv_reward', action='store_true', default=False,
+                        help='If true, just divide the reward target by horizon')
     parser.add_argument('--l2_reward', action='store_true', default=False,
                         help='If true, each adversary gets a reward for being close to the adversaries. This '
                              'is NOT a supervised loss')
@@ -266,6 +268,7 @@ def setup_exps(args):
 
     config['env_config']['low_reward'] = args.low_reward
     config['env_config']['high_reward'] = args.high_reward
+    config['env_config']['simple_adv_reward'] = args.simple_adv_reward
     config['env_config']['curriculum'] = args.curriculum
     config['env_config']['goal_score'] = args.goal_score
     config['env_config']['adv_incr_freq'] = args.adv_incr_freq
