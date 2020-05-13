@@ -89,7 +89,10 @@ def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show
     # with open('{}/{}_{}.png'.format(output_path, file_name, "transfer_heatmap"),'wb') as heatmap:
     fig = plt.figure()
     if exp_type == 'hopper':
-        plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+        if 'step' in file_name:
+            plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=0, vmax=1000)
+        else:
+            plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
         plt.title(file_name)
         plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x * 3.53) for x in mass_sweep])
         plt.ylabel("Mass coef")
