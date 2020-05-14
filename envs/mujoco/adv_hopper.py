@@ -136,6 +136,9 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                 (self.adversary_range, self.adv_action_space.low.shape[0], self.horizon + 1))
             self.local_num_observed_l2_samples = np.zeros(self.adversary_range)
 
+        # track adversary actions for logging
+        self.adv_actions = np.zeros(self.adv_action_space.low.shape[0])
+
     @property
     def adv_action_space(self):
         """ 2D adversarial action. Maximum of self.adversary_strength in each dimension.
@@ -223,6 +226,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                 if self.adv_all_actions:
                     adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
 
+                    self.adv_actions = adv_action
                     # self._adv_to_xfrc(adv_action)
                     hopper_action += adv_action
                     # apply clipping to hopper action
@@ -363,6 +367,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             return ob, reward, done, {}
 
     def reset(self):
+        self.adv_actions = np.zeros(self.adv_action_space.low.shape[0])
         self.step_num = 0
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
         self.total_reward = 0

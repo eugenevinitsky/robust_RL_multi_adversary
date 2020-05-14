@@ -383,7 +383,9 @@ def setup_exps(args):
 
     # add the callbacks
     config["callbacks"] = {"on_train_result": on_train_result,
-                           "on_episode_end": on_episode_end}
+                           "on_episode_end": on_episode_end,
+                           "on_episode_start": on_episode_start,
+                           "on_episode_step": on_episode_step}
 
     # create a custom string that makes looking at the experiment names easier
     def trial_str_creator(trial):
@@ -464,6 +466,21 @@ def on_train_result(info):
                 lambda env: env.update_global_action_mean(mean_result_vec)))
 
 
+def on_episode_step(info):
+    episode = info["episode"]
+
+    # store info about adversary action norm
+    if hasattr(info["env"], 'envs'):
+        env = info["env"].envs[0]
+        if hasattr(env, 'adv_actions'):
+            episode.user_data["mean_adv_action"].append(np.linalg.norm(env.adv_actions))
+
+
+def on_episode_start(info):
+    episode = info["episode"]
+    episode.user_data["mean_adv_action"] = []
+
+
 def on_episode_end(info):
     """Select the currently active adversary"""
 
@@ -481,6 +498,9 @@ def on_episode_end(info):
             episode.custom_metrics["success"] = int(env.success)
         if env.adversary_range > 0:
             episode.custom_metrics["adv_{}_rew".format(env.curr_adversary)] = env.total_reward
+            if hasattr(env, 'adv_actions'):
+                episode.custom_metrics["mean_adv{}_action".format(env.curr_adversary)] = \
+                    np.nan_to_num(np.mean(episode.user_data["mean_adv_action"]))
 
 
 
