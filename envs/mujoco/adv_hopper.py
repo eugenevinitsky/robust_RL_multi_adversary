@@ -29,6 +29,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.high_reward = config["high_reward"]
         # which dmalt reward to use
         self.simple_adv_reward = config["simple_adv_reward"]
+        # whether the reward for the adversaries is only accumulated at the end
+        self.sparse = config["sparse"]
 
         # How frequently we check whether to increase the adversary range
         self.adv_incr_freq = config["adv_incr_freq"]
@@ -83,8 +85,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.advs_per_rew = config['advs_per_rew']
         self.reward_targets = np.linspace(start=self.low_reward, stop=self.high_reward,
                                      num=self.num_adv_rews)
-        # repeat the bins so that we can index the adversaries easily
-        self.reward_targets = np.repeat(self.reward_targets, self.advs_per_rew)
+        # repeat the bins so that we can index the adversaries easily, reverse so we go from easy to hard
+        self.reward_targets = np.repeat(self.reward_targets, self.advs_per_rew)[::-1]
 
         self.comp_adversaries = []
         for i in range(self.adversary_range):
@@ -283,9 +285,14 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     })
 
                 if self.simple_adv_reward:
-
                     adv_reward = [(self.reward_targets[i] / self.horizon) -
                                   abs(reward - (self.reward_targets[i] / self.horizon)) for i in range(self.adversary_range)]
+                elif self.sparse:
+                    if self.step_num == self.horizon:
+                        adv_reward = [self.reward_targets[i] - np.abs(self.total_reward - self.reward_targets[i])
+                                      for i in range(self.adversary_range)]
+                    else:
+                        adv_reward = self.adversary_range * [0]
                 elif self.reward_range:
                     # we make this a positive reward that peaks at the reward target so that the adversary
                     # isn't trying to make the rollout end as fast as possible. It wants the rollout to continue.
