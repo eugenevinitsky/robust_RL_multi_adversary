@@ -1,3 +1,5 @@
+from copy import copy
+
 from gym.envs.mujoco.ant import AntEnv
 from gym.spaces import Box, Dict
 import numpy as np
@@ -192,8 +194,8 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
         self.step_num += 1
         if isinstance(actions, dict):
             # the hopper action before any adversary modifies it
-            obs_ant_action = actions['agent']
-            ant_action = actions['agent']
+            obs_ant_action = copy(actions['agent'])
+            ant_action = copy(actions['agent'])
 
             if self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in actions.keys():
                 adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[

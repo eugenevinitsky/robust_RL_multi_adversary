@@ -227,7 +227,6 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                 if self.adv_all_actions:
                     adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
 
-                    # self._adv_to_xfrc(adv_action)
                     hopper_action += adv_action
                     # apply clipping to hopper action
                     if self.clip_actions:

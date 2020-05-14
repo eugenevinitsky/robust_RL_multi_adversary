@@ -7,7 +7,7 @@ import numpy as np
 from os import path
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from visualize.plot_heatmap import hopper_friction_sweep, hopper_mass_sweep
-from copy import deepcopy
+from copy import deepcopy, copy
 
 class AdvMAHopper(HopperEnv, MultiAgentEnv):
     def __init__(self, config):
@@ -216,8 +216,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.step_num += 1
         if isinstance(actions, dict):
             # the hopper action before any adversary modifies it
-            obs_hopper_action = actions['agent']
-            hopper_action = actions['agent']
+            obs_hopper_action = copy(actions['agent'])
+            hopper_action = copy(actions['agent'])
 
             if self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in actions.keys():
                 if self.adv_all_actions:
