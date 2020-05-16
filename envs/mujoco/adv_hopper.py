@@ -31,6 +31,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.simple_adv_reward = config["simple_adv_reward"]
         # whether the reward for the adversaries is only accumulated at the end
         self.sparse = config["sparse"]
+        # value added to adversary rew at each timestep
+        self.adversary_add_const = config["adversary_add_const"]
 
         # How frequently we check whether to increase the adversary range
         self.adv_incr_freq = config["adv_incr_freq"]
@@ -45,6 +47,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         # This is whether we concatenate the agent action into the observation
         self.domain_randomization = config["domain_randomization"]
         self.extreme_domain_randomization = config["extreme_domain_randomization"]
+        self.adversarial_domain_randomization = config["adversarial_domain_randomization"]
 
         self.cheating = config["cheating"]
         # whether the adversaries are receiving penalties for being too similar
@@ -149,6 +152,10 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             box = Box(low=-np.ones(low.shape) * self.adversary_strength, high=np.ones(high.shape) * self.adversary_strength,
                       shape=None, dtype=np.float32)
             return box
+        elif self.adversarial_domain_randomization:
+            low = np.array([hopper_friction_sweep[0], hopper_mass_sweep[0]])
+            high = np.array([hopper_friction_sweep[-1], hopper_mass_sweep[-1]])
+            return Box(low=low, high=high)
         else:
             return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(2,))
 
@@ -216,7 +223,6 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         return self.observed_states
 
     def step(self, actions):
-        self.step_num += 1
         if isinstance(actions, dict):
             # the hopper action before any adversary modifies it
             obs_hopper_action = copy(actions['agent'])
@@ -232,6 +238,11 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     # apply clipping to hopper action
                     if self.clip_actions:
                         hopper_action = np.clip(obs_hopper_action, a_min=self.action_space.low, a_max=self.action_space.high)
+                elif self.adversarial_domain_randomization and self.step_num == 0:
+                    friction_coef = actions['adversary{}'.format(self.curr_adversary)][0]
+                    mass_coef = actions['adversary{}'.format(self.curr_adversary)][1]
+                    self.model.body_mass[self.dr_bindex] = (self.original_mass * mass_coef)
+                    self.model.geom_friction[:] = (self.original_friction * friction_coef)[:]
                 else:
                     adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
                     self._adv_to_xfrc(adv_action)
@@ -239,7 +250,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             assert actions in self.action_space
             obs_hopper_action = actions
             hopper_action = actions
-
+        self.step_num += 1
 
         # keep track of the action that was taken
         if self.l2_memory and self.l2_reward and isinstance(actions, dict) and 'adversary{}'.format(self.curr_adversary) in actions.keys():
@@ -283,6 +294,11 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     obs_dict.update({
                         'adversary{}'.format(i): {"obs": self.observed_states, "is_active": np.array([is_active[i]])}
                         for i in range(self.adversary_range)})
+                elif self.adversarial_domain_randomization:
+                    if done:
+                        obs_dict.update({
+                            'adversary{}'.format(self.curr_adversary): self.observed_states
+                        })
                 else:
                     obs_dict.update({
                         'adversary{}'.format(self.curr_adversary): self.observed_states
@@ -314,6 +330,9 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                        i] - self.total_reward)) * (1 / max(1, self.step_num)) for i in range(self.adversary_range)]
                 else:
                     adv_reward = [-reward for _ in range(self.adversary_range)]
+
+                # TODO(@evinitsky) put back
+                # adv_reward += self.adversary_add_const
 
                 if self.l2_reward and self.adversary_range > 1:
                     # to do the kl or l2 reward exactly we have to get actions from all the agents
@@ -359,7 +378,12 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
 
                 else:
-                    reward_dict.update({'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]})
+                    # only get a reward at the end
+                    if self.adversarial_domain_randomization:
+                        if done:
+                            reward_dict.update({'adversary{}'.format(self.curr_adversary): -self.total_reward})
+                    else:
+                        reward_dict.update({'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]})
 
             done_dict = {'__all__': done}
             return obs_dict, reward_dict, done_dict, info

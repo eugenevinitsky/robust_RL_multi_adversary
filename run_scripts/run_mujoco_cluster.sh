@@ -1068,18 +1068,105 @@
 #--adv_strength 1.0 --adv_all_actions --reward_range --low_reward 2000 --high_reward 3000 --sparse" \
 #--start --stop --tmux --cluster-name=ev_hop_test9
 
-ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_mujoco.py \
---train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 1 --advs_per_rew 1 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
---exp_title hop_DMALT_1adv_concat1_str0p25_grid_l2000_h3000_srew --num_cpus 9 --run_transfer_tests --multi_node \
---adv_strength 1.0 --adv_all_actions --reward_range --low_reward 2000 --high_reward 2000 --simple_adv_reward" \
---start --stop --tmux --cluster-name=ev_hop_test10
+# Note, misnamed.
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+#--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 1 --advs_per_rew 1 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_DMALT_1adv_concat1_str0p25_grid_l2000_h3000_srew --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 1.0 --adv_all_actions --reward_range --low_reward 2000 --high_reward 2000 --simple_adv_reward" \
+#--start --stop --tmux --cluster-name=ev_hop_test10
 
-ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/pendulum/run_adv_mujoco.py \
---train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 1 --advs_per_rew 1 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
---exp_title hop_DMALT_1adv_concat1_str0p25_grid_l2000_h3000_srew --num_cpus 9 --run_transfer_tests --multi_node \
---adv_strength 4.0 --adv_all_actions --reward_range --low_reward 2000 --high_reward 2000 --simple_adv_reward" \
---start --stop --tmux --cluster-name=ev_hop_test11
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+#--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 1 --advs_per_rew 1 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_DMALT_1adv_concat1_str4p0_grid_l2000_h3000_srew --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 4.0 --adv_all_actions --reward_range --low_reward 2000 --high_reward 2000 --simple_adv_reward" \
+#--start --stop --tmux --cluster-name=ev_hop_test11
+
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+#--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 1 --advs_per_rew 1 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_DMALT_1adv_concat1_str4p0_grid_l2000_h2000_srew --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 4.0 --adv_all_actions --reward_range --low_reward 2000 --high_reward 2000 --simple_adv_reward" \
+#--start --stop --tmux --cluster-name=ev_hop_test12
+
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+#--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 1 --advs_per_rew 1 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_DMALT_1adv_concat1_str4p0_grid_l4500_h4500_srew --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 4.0 --adv_all_actions --reward_range --low_reward 4500 --high_reward 4500 --simple_adv_reward" \
+#--start --stop --tmux --cluster-name=ev_hop_test13
+
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+#--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 1 --advs_per_rew 1 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_DMALT_1adv_concat1_str4p0_grid_l4500_h4500_srew --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 4.0 --adv_all_actions --reward_range --low_reward 1000 --high_reward 1000 --simple_adv_reward" \
+#--start --stop --tmux --cluster-name=ev_hop_test15
+
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+#--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_DMALT_5adv_concat1_str4p0_grid_l1000_h3500_srew --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 4.0 --adv_all_actions --reward_range --low_reward 1000 --high_reward 3500 --simple_adv_reward" \
+#--start --stop --tmux --cluster-name=ev_hop_test16
 
 # TODO(@evinitsky) try training the adversaries in one at a time and then freezing them
+############################################################################################################
+# 5 / 15 experiments
+
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+#--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 1 --num_adv_rews 5 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_DMALT_5adv_concat1_str4p0_grid_l1000_h3500_srew --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 4.0 --adv_all_actions --reward_range --low_reward 1000 --high_reward 3500 --simple_adv_reward" \
+#--start --stop --tmux --cluster-name=ev_hop_test16
+#
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+#--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 1 --advs_per_rew 1 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_DMALT_1adv_concat1_str4p0_grid_l3000_h3000_srew --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 4.0 --adv_all_actions --reward_range --low_reward 3000 --high_reward 3000 --simple_adv_reward" \
+#--start --stop --tmux --cluster-name=ev_hop_test17
+#
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+#--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 5 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_DMALT_5adv_concat1_str4p0_grid_l3000_h3000_srew --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 4.0 --adv_all_actions --reward_range --low_reward 3000 --high_reward 3000 --simple_adv_reward" \
+#--start --stop --tmux --cluster-name=ev_hop_test18
+#
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+#--train_batch_size 100000 --num_iters 500 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 5 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_DMALT_5adv_concat1_str4p0_grid_l2000_h2000_srew --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 4.0 --adv_all_actions --reward_range --low_reward 2000 --high_reward 2000 --simple_adv_reward" \
+#--start --stop --tmux --cluster-name=ev_hop_test20/
+
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+--train_batch_size 100000 --num_iters 250 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 5 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+--exp_title hop_RARL_5adv_concat1_str0p25_grid --num_cpus 9 --run_transfer_tests --multi_node \
+--adv_strength 0.25 --adv_all_actions" \
+--start --stop --tmux --cluster-name=ev_hop_test21/
+
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+--train_batch_size 100000 --num_iters 250 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 5 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+--exp_title hop_RARL_5adv_concat1_str0p5_grid --num_cpus 9 --run_transfer_tests --multi_node \
+--adv_strength 0.5 --adv_all_actions" \
+--start --stop --tmux --cluster-name=ev_hop_test22/
+
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+--train_batch_size 100000 --num_iters 250 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 5 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+--exp_title hop_RARL_5adv_concat1_str1p0_grid --num_cpus 9 --run_transfer_tests --multi_node \
+--adv_strength 1.0 --adv_all_actions" \
+--start --stop --tmux --cluster-name=ev_hop_test23/
+
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+--train_batch_size 100000 --num_iters 250 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 5 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+--exp_title hop_RARL_5adv_concat1_str0p1_grid --num_cpus 9 --run_transfer_tests --multi_node \
+--adv_strength 0.1 --adv_all_actions" \
+--start --stop --tmux --cluster-name=ev_hop_test25/

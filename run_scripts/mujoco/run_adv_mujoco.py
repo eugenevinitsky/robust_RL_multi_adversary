@@ -130,6 +130,8 @@ def setup_exps(args):
                         help='If true we use vanilla domain randomization over the transfer task.')
     parser.add_argument('--extreme_domain_randomization', action='store_true', default=False,
                         help='If true we use domain randomization across different joints/links as well')
+    parser.add_argument('--adversarial_domain_randomization', action='store_true', default=False,
+                        help='If true, the adversary picks the domain randomization parameters')
     parser.add_argument('--cheating', action='store_true', default=False,
                         help='Enabled with domain randomization, will provide the learner with the transfer params.')
     parser.add_argument('--reward_range', action='store_true', default=False,
@@ -144,6 +146,9 @@ def setup_exps(args):
                                                                           'to push you to')
     parser.add_argument('--simple_adv_reward', action='store_true', default=False,
                         help='If true, just divide the reward target by horizon')
+    parser.add_argument('--adversary_add_const', type=float, default=0.0,
+                        help='Value added at each timestep to the adversary reward. Can be used to prevent'
+                             'the adversary from being incentivized to terminate the rollout')
     parser.add_argument('--sparse', action='store_true', default=False,
                         help='If true, adversaries only get total reward at termination')
     parser.add_argument('--l2_reward', action='store_true', default=False,
@@ -194,6 +199,8 @@ def setup_exps(args):
         sys.exit('You can only have 1 adversary if you are alternating training')
     if args.cheating and not args.domain_randomization:
         sys.exit('cheating should not be enabled without domain randomization' )
+    if args.adversarial_domain_randomization and args.adv_all_actions:
+        sys.exit('you can\'t have both adversaries add noise to actions and pick domain randomization params')
     if args.reward_range and args.num_adv_strengths * args.advs_per_strength <= 0:
         sys.exit('must specify number of strength levels, number of adversaries when using reward range')
     if (args.num_adv_strengths * args.advs_per_strength != args.num_adv_rews * args.advs_per_rew) and args.reward_range:
@@ -314,6 +321,7 @@ def setup_exps(args):
     config['env_config']['high_reward'] = args.high_reward
     config['env_config']['simple_adv_reward'] = args.simple_adv_reward
     config['env_config']['sparse'] = args.sparse
+    config['env_config']['adversary_add_const'] = args.adversary_add_const
 
     config['env_config']['curriculum'] = args.curriculum
     config['env_config']['goal_score'] = args.goal_score
@@ -332,6 +340,8 @@ def setup_exps(args):
     config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
     config['env_config']['no_end_if_fall'] = args.no_end_if_fall
     config['env_config']['adv_all_actions'] = args.adv_all_actions
+    config['env_config']['adversarial_domain_randomization'] = args.adversarial_domain_randomization
+
     config['env_config']['entropy_coeff'] = args.entropy_coeff
     config['env_config']['clip_actions'] = args.clip_actions
     config['env_config']['random_eps'] = 0.3
