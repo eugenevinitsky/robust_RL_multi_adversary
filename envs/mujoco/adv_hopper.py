@@ -239,10 +239,10 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     if self.clip_actions:
                         hopper_action = np.clip(obs_hopper_action, a_min=self.action_space.low, a_max=self.action_space.high)
                 elif self.adversarial_domain_randomization and self.step_num == 0:
-                    friction_coef = actions['adversary{}'.format(self.curr_adversary)][0]
-                    mass_coef = actions['adversary{}'.format(self.curr_adversary)][1]
-                    self.model.body_mass[self.dr_bindex] = (self.original_mass * mass_coef)
-                    self.model.geom_friction[:] = (self.original_friction * friction_coef)[:]
+                    self.friction_coef = actions['adversary{}'.format(self.curr_adversary)][0]
+                    self.mass_coef = actions['adversary{}'.format(self.curr_adversary)][1]
+                    self.model.body_mass[self.dr_bindex] = (self.original_mass * self.mass_coef)
+                    self.model.geom_friction[:] = (self.original_friction * self.friction_coef)[:]
                 else:
                     adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
                     self._adv_to_xfrc(adv_action)

@@ -511,8 +511,9 @@ def on_episode_end(info):
             if hasattr(env, 'adv_actions'):
                 episode.custom_metrics["mean_adv{}_action".format(env.curr_adversary)] = \
                     np.nan_to_num(np.mean(episode.user_data["mean_adv_action"]))
-
-
+        if env.adversarial_domain_randomization:
+            episode.custom_metrics["adv{}_mass_coeff".format(env.curr_adversary)] = env.mass_coef
+            episode.custom_metrics["adv{}_friction_coeff".format(env.curr_adversary)] = env.friction_coef
 
 class AlternateTraining(Trainable):
     def _setup(self, config):
