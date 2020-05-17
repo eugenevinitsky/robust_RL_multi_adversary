@@ -15,7 +15,7 @@ from envs.multiarm_bandit import MultiarmBandit, PSEUDORANDOM_TRANSFER
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from visualize.mujoco.run_rollout import run_rollout, instantiate_rollout
-from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep
+from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep, ant_mass_sweep, ant_friction_sweep
 import errno
 
 
@@ -125,10 +125,15 @@ cheetah_run_list = [
     ['base', []]
 ]
 
+ant_run_list = [
+    ['base', []]
+]
+
 hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
 for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
     hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
 cheetah_grid = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep)
+ant_grid = np.meshgrid(ant_mass_sweep, ant_friction_sweep)
 
 def reset_env(env, num_active_adv=0):
     """Undo parameters that need to be off"""
@@ -240,7 +245,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         except:
             pass
 
-    if 'MACheetahEnv' == rllib_config['env']:
+    elif 'MACheetahEnv' == rllib_config['env']:
         reward_means = np.array(temp_output)[1:, 0].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
         output_name = output_file_name + 'rew'
         save_heatmap(reward_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
@@ -248,6 +253,16 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         step_means = np.array(temp_output)[1:, 2].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
         output_name = output_file_name + 'steps'
         save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
+
+    elif 'MAAntEnv' == rllib_config['env']:
+        reward_means = np.array(temp_output)[1:, 0].reshape(len(ant_mass_sweep), len(ant_friction_sweep))
+        output_name = output_file_name + 'rew'
+        save_heatmap(reward_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
+
+        step_means = np.array(temp_output)[1:, 2].reshape(len(ant_mass_sweep), len(ant_friction_sweep))
+        output_name = output_file_name + 'steps'
+        save_heatmap(step_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
+
 
     elif 'MAPendulumEnv' in rllib_config['env']:
         means = np.array(temp_output)[1:, 0]
@@ -339,6 +354,8 @@ if __name__ == '__main__':
             run_list = hopper_run_list
     elif rllib_config['env'] == "MACheetahEnv":
         run_list = cheetah_run_list
+    elif rllib_config['env'] == "MAAntEnv":
+        run_list = ant_run_list
     elif rllib_config['env'] == "MultiarmBandit":
         run_list = make_bandit_transfer_list(rllib_config['env_config']['num_arms'])
 
