@@ -19,6 +19,9 @@ hopper_friction_sweep = np.linspace(0.7, 1.3, 11)
 cheetah_mass_sweep = np.linspace(.5, 1.5, 11)
 cheetah_friction_sweep = np.linspace(0.1, 0.9, 11)
 
+ant_mass_sweep = np.linspace(.5, 1.5, 11)
+ant_friction_sweep = np.linspace(0.1, 0.9, 11)
+
 def load_data(results_path):
     all_file_names = OrderedDict()
     for (dirpath, dirnames, filenames) in os.walk(results_path):
@@ -75,10 +78,6 @@ def make_heatmap(results_path, exp_type, output_path, show=False, output_file_na
     for file_name in sweep_data:
         print(file_name)
         _, _, _, _, means, _, _, _, dirpath = sweep_data[file_name]
-        if exp_type == 'hopper':
-            means = means.reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
-        elif exp_type == 'cheetah':
-            means = means.reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
 
         if not output_path:
             output_name = dirpath
@@ -87,8 +86,21 @@ def make_heatmap(results_path, exp_type, output_path, show=False, output_file_na
 
         if not output_file_name:
             output_file_name = file_name.split("sweep")[0]
-        save_heatmap(means, hopper_mass_sweep, hopper_friction_sweep, output_name,
-                     output_file_name, show, exp_type, fontsize, title_fontsize)
+
+        if exp_type == 'hopper':
+            means = means.reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
+            save_heatmap(means, hopper_mass_sweep, hopper_friction_sweep, output_name,
+                         output_file_name, show, exp_type, fontsize, title_fontsize)
+        elif exp_type == 'cheetah':
+            means = means.reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
+            save_heatmap(means, cheetah_mass_sweep, cheetah_friction_sweep, output_name,
+                         output_file_name, show, exp_type, fontsize, title_fontsize)
+        elif exp_type == 'ant':
+            means = means.reshape(len(ant_mass_sweep), len(ant_friction_sweep))
+            save_heatmap(means, ant_mass_sweep, ant_friction_sweep, output_name,
+                         output_file_name, show, exp_type, fontsize, title_fontsize)
+
+
 
 def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show, exp_type, fontsize=14, title_fontsize=16):
     # with open('{}/{}_{}.png'.format(output_path, file_name, "transfer_heatmap"),'wb') as heatmap:
@@ -107,6 +119,13 @@ def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show
         plt.ylabel("Mass coef", fontsize=fontsize)
         plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
         plt.xlabel("Friction coef", fontsize=fontsize)
+    elif exp_type == 'ant':
+        plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3000)
+        plt.title(file_name, fontsize=title_fontsize)
+        plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x * 6.0) for x in mass_sweep])
+        plt.ylabel("Mass coef", fontsize=fontsize)
+        plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
+        plt.xlabel("Friction coef", fontsize=fontsize)
     plt.colorbar()
     plt.tight_layout()
     plt.savefig('{}/{}_{}.png'.format(output_path.replace(' ', '_'), file_name, "transfer_heatmap"))
@@ -117,7 +136,7 @@ def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('results_path', type=str, help='Pass the path to the folder containing all yuor results files')
-    parser.add_argument('exp_type', type=str, help='hopper, cheetah, pendulum')
+    parser.add_argument('exp_type', type=str, help='hopper, cheetah, pendulum, ant')
     parser.add_argument('--output_path', type=str, help='Output file location.')
     parser.add_argument('--show_images', action="store_true", help='Show plots as they are created.')
     args = parser.parse_args()

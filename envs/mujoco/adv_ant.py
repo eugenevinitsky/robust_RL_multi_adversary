@@ -2,7 +2,7 @@ from gym.envs.mujoco.ant import AntEnv
 from gym.spaces import Box, Dict
 import numpy as np
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
-from visualize.plot_heatmap import hopper_friction_sweep, hopper_mass_sweep
+from visualize.plot_heatmap import ant_friction_sweep, ant_mass_sweep
 
 
 class AdvMAAnt(AntEnv, MultiAgentEnv):
@@ -175,8 +175,8 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
             self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
 
     def randomize_domain(self):
-        self.friction_coef = np.random.choice(hopper_friction_sweep)
-        self.mass_coef = np.random.choice(hopper_mass_sweep)
+        self.friction_coef = np.random.choice(ant_friction_sweep)
+        self.mass_coef = np.random.choice(ant_mass_sweep)
 
         self.model.body_mass[self.dr_bindex] = (self.original_mass * self.mass_coef)
         self.model.geom_friction[:] = (self.original_friction * self.friction_coef)[:]
@@ -191,7 +191,7 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
     def step(self, actions):
         self.step_num += 1
         if isinstance(actions, dict):
-            # the hopper action before any adversary modifies it
+            # the ant action before any adversary modifies it
             obs_ant_action = actions['agent']
             ant_action = actions['agent']
 
@@ -201,7 +201,7 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
 
                 # self._adv_to_xfrc(adv_action)
                 ant_action += adv_action
-                # apply clipping to hopper action
+                # apply clipping to ant action
                 if self.clip_actions:
                     ant_action = np.clip(obs_ant_action, a_min=self.action_space.low,
                                             a_max=self.action_space.high)
@@ -365,3 +365,6 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
 
         return curr_obs
 
+def ant_env_creator(env_config):
+    env = AdvMAAnt(env_config)
+    return env

@@ -59,6 +59,9 @@ def instantiate_rollout(rllib_config, checkpoint):
     elif rllib_config['env'] == "MACheetahEnv":
         env_name = "MACheetahEnv"
         create_env_fn = make_create_env(AdvMAHalfCheetahEnv)
+    elif rllib_config['env'] == "MAAntEnv":
+        env_name = "MAAntEnv"
+        create_env_fn = make_create_env(AdvMAAnt)
     elif rllib_config['env'] == "LinearEnv":
         env_name = "LinearEnv"
         create_env_fn = make_create_env(LinearEnv)
