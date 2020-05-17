@@ -132,6 +132,9 @@ def setup_exps(args):
                         help='If true we use domain randomization across different joints/links as well')
     parser.add_argument('--adversarial_domain_randomization', action='store_true', default=False,
                         help='If true, the adversary picks the domain randomization parameters')
+    parser.add_argument('--mixed_nash_adversary', action='store_true', default=False,
+                        help='If true, each adversary is given a categorical variable that they can use to select'
+                             'which set of actions is used')
     parser.add_argument('--cheating', action='store_true', default=False,
                         help='Enabled with domain randomization, will provide the learner with the transfer params.')
     parser.add_argument('--reward_range', action='store_true', default=False,
@@ -201,6 +204,8 @@ def setup_exps(args):
         sys.exit('cheating should not be enabled without domain randomization' )
     if args.adversarial_domain_randomization and args.adv_all_actions:
         sys.exit('you can\'t have both adversaries add noise to actions and pick domain randomization params')
+    if args.mixed_nash_adversary and args.adv_all_actions:
+        sys.exit('you can\'t have both adversaries add noise to actions and have the mixed nash adversary')
     if args.reward_range and args.num_adv_strengths * args.advs_per_strength <= 0:
         sys.exit('must specify number of strength levels, number of adversaries when using reward range')
     if (args.num_adv_strengths * args.advs_per_strength != args.num_adv_rews * args.advs_per_rew) and args.reward_range:
@@ -341,6 +346,7 @@ def setup_exps(args):
     config['env_config']['no_end_if_fall'] = args.no_end_if_fall
     config['env_config']['adv_all_actions'] = args.adv_all_actions
     config['env_config']['adversarial_domain_randomization'] = args.adversarial_domain_randomization
+    config['env_config']['mixed_nash_adversary'] = args.mixed_nash_adversary
 
     config['env_config']['entropy_coeff'] = args.entropy_coeff
     config['env_config']['clip_actions'] = args.clip_actions

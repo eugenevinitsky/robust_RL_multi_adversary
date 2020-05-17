@@ -2,7 +2,7 @@ import os
 import subprocess
 
 if __name__ == "__main__":
-    path = "/Users/eugenevinitsky/Desktop/Research/Data/sim2real/transfer_results/adv_robust/05-15-2020"
+    path = "/Users/eugenevinitsky/Desktop/Research/Data/sim2real/transfer_results/adv_robust/05-16-2020"
 
     dirs = os.listdir(path)
     for dir in dirs:

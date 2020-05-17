@@ -1171,9 +1171,41 @@
 #--adv_strength 0.1 --adv_all_actions" \
 #--start --stop --tmux --cluster-name=ev_hop_test25/
 
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+#--train_batch_size 100000 --num_iters 250 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 5 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_RARL_5adv_concat1_advDR_grid --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 0.1 --adversarial_domain_randomization" \
+#--start --stop --tmux --cluster-name=ev_hop_test26/
+
+
+####################################################################################################################
+# 5/16 experiments
+###################################################################################################################
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+#--train_batch_size 100000 --num_iters 250 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 1 --advs_per_strength 1 --advs_per_rew 1 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_RARL_1adv_concat1_advDR_grid --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 0.1 --adversarial_domain_randomization" \
+#--start --stop --tmux --cluster-name=ev_hop_test28
+
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+#--train_batch_size 100000 --num_iters 250 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+#--num_adv_strengths 0 --advs_per_strength 0 --advs_per_rew 0 --num_adv_rews 0 --grid_search --use_s3 --env_name hopper \
+#--exp_title hop_RARL_0adv_concat1_DR_grid --num_cpus 9 --run_transfer_tests --multi_node \
+#--domain_randomization" \
+#--start --stop --tmux --cluster-name=ev_hop_test29
+
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
 --train_batch_size 100000 --num_iters 250 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
---num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 5 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
---exp_title hop_RARL_5adv_concat1_advDR_grid --num_cpus 9 --run_transfer_tests --multi_node \
---adv_strength 0.1 --adversarial_domain_randomization" \
---start --stop --tmux --cluster-name=ev_hop_test26/
+--num_adv_strengths 1 --advs_per_strength 10 --advs_per_rew 10 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+--exp_title hop_RARL_10adv_concat1_str0p25_grid --num_cpus 9 --run_transfer_tests --multi_node \
+--adv_strength 0.25 --adv_all_actions" \
+--start --stop --tmux --cluster-name=ev_hop_test30
+
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/mujoco/run_adv_mujoco.py \
+--train_batch_size 100000 --num_iters 250 --checkpoint_freq 100 --num_concat_states 1 --concat_actions \
+--num_adv_strengths 1 --advs_per_strength 1 --advs_per_rew 1 --num_adv_rews 1 --grid_search --use_s3 --env_name hopper \
+--exp_title hop_RARL_1adv_concat1_str0p25_grid --num_cpus 9 --run_transfer_tests --multi_node \
+--adv_strength 0.25 --adv_all_actions" \
+--start --stop --tmux --cluster-name=ev_hop_test31

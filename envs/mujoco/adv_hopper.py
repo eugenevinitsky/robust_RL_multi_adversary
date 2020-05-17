@@ -2,7 +2,7 @@ import gym
 from gym import spaces
 from gym.utils import seeding
 from gym.envs.mujoco.hopper import HopperEnv
-from gym.spaces import Box, Discrete, Dict
+from gym.spaces import Box, Discrete, Dict, Tuple
 import numpy as np
 from os import path
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
@@ -60,6 +60,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.kl_reward_coeff = config['kl_reward_coeff']
         self.no_end_if_fall = config['no_end_if_fall']
         self.adv_all_actions = config['adv_all_actions']
+        self.mixed_nash_adversary = config['mixed_nash_adversary']
         self.clip_actions = config['clip_actions']
 
         # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
@@ -140,7 +141,10 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             self.local_num_observed_l2_samples = np.zeros(self.adversary_range)
 
         # track adversary actions for logging
-        self.adv_actions = np.zeros(self.adv_action_space.low.shape[0])
+        if isinstance(self.adv_action_space, Box):
+            self.adv_actions = np.zeros(self.adv_action_space.low.shape[0])
+        else:
+            self.adv_actions = np.zeros(self.adv_action_space[1].low.shape[0])
 
     @property
     def adv_action_space(self):
@@ -156,6 +160,13 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             low = np.array([hopper_friction_sweep[0], hopper_mass_sweep[0]])
             high = np.array([hopper_friction_sweep[-1], hopper_mass_sweep[-1]])
             return Box(low=low, high=high)
+        elif self.mixed_nash_adversary:
+            low = np.array(self.action_space.low.tolist())
+            high = np.array(self.action_space.high.tolist())
+            box = Tuple((Discrete(4), Box(low=-np.ones(low.shape[0] * 4) * self.adversary_strength,
+                          high=np.ones(high.shape[0] * 4) * self.adversary_strength,
+                          shape=None, dtype=np.float32)))
+            return box
         else:
             return Box(low=-self.adversary_strength, high=self.adversary_strength, shape=(2,))
 
@@ -243,6 +254,17 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     self.mass_coef = actions['adversary{}'.format(self.curr_adversary)][1]
                     self.model.body_mass[self.dr_bindex] = (self.original_mass * self.mass_coef)
                     self.model.geom_friction[:] = (self.original_friction * self.friction_coef)[:]
+                elif self.mixed_nash_adversary:
+                    chosen_action = actions['adversary{}'.format(self.curr_adversary)][0]
+                    adv_action = actions['adversary{}'.format(self.curr_adversary)][1][chosen_action * 3: (chosen_action + 1) * 3]
+
+                    self.adv_actions = adv_action
+                    # self._adv_to_xfrc(adv_action)
+                    hopper_action += adv_action
+                    # apply clipping to hopper action
+                    if self.clip_actions:
+                        hopper_action = np.clip(obs_hopper_action, a_min=self.action_space.low,
+                                                a_max=self.action_space.high)
                 else:
                     adv_action = actions['adversary{}'.format(self.curr_adversary)] * self.strengths[self.curr_adversary]
                     self._adv_to_xfrc(adv_action)
@@ -391,7 +413,12 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
             return ob, reward, done, {}
 
     def reset(self):
-        self.adv_actions = np.zeros(self.adv_action_space.low.shape[0])
+        # track adversary actions for logging
+        if isinstance(self.adv_action_space, Box):
+            self.adv_actions = np.zeros(self.adv_action_space.low.shape[0])
+        else:
+            self.adv_actions = np.zeros(self.adv_action_space[1].low.shape[0])
+
         self.step_num = 0
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
         self.total_reward = 0
