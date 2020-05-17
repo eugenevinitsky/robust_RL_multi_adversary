@@ -127,7 +127,7 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
             if adv_num is not None:
                 multi_obs = {'agent': obs['agent'], 'adversary{}'.format(adv_num): obs['agent']}
             else:
-                multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
+                multi_obs = {'agent': obs['agent']} if multiagent else {_DUMMY_AGENT_ID: obs}
             action_dict = {}
             for agent_id, a_obs in multi_obs.items():
                 if a_obs is not None:
