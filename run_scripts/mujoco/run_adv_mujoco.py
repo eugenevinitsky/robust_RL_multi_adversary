@@ -135,6 +135,9 @@ def setup_exps(args):
     parser.add_argument('--mixed_nash_adversary', action='store_true', default=False,
                         help='If true, each adversary is given a categorical variable that they can use to select'
                              'which set of actions is used')
+    parser.add_argument('--num_adv_strategies', type=int, default=False,
+                        help='If true, each adversary has this many strategies it can deploy'
+                             'and a categorical variable it uses to pick over them')
     parser.add_argument('--cheating', action='store_true', default=False,
                         help='Enabled with domain randomization, will provide the learner with the transfer params.')
     parser.add_argument('--reward_range', action='store_true', default=False,
@@ -347,6 +350,7 @@ def setup_exps(args):
     config['env_config']['adv_all_actions'] = args.adv_all_actions
     config['env_config']['adversarial_domain_randomization'] = args.adversarial_domain_randomization
     config['env_config']['mixed_nash_adversary'] = args.mixed_nash_adversary
+    config['env_config']['num_adv_strategies'] = args.num_adv_strategies
 
     config['env_config']['entropy_coeff'] = args.entropy_coeff
     config['env_config']['clip_actions'] = args.clip_actions
@@ -490,11 +494,13 @@ def on_episode_step(info):
         env = info["env"].envs[0]
         if hasattr(env, 'adv_actions'):
             episode.user_data["mean_adv_action"].append(np.linalg.norm(env.adv_actions))
-
+        # if env.mixed_nash_adversary:
+        #     episode.user_data["chosen_policy"].append(env.chosen_policy)
 
 def on_episode_start(info):
     episode = info["episode"]
     episode.user_data["mean_adv_action"] = []
+    # episode.user_data["chosen_policy"] = []
 
 
 def on_episode_end(info):

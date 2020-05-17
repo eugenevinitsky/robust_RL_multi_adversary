@@ -61,6 +61,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.no_end_if_fall = config['no_end_if_fall']
         self.adv_all_actions = config['adv_all_actions']
         self.mixed_nash_adversary = config['mixed_nash_adversary']
+        self.num_adv_strategies = config.get('num_adv_strategies', 4)
         self.clip_actions = config['clip_actions']
 
         # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
@@ -163,8 +164,9 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         elif self.mixed_nash_adversary:
             low = np.array(self.action_space.low.tolist())
             high = np.array(self.action_space.high.tolist())
-            box = Tuple((Discrete(4), Box(low=-np.ones(low.shape[0] * 4) * self.adversary_strength,
-                          high=np.ones(high.shape[0] * 4) * self.adversary_strength,
+            box = Tuple((Discrete(self.num_adv_strategies),
+                         Box(low=-np.ones(low.shape[0] * self.num_adv_strategies) * self.adversary_strength,
+                          high=np.ones(high.shape[0] * self.num_adv_strategies) * self.adversary_strength,
                           shape=None, dtype=np.float32)))
             return box
         else:
