@@ -164,6 +164,8 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
                     if len(a_action) > 1:
                         if isinstance(a_action[0], np.ndarray):
                             a_action[0] = a_action[0].flatten()
+                    if isinstance(a_action, list) and len(a_action) > 1:
+                        a_action = (a_action[0][0], a_action[1][0])
                     action_dict[agent_id] = a_action
                     prev_action = _flatten_action(a_action)  # tuple actions
                     prev_actions[agent_id] = prev_action

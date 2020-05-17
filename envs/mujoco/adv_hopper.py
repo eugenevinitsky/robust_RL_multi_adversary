@@ -144,7 +144,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         if isinstance(self.adv_action_space, Box):
             self.adv_actions = np.zeros(self.adv_action_space.low.shape[0])
         else:
-            self.adv_actions = np.zeros(self.adv_action_space[1].low.shape[0])
+            self.adv_actions = np.zeros(3)
 
     @property
     def adv_action_space(self):
