@@ -98,10 +98,11 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
 
         # Do the initialization
         super(AdvMAAnt, self).__init__()
-        self._adv_f_bname = 'foot'
+        self._adv_f_bname = ['aux_1', 'aux_2', 'aux_3', 'aux_4']
         bnames = self.model.body_names
-        self._adv_bindex = bnames.index(
-            self._adv_f_bname)  # Index of the body on which the adversary force will be applied
+        self._adv_bindex = [bnames.index(i) for i in
+                            self._adv_f_bname]  # Index of the body on which the adversary force will be applied
+
         dr_mass_bname = 'torso'
         self.dr_bindex = bnames.index(dr_mass_bname)
         self.original_friction = np.array(self.model.geom_friction)
