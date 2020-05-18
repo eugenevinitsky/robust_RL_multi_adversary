@@ -13,6 +13,7 @@ DEFAULT_ENV_PARAMS = {
     },
     'MAFetchReachEnv': {
         'n_cycles': 10,
+        'buffer_size': int(1E4)
     },
 }
 

@@ -42,15 +42,21 @@ def train(*, policy_dict, rollout_worker, evaluator,
         # train
         rollout_worker.clear_history()
         for i in range(n_cycles):
+            print('{} / {}'.format(i, n_cycles))
             rollout_worker.venv.select_new_adversary()
             if len(policy_dict) > 1:
                 curr_adv = rollout_worker.venv.curr_adversary
+                rollout_worker.selected_adversary = curr_adv
+
+            episode_dict = rollout_worker.generate_rollouts()
+
+            # you should only store and train the policies that were actually rolled out
+            if len(policy_dict) > 1:
                 temp_policy_dict = {'agent': policy_dict['agent'],
-                                    'adversary{}'.format(curr_adv): policy_dict['adversary{}'.format(curr_adv)]}
+                                    'adversary{}'.format(rollout_worker.selected_adversary):
+                                        policy_dict['adversary{}'.format(rollout_worker.selected_adversary)]}
             else:
                 temp_policy_dict = policy_dict
-            rollout_worker.policy = temp_policy_dict
-            episode_dict = rollout_worker.generate_rollouts()
             for key, policy in temp_policy_dict.items():
                 policy.store_episode(episode_dict[key])
                 for _ in range(n_batches):

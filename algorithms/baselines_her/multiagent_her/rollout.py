@@ -35,6 +35,7 @@ class RolloutWorker:
         self.info_keys = [key.replace('info_', '') for key in dims.keys() if key.startswith('info_')]
 
         self.success_history = deque(maxlen=history_len)
+        self.selected_adversary = 0
         self.Q_history = {}
         for key in policy.keys():
             self.Q_history.update({key:deque(maxlen=history_len) })
@@ -67,8 +68,16 @@ class RolloutWorker:
         info_values = [np.empty((self.T - 1, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in self.info_keys]
         Qs = {key: [] for key in self.policy.keys()}
         u_dict = {}
+
+        if len(self.policy) > 1:
+            temp_policy_dict = {'agent': self.policy['agent'],
+                                'adversary{}'.format(self.selected_adversary):
+                                    self.policy['adversary{}'.format(self.selected_adversary)]}
+        else:
+            temp_policy_dict = self.policy
+
         for t in range(self.T):
-            for key, policy in self.policy.items():
+            for key, policy in temp_policy_dict.items():
                 policy_output = policy.get_actions(
                     o, ag, self.g,
                     compute_Q=self.compute_Q,
@@ -142,12 +151,12 @@ class RolloutWorker:
         achieved_goals.append(ag.copy())
 
         episode_dict = {}
-        for key in self.policy.keys():
+        for key in temp_policy_dict.keys():
             episode_dict.update({key: dict(o=obs,
                            u=acts[key],
                            g=goals,
                            ag=achieved_goals)})
-        for agent_id in self.policy.keys():
+        for agent_id in temp_policy_dict.keys():
             for key, value in zip(self.info_keys, info_values):
                 dict_key = 'info_{}'.format(key)
                 if 'adversary' in agent_id:
@@ -160,7 +169,7 @@ class RolloutWorker:
         success_rate = np.mean(successful)
         self.success_history.append(success_rate)
         if self.compute_Q:
-            for key in self.policy.keys():
+            for key in temp_policy_dict.keys():
                 self.Q_history[key].append(np.mean(Qs[key]))
         self.n_episodes += self.rollout_batch_size
 
