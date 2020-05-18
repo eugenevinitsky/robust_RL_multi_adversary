@@ -275,17 +275,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             pass
 
     elif 'MACheetahEnv' == rllib_config['env']:
-        if is_test:
-            reward_means = np.array(temp_output)[:, 0]
-            output_name = output_file_name + 'holdout_rew'
-            save_heatmap(reward_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False,
-                         'cheetah')
-
-            step_means = np.array(temp_output)[:, 2]
-            output_name = output_file_name + 'holdout_steps'
-            save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
-
-        else:
+        if not is_test:
             reward_means = np.array(temp_output)[1:, 0].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
             output_name = output_file_name + 'rew'
             save_heatmap(reward_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
@@ -295,15 +285,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
 
     elif 'MAAntEnv' == rllib_config['env']:
-        if is_test:
-            reward_means = np.array(temp_output)[:, 0]
-            output_name = output_file_name + 'holdout_rew'
-            save_heatmap(reward_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
-
-            step_means = np.array(temp_output)[:, 2]
-            output_name = output_file_name + 'holdout_steps'
-            save_heatmap(step_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
-        else:
+        if not is_test:
             reward_means = np.array(temp_output)[1:, 0].reshape(len(ant_mass_sweep), len(ant_friction_sweep))
             output_name = output_file_name + 'rew'
             save_heatmap(reward_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
@@ -311,7 +293,6 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             step_means = np.array(temp_output)[1:, 2].reshape(len(ant_mass_sweep), len(ant_friction_sweep))
             output_name = output_file_name + 'steps'
             save_heatmap(step_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
-
 
     elif 'MAPendulumEnv' in rllib_config['env']:
         means = np.array(temp_output)[1:, 0]
