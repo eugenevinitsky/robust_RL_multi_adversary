@@ -276,12 +276,12 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
 
     elif 'MACheetahEnv' == rllib_config['env']:
         if is_test:
-            reward_means = np.array(temp_output)[1:, 0].reshape(num_cheetah_custom_tests, num_cheetah_custom_tests)
+            reward_means = np.array(temp_output)[:, 0].reshape(num_cheetah_custom_tests, num_cheetah_custom_tests)
             output_name = output_file_name + 'holdout_rew'
             save_heatmap(reward_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False,
                          'cheetah')
 
-            step_means = np.array(temp_output)[1:, 2].reshape(num_cheetah_custom_tests, num_cheetah_custom_tests)
+            step_means = np.array(temp_output)[:, 2].reshape(num_cheetah_custom_tests, num_cheetah_custom_tests)
             output_name = output_file_name + 'holdout_steps'
             save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
 
@@ -296,11 +296,11 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
 
     elif 'MAAntEnv' == rllib_config['env']:
         if is_test:
-            reward_means = np.array(temp_output)[1:, 0].reshape(num_ant_custom_tests, num_ant_custom_tests)
+            reward_means = np.array(temp_output)[:, 0].reshape(num_ant_custom_tests, num_ant_custom_tests)
             output_name = output_file_name + 'holdout_rew'
             save_heatmap(reward_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
 
-            step_means = np.array(temp_output)[1:, 2].reshape(num_ant_custom_tests, num_ant_custom_tests)
+            step_means = np.array(temp_output)[:, 2].reshape(num_ant_custom_tests, num_ant_custom_tests)
             output_name = output_file_name + 'holdout_steps'
             save_heatmap(step_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
         else:
