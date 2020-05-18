@@ -134,7 +134,7 @@ cheetah_test_list=[
     ['friction_hard_bthighfthighfshinmax', make_set_fric_hard(max(cheetah_friction_sweep), min(cheetah_friction_sweep), [3, 6, 7])],
     ['friction_hard_headfshinffootmax', make_set_fric_hard(max(cheetah_friction_sweep), min(cheetah_friction_sweep), [2, 7, 8])],
 ]
-num_cheetah_custom_tests = len(cheetah_run_list)
+num_cheetah_custom_tests = len(cheetah_test_list)
 
 #ant geoms: ('world', 'torso', 'front_left_leg', 'aux_1', 'front_right_leg', 'aux_2', 'back_leg', 'aux_3', 'right_back_leg', 'aux_4')
 ant_run_list = [
@@ -150,7 +150,7 @@ ant_test_list=[
     ['friction_hard_frla3rblmax', make_set_fric_hard(max(ant_friction_sweep), min(ant_friction_sweep), [4, 7, 8])],
     ['friction_hard_a1rbla4max', make_set_fric_hard(max(ant_friction_sweep), min(ant_friction_sweep), [3, 8, 9])],
 ]
-num_ant_custom_tests = len(ant_run_list)
+num_ant_custom_tests = len(ant_test_list)
 
 hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
 for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
@@ -274,23 +274,43 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         except:
             pass
 
-    elif 'MACheetahEnv' == rllib_config['env'] and len(temp_output) > num_cheetah_custom_tests:
-        reward_means = np.array(temp_output)[num_cheetah_custom_tests:, 0].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
-        output_name = output_file_name + 'rew'
-        save_heatmap(reward_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
+    elif 'MACheetahEnv' == rllib_config['env']:
+        if is_test:
+            reward_means = np.array(temp_output)[1:, 0].reshape(num_cheetah_custom_tests, num_cheetah_custom_tests)
+            output_name = output_file_name + 'holdout_rew'
+            save_heatmap(reward_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False,
+                         'cheetah')
 
-        step_means = np.array(temp_output)[num_cheetah_custom_tests:, 2].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
-        output_name = output_file_name + 'steps'
-        save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
+            step_means = np.array(temp_output)[1:, 2].reshape(num_cheetah_custom_tests, num_cheetah_custom_tests)
+            output_name = output_file_name + 'holdout_steps'
+            save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
 
-    elif 'MAAntEnv' == rllib_config['env'] and len(temp_output) > num_ant_custom_tests:
-        reward_means = np.array(temp_output)[num_ant_custom_tests:, 0].reshape(len(ant_mass_sweep), len(ant_friction_sweep))
-        output_name = output_file_name + 'rew'
-        save_heatmap(reward_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
+        else:
+            reward_means = np.array(temp_output)[1:, 0].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
+            output_name = output_file_name + 'rew'
+            save_heatmap(reward_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
 
-        step_means = np.array(temp_output)[num_ant_custom_tests:, 2].reshape(len(ant_mass_sweep), len(ant_friction_sweep))
-        output_name = output_file_name + 'steps'
-        save_heatmap(step_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
+            step_means = np.array(temp_output)[1:, 2].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
+            output_name = output_file_name + 'steps'
+            save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
+
+    elif 'MAAntEnv' == rllib_config['env']:
+        if is_test:
+            reward_means = np.array(temp_output)[1:, 0].reshape(num_ant_custom_tests, num_ant_custom_tests)
+            output_name = output_file_name + 'holdout_rew'
+            save_heatmap(reward_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
+
+            step_means = np.array(temp_output)[1:, 2].reshape(num_ant_custom_tests, num_ant_custom_tests)
+            output_name = output_file_name + 'holdout_steps'
+            save_heatmap(step_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
+        else:
+            reward_means = np.array(temp_output)[1:, 0].reshape(len(ant_mass_sweep), len(ant_friction_sweep))
+            output_name = output_file_name + 'rew'
+            save_heatmap(reward_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
+
+            step_means = np.array(temp_output)[1:, 2].reshape(len(ant_mass_sweep), len(ant_friction_sweep))
+            output_name = output_file_name + 'steps'
+            save_heatmap(step_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
 
 
     elif 'MAPendulumEnv' in rllib_config['env']:
