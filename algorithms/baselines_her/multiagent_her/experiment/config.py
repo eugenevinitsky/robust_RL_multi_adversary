@@ -11,6 +11,9 @@ DEFAULT_ENV_PARAMS = {
     'FetchReach-v1': {
         'n_cycles': 10,
     },
+    'MAFetchReachEnv': {
+        'n_cycles': 10,
+    },
 }
 
 
@@ -70,13 +73,13 @@ def cached_make_env(make_env):
     return CACHED_ENVS[make_env]
 
 
-def prepare_params(kwargs):
+def prepare_params(env, kwargs):
     # DDPG params
     ddpg_params = dict()
     env_name = kwargs['env_name']
 
-    def make_env(subrank=None):
-        env = gym.make(env_name)
+    def make_env(env, subrank=None):
+        # env = gym.make(env_name)
         if subrank is not None and logger.get_dir() is not None:
             try:
                 from mpi4py import MPI
@@ -95,9 +98,15 @@ def prepare_params(kwargs):
         return env
 
     kwargs['make_env'] = make_env
-    tmp_env = cached_make_env(kwargs['make_env'])
-    assert hasattr(tmp_env, '_max_episode_steps')
-    kwargs['T'] = tmp_env._max_episode_steps
+    # tmp_env = cached_make_env(env, kwargs['make_env'])
+    tmp_env = make_env(env)
+    CACHED_ENVS[kwargs['make_env']] = tmp_env
+    # TODO(@evinitsky) fix up!!!! This is a BUGGGGGG. This is always false.
+    if hasattr(tmp_env, '_max_episode_steps'):
+        kwargs['T'] = tmp_env._max_episode_steps
+    else:
+        # TODO(@evinitsky) fix up
+        kwargs['T'] = 50
 
     kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']
     kwargs['gamma'] = 1. - 1. / kwargs['T']
@@ -186,7 +195,11 @@ def configure_ddpg(dims, params, reuse=False, use_mpi=True, clip_return=True, na
 def configure_dims(params):
     env = cached_make_env(params['make_env'])
     env.reset()
-    obs, _, _, info = env.step(env.action_space.sample())
+    if hasattr(env, 'adv_observation_space') and env.adversary_range > 0:
+        obs, _, _, info = env.step({'agent': env.action_space.sample(),
+                                    'adversary_0': env.adv_action_space.sample()})
+    else:
+        obs, _, _, info = env.step(env.action_space.sample())
 
     dims = {
         'o': obs['observation'].shape[0],

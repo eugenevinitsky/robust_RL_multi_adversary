@@ -41,7 +41,8 @@ def train(*, policy_dict, rollout_worker, evaluator,
     for epoch in range(n_epochs):
         # train
         rollout_worker.clear_history()
-        for _ in range(n_cycles):
+        for i in range(n_cycles):
+            print(i)
             episode_dict = rollout_worker.generate_rollouts()
             for key, policy in policy_dict.items():
                 policy.store_episode(episode_dict[key])
@@ -114,7 +115,10 @@ def learn(*, network, env, total_timesteps,
 
     # Prepare params.
     params = config.DEFAULT_PARAMS
-    env_name = env.spec.id
+    if hasattr(env, 'name'):
+        env_name = env.name
+    else:
+        env_name = env.spec.id
     params['env_name'] = env_name
     params['replay_strategy'] = replay_strategy
     if env_name in config.DEFAULT_ENV_PARAMS:
@@ -122,8 +126,11 @@ def learn(*, network, env, total_timesteps,
     params.update(**override_params)  # makes it possible to override any parameter
     with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
         json.dump(params, f)
-    params = config.prepare_params(params)
-    params['rollout_batch_size'] = env.num_envs
+    params = config.prepare_params(env, params)
+    # params['rollout_batch_size'] = env.num_envs
+    # TODO(@ev) put back
+    params['rollout_batch_size'] = 1
+
 
     if demo_file is not None:
         params['bc_loss'] = 1
@@ -183,7 +190,7 @@ def learn(*, network, env, total_timesteps,
     n_epochs = total_timesteps // n_cycles // rollout_worker.T // rollout_worker.rollout_batch_size
 
     return train(
-        save_path=save_path, policy=policy_dict, rollout_worker=rollout_worker,
+        save_path=save_path, policy_dict=policy_dict, rollout_worker=rollout_worker,
         evaluator=evaluator, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
         n_cycles=params['n_cycles'], n_batches=params['n_batches'],
         policy_save_interval=policy_save_interval, demo_file=demo_file)
@@ -201,7 +208,8 @@ def learn(*, network, env, total_timesteps,
               help='the HER replay strategy to be used. "future" uses HER, "none" disables HER.')
 @click.option('--clip_return', type=int, default=1, help='whether or not returns should be clipped')
 @click.option('--demo_file', type=str, default='PATH/TO/DEMO/DATA/FILE.npz', help='demo data file path')
-@click.option('--num_adv', type=int, default=0, help='number of active adversaries')
+# TODO(@evinitsky) figure out why this isn't actually being used or interacting with argparse
+@click.option('--num_adv', type=int, default=1, help='number of active adversaries')
 def main(**kwargs):
     learn(**kwargs)
 

@@ -5,6 +5,8 @@ import os
 import subprocess
 import sys
 
+from gym.spaces import Dict
+
 import numpy as np
 import psutil
 import pytz
@@ -51,26 +53,30 @@ def setup_ma_config(config, create_env):
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
     adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}, "entropy_coeff": config['env_config']['entropy_coeff']}
+    observation_space = env.observation_space
+    # handle the fetch and push envs
+    if isinstance(observation_space, Dict) and 'all_obs' in observation_space.spaces:
+        observation_space = observation_space['all_obs']
     if config['env_config']['run'] == 'PPO':
         if config['env_config']['kl_reward']:
             ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
             adversary_config['model']['custom_action_dist'] = "logits_dist"
         # for both of these we need a graph that zeros out agents that weren't active
         if config['env_config']['kl_reward'] or (config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
-            policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+            policy_graphs = {'agent': (PPOTFPolicy, observation_space, env.action_space, {})}
             policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
                                                     env.adv_action_space, adversary_config) for i in
                                   range(num_adversaries)})
         else:
-            policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+            policy_graphs = {'agent': (PPOTFPolicy, observation_space, env.action_space, {})}
             policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
                                                     env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     elif config['env_config']['run'] == 'TD3':
-        policy_graphs = {'agent': (DDPGTFPolicy, env.observation_space, env.action_space, {})}
+        policy_graphs = {'agent': (DDPGTFPolicy, observation_space, env.action_space, {})}
         policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in range(num_adversaries)})
     elif config['env_config']['run'] == 'HER':
-        policy_graphs = {'agent': (None, env.observation_space, env.action_space, {})}
+        policy_graphs = {'agent': (None, observation_space, env.action_space, {})}
 
         policy_graphs.update({adv_policies[i]: (DDPGTFPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in range(num_adversaries)})
@@ -100,17 +106,19 @@ def setup_ma_config(config, create_env):
         }})
 
 
-def setup_exps(args):
-    parser = init_parser()
+def get_parser(parser):
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
-    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper', 'cheetah', 'ant', 'fetchreach', 'fetchpush'])
+    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?',
+                        choices=['pendulum', 'hopper', 'cheetah', 'ant', 'fetchreach', 'fetchpush'])
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO, SAC, TD3')
-    parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
+    parser.add_argument('--custom_ppo', action='store_true', default=False,
+                        help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
                                                                          'Multiply this by `advs_per_strength` to get the total number of adversaries'
                                                                          'Default single agent trained with RARL')
-    parser.add_argument('--advs_per_strength', type=int, default=1, help='How many adversaries exist at each strength level')
+    parser.add_argument('--advs_per_strength', type=int, default=1,
+                        help='How many adversaries exist at each strength level')
     parser.add_argument('--adv_strength', type=float, default=5.0, help='Strength of active adversaries in the env')
     parser.add_argument('--alternate_training', action='store_true', default=False)
     parser.add_argument('--curriculum', action='store_true', default=False,
@@ -143,7 +151,8 @@ def setup_exps(args):
     parser.add_argument('--reward_range', action='store_true', default=False,
                         help='If true, the adversaries try to get agents to goals evenly spaced between `low_reward`'
                              'and `high_reward')
-    parser.add_argument('--num_adv_rews', type=int, default=1, help='Number of adversary rews ranges if reward ranges is on')
+    parser.add_argument('--num_adv_rews', type=int, default=1,
+                        help='Number of adversary rews ranges if reward ranges is on')
     parser.add_argument('--advs_per_rew', type=int, default=1,
                         help='How many adversaries exist at a given reward level')
     parser.add_argument('--low_reward', type=float, default=0.0, help='The lower range that adversaries try'
@@ -176,7 +185,7 @@ def setup_exps(args):
     parser.add_argument('--kl_reward', action='store_true', default=False,
                         help='If true, each adversary gets a reward for being close to the adversaries in '
                              'KL space.')
-    parser.add_argument('--kl_reward_coeff',  type=float, default=1.0,
+    parser.add_argument('--kl_reward_coeff', type=float, default=1.0,
                         help='Scaling on the kl_reward')
     parser.add_argument('--no_end_if_fall', action='store_true', default=False,
                         help='If true, the env continues even after a fall ')
@@ -198,6 +207,57 @@ def setup_exps(args):
     parser.add_argument('--num_push_curriculum_iters', type=int, default=100,
                         help='How many iterations the curriculum should run over')
     parser.add_argument('--horizon', type=int, default=100)
+    return parser
+
+def get_env_config(args, config):
+    config['env_config']['horizon'] = args.horizon
+    config['env_config']['should_render'] = args.render
+    config['env_config']['num_adv_strengths'] = args.num_adv_strengths
+    config['env_config']['advs_per_strength'] = args.advs_per_strength
+    config['env_config']['adversary_strength'] = args.adv_strength
+    config['env_config']['reward_range'] = args.reward_range
+    config['env_config']['num_adv_rews'] = args.num_adv_rews
+    config['env_config']['advs_per_rew'] = args.advs_per_rew
+
+    config['env_config']['low_reward'] = args.low_reward
+    config['env_config']['high_reward'] = args.high_reward
+    config['env_config']['simple_adv_reward'] = args.simple_adv_reward
+    config['env_config']['sparse'] = args.sparse
+    config['env_config']['adversary_add_const'] = args.adversary_add_const
+
+    config['env_config']['curriculum'] = args.curriculum
+    config['env_config']['goal_score'] = args.goal_score
+    config['env_config']['adv_incr_freq'] = args.adv_incr_freq
+    config['env_config']['concat_actions'] = args.concat_actions
+    config['env_config']['num_concat_states'] = args.num_concat_states
+    config['env_config']['domain_randomization'] = args.domain_randomization
+    config['env_config']['extreme_domain_randomization'] = args.extreme_domain_randomization
+    config['env_config']['cheating'] = args.cheating
+    config['env_config']['l2_reward'] = args.l2_reward
+    config['env_config']['kl_reward'] = args.kl_reward
+    config['env_config']['l2_reward_coeff'] = args.l2_reward_coeff
+    config['env_config']['kl_reward_coeff'] = args.kl_reward_coeff
+    config['env_config']['l2_in_tranche'] = args.l2_in_tranche
+    config['env_config']['l2_memory'] = args.l2_memory
+    config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
+    config['env_config']['no_end_if_fall'] = args.no_end_if_fall
+    config['env_config']['adv_all_actions'] = args.adv_all_actions
+    config['env_config']['adversarial_domain_randomization'] = args.adversarial_domain_randomization
+    config['env_config']['mixed_nash_adversary'] = args.mixed_nash_adversary
+    config['env_config']['num_adv_strategies'] = args.num_adv_strategies
+
+    config['env_config']['entropy_coeff'] = args.entropy_coeff
+    config['env_config']['clip_actions'] = args.clip_actions
+    config['env_config']['random_eps'] = 0.3
+
+    # curriculum config
+    config['env_config']['push_curriculum'] = args.push_curriculum
+    config['env_config']['num_push_curriculum_iters'] = args.num_push_curriculum_iters
+    return config
+
+def setup_exps(args):
+    parser = init_parser()
+    parser = get_parser(parser)
 
     args = parser.parse_args(args)
 
@@ -316,51 +376,7 @@ def setup_exps(args):
     # config['kl_diff_target'] = args.kl_diff_target
     # config['kl_diff_clip'] = 5.0
 
-    config['env_config']['horizon'] = args.horizon
-    config['env_config']['should_render'] = args.render
-    config['env_config']['num_adv_strengths'] = args.num_adv_strengths
-    config['env_config']['advs_per_strength'] = args.advs_per_strength
-    config['env_config']['adversary_strength'] = args.adv_strength
-    config['env_config']['reward_range'] = args.reward_range
-    config['env_config']['num_adv_rews'] = args.num_adv_rews
-    config['env_config']['advs_per_rew'] = args.advs_per_rew
-
-    config['env_config']['low_reward'] = args.low_reward
-    config['env_config']['high_reward'] = args.high_reward
-    config['env_config']['simple_adv_reward'] = args.simple_adv_reward
-    config['env_config']['sparse'] = args.sparse
-    config['env_config']['adversary_add_const'] = args.adversary_add_const
-
-    config['env_config']['curriculum'] = args.curriculum
-    config['env_config']['goal_score'] = args.goal_score
-    config['env_config']['adv_incr_freq'] = args.adv_incr_freq
-    config['env_config']['concat_actions'] = args.concat_actions
-    config['env_config']['num_concat_states'] = args.num_concat_states
-    config['env_config']['domain_randomization'] = args.domain_randomization
-    config['env_config']['extreme_domain_randomization'] = args.extreme_domain_randomization
-    config['env_config']['cheating'] = args.cheating
-    config['env_config']['l2_reward'] = args.l2_reward
-    config['env_config']['kl_reward'] = args.kl_reward
-    config['env_config']['l2_reward_coeff'] = args.l2_reward_coeff
-    config['env_config']['kl_reward_coeff'] = args.kl_reward_coeff
-    config['env_config']['l2_in_tranche'] = args.l2_in_tranche
-    config['env_config']['l2_memory'] = args.l2_memory
-    config['env_config']['l2_memory_target_coeff'] = args.l2_memory_target_coeff
-    config['env_config']['no_end_if_fall'] = args.no_end_if_fall
-    config['env_config']['adv_all_actions'] = args.adv_all_actions
-    config['env_config']['adversarial_domain_randomization'] = args.adversarial_domain_randomization
-    config['env_config']['mixed_nash_adversary'] = args.mixed_nash_adversary
-    config['env_config']['num_adv_strategies'] = args.num_adv_strategies
-
-    config['env_config']['entropy_coeff'] = args.entropy_coeff
-    config['env_config']['clip_actions'] = args.clip_actions
-    config['env_config']['random_eps'] = 0.3
-
-    # curriculum config
-    config['env_config']['push_curriculum'] = args.push_curriculum
-    config['env_config']['num_push_curriculum_iters'] = args.num_push_curriculum_iters
-
-
+    get_env_config(args, config)
     config['env_config']['run'] = alg_run
 
     ModelCatalog.register_custom_model("rnn", LSTM)

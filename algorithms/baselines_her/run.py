@@ -9,10 +9,12 @@ import numpy as np
 
 from baselines.common.vec_env import VecFrameStack, VecNormalize, VecEnv
 from baselines.common.vec_env.vec_video_recorder import VecVideoRecorder
-from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env, make_env
+from algorithms.baselines_her.multiagent_her.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env, make_env
 from baselines.common.tf_util import get_session
 from baselines import logger
 from importlib import import_module
+
+from run_scripts.mujoco.run_adv_mujoco import get_parser, get_env_config
 
 try:
     from mpi4py import MPI
@@ -61,7 +63,6 @@ def train(args, extra_args):
     alg_kwargs = get_learn_function_defaults(args.alg, env_type)
     alg_kwargs.update(extra_args)
 
-    import ipdb; ipdb.set_trace()
     env = build_env(args)
     if args.save_video_interval != 0:
         env = VecVideoRecorder(env, osp.join(logger.get_dir(), "videos"), record_video_trigger=lambda x: x % args.save_video_interval == 0, video_length=args.save_video_length)
@@ -78,6 +79,7 @@ def train(args, extra_args):
         env=env,
         seed=seed,
         total_timesteps=total_timesteps,
+        num_adv=args.num_adv,
         **alg_kwargs
     )
 
@@ -92,15 +94,18 @@ def build_env(args):
     seed = args.seed
 
     env_type, env_id = get_env_type(args)
+    temp_config = {'env_config': {}}
+    passed_config = get_env_config(args, temp_config)
 
     if env_type in {'atari', 'retro'}:
         if alg == 'deepq':
             env = make_env(env_id, env_type, seed=seed, wrapper_kwargs={'frame_stack': True})
-        elif alg == 'trpo_mpi':
+        elif alg == 'trpo_mpi' or alg == 'multiagent_her':
             env = make_env(env_id, env_type, seed=seed)
         else:
             frame_stack_size = 4
-            env = make_vec_env(env_id, env_type, nenv, seed, gamestate=args.gamestate, reward_scale=args.reward_scale)
+            env = make_vec_env(env_id, env_type, nenv, seed, gamestate=args.gamestate, reward_scale=args.reward_scale,
+                               config=passed_config)
             env = VecFrameStack(env, frame_stack_size)
 
     else:
@@ -110,8 +115,12 @@ def build_env(args):
         config.gpu_options.allow_growth = True
         get_session(config=config)
 
-        flatten_dict_observations = alg not in {'her'}
-        env = make_vec_env(env_id, env_type, args.num_env or 1, seed, reward_scale=args.reward_scale, flatten_dict_observations=flatten_dict_observations)
+        flatten_dict_observations = alg not in {'her', 'multiagent_her'}
+        # TODO(@evinitsky) put back the vec env here
+        env = make_env(env_id, env_type, args.num_env or 1, seed,
+                           reward_scale=args.reward_scale,
+                           flatten_dict_observations=flatten_dict_observations,
+                           config=passed_config)
 
         if env_type == 'mujoco':
             env = VecNormalize(env, use_tf=True)
@@ -133,6 +142,8 @@ def get_env_type(args):
     if env_id in _game_envs.keys():
         env_type = env_id
         env_id = [g for g in _game_envs[env_type]][0]
+    elif env_id == 'MAFetchReachEnv' or env_id == 'MAFetchReachEnv':
+        env_type = 'robotics'
     else:
         env_type = None
         for g, e in _game_envs.items():
@@ -204,6 +215,7 @@ def main(args):
     # configure logger, disable logging in child MPI processes (with rank > 0)
 
     arg_parser = common_arg_parser()
+    arg_parser = get_parser(arg_parser)
     args, unknown_args = arg_parser.parse_known_args(args)
     extra_args = parse_cmdline_kwargs(unknown_args)
 

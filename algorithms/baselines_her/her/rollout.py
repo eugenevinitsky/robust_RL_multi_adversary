@@ -32,7 +32,6 @@ class RolloutWorker:
 
         assert self.T > 0
 
-        import ipdb; ipdb.set_trace()
         self.info_keys = [key.replace('info_', '') for key in dims.keys() if key.startswith('info_')]
 
         self.success_history = deque(maxlen=history_len)

@@ -44,7 +44,6 @@ class RolloutWorker:
         self.clear_history()
 
     def reset_all_rollouts(self):
-        import ipdb; ipdb.set_trace()
         self.obs_dict = self.venv.reset()
         self.initial_o = self.obs_dict['observation']
         self.initial_ag = self.obs_dict['achieved_goal']
@@ -63,7 +62,7 @@ class RolloutWorker:
         ag[:] = self.initial_ag
 
         # generate episodes
-        obs, achieved_goals, acts, goals, successes = [], [], [], [], []
+        obs, achieved_goals, acts, goals, successes = [], [], {key: [] for key in self.policy.keys()}, [], []
         dones = []
         info_values = [np.empty((self.T - 1, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in self.info_keys]
         Qs = {key: [] for key in self.policy.keys()}
@@ -93,32 +92,45 @@ class RolloutWorker:
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
             success = np.zeros(self.rollout_batch_size)
 
-            obs_dict_new, _, done, info = self.venv.step(u_dict)
+            # TODO(@evinitsky) remove this and handle non-multiagent case better
+            try:
+                obs_dict_new, _, done, info = self.venv.step(u_dict)
+            except:
+                obs_dict_new, _, done, info = self.venv.step(u_dict['agent'][0])
+
             o_new = obs_dict_new['observation']
             ag_new = obs_dict_new['achieved_goal']
-            success = np.array([i.get('is_success', 0.0) for i in info])
+            success = np.array([info['is_success']])
 
-            if any(done):
+            if (isinstance(done, dict) and done['__all__']) or (not isinstance(done, dict) and done):
                 # here we assume all environments are done is ~same number of steps, so we terminate rollouts whenever any of the envs returns done
                 # trick with using vecenvs is not to add the obs from the environments that are "done", because those are already observations
                 # after a reset
                 break
 
-            for i, info_dict in enumerate(info):
-                for idx, key in enumerate(self.info_keys):
-                    info_values[idx][t, i] = info[i][key]
+            # for i, info_dict in enumerate(info):
+            #     for idx, key in enumerate(self.info_keys):
+            #         try:
+            #             info_values[idx][t, i] = info[key]
+            #         except:
+            #             import ipdb; ipdb.set_trace()
 
             if np.isnan(o_new).any():
                 self.logger.warn('NaN caught during rollout generation. Trying again...')
                 self.reset_all_rollouts()
                 return self.generate_rollouts()
 
-            dones.append(done)
+            if isinstance(done, dict):
+                dones.append(np.array([done['__all__']]))
+            else:
+                dones.append(done)
+
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
             successes.append(success.copy())
-            acts.append(u_dict.copy())
-            goals.append(self.g.copy())
+            for key, val in u_dict.items():
+                acts[key].append(u_dict[key].copy())
+            goals.append(self.g.copy()[np.newaxis, :])
             o[...] = o_new
             ag[...] = ag_new
         obs.append(o.copy())
@@ -127,11 +139,12 @@ class RolloutWorker:
         episode_dict = {}
         for key in self.policy.keys():
             episode_dict.update({key: dict(o=obs,
-                           u=acts,
+                           u=acts[key],
                            g=goals,
                            ag=achieved_goals)})
-        for key, value in zip(self.info_keys, info_values):
-            episode_dict['info_{}'.format(key)] = value
+        for agent_id in self.policy.keys():
+            for key, value in zip(self.info_keys, info_values):
+                episode_dict[agent_id]['info_{}'.format(key)] = value
 
         # stats
         successful = np.array(successes)[-1, :]
@@ -143,6 +156,7 @@ class RolloutWorker:
                 self.Q_history[key].append(np.mean(Qs[key]))
         self.n_episodes += self.rollout_batch_size
 
+        # TODO(@evinitsky) do we need this?
         for key, episode in episode_dict.items():
             episode_dict[key] = convert_episode_to_batch_major(episode)
 

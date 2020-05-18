@@ -18,6 +18,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
 
         self.horizon = config["horizon"]
         self.step_num = 0
+        self.name = "AdvMAFetchEnv"
 
         self.total_reward = 0
 
@@ -129,15 +130,15 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
 
         self.original_friction = deepcopy(np.array(self.sim.model.geom_friction))
         self.original_mass_all = deepcopy(self.sim.model.body_mass)
-        obs_space = self.observation_space['all_obs']
-        if self.concat_actions:
-            action_space = self.action_space
-            low = np.tile(np.concatenate((obs_space.low, action_space.low * 1000)), self.num_concat_states)
-            high = np.tile(np.concatenate((obs_space.high, action_space.high * 1000)), self.num_concat_states)
-        else:
-            low = np.tile(obs_space.low, self.num_concat_states)
-            high = np.tile(obs_space.high, self.num_concat_states)
-        self.observation_space = Box(low=low, high=high, dtype=np.float32)
+        # obs_space = self.observation_space['all_obs']
+        # if self.concat_actions:
+        #     action_space = self.action_space
+        #     low = np.tile(np.concatenate((obs_space.low, action_space.low * 1000)), self.num_concat_states)
+        #     high = np.tile(np.concatenate((obs_space.high, action_space.high * 1000)), self.num_concat_states)
+        # else:
+        #     low = np.tile(obs_space.low, self.num_concat_states)
+        #     high = np.tile(obs_space.high, self.num_concat_states)
+        # self.observation_space = Box(low=low, high=high, dtype=np.float32)
 
         # instantiate the l2 memory tracker
         if self.adversary_range > 0 and self.l2_memory:
@@ -166,11 +167,11 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
     @property
     def adv_observation_space(self):
         if self.kl_reward or (self.l2_reward and not self.l2_memory):
-            dict_space = Dict({'obs': self.observation_space,
+            dict_space = Dict({'obs': self.observation_space['all_obs'],
                                'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
             return dict_space
         else:
-            return self.observation_space
+            return self.observation_space['all_obs']
 
     def update_push_curriculum(self, iter):
         self.num_iters = iter
@@ -244,8 +245,6 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             # the robot action before any adversary modifies it
             obs_fetch_action = actions['agent']
             # fetch_action = actions['agent']
-            obs_fetch_action += np.random.binomial(1, self.random_eps, obs_fetch_action.shape[0]) * (
-                    self._random_action(obs_fetch_action.shape[0]) - obs_fetch_action)  # eps-greedy
             fetch_action = obs_fetch_action
 
             if self.adversary_range > 0 and 'adversary{}'.format(self.curr_adversary) in actions.keys():
@@ -272,6 +271,8 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             self.local_l2_memory_array[self.curr_adversary, :, self.step_num] += actions[
                 'adversary{}'.format(self.curr_adversary)]
 
+        if len(fetch_action.shape) > 1:
+            fetch_action = fetch_action[0]
         self._set_action(fetch_action)
         self.sim.step()
         self._step_callback()
@@ -282,7 +283,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             'is_success': self._is_success(obs['achieved_goal'], self.goal),
         }
         self.success = self._is_success(obs['achieved_goal'], self.goal)
-        reward = self.compute_reward(obs['grip_pos'], obs['achieved_goal'], self.goal, info)
+        reward = self.compute_reward(obs['achieved_goal'], self.goal, info)
         ob = obs['all_obs']
 
         # you are allowed to observe the mass and friction coefficients
@@ -381,9 +382,11 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
                     reward_dict.update({'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]})
 
             done_dict = {'__all__': done}
-            return obs_dict, reward_dict, done_dict, info
+            obs.update(obs_dict)
+            info.update({'is_success': self._is_success(obs['achieved_goal'], self.goal)})
+            return obs, reward_dict, done_dict, info
         else:
-            return ob, reward, done, {}
+            return obs, reward, done, {}
 
     def reset(self):
         self.step_num = 0
@@ -418,6 +421,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             if self.l2_memory:
                 self.local_num_observed_l2_samples[self.curr_adversary] += 1
 
+        curr_obs.update(self._get_obs())
         return curr_obs
 
     def _reset_sim(self):
