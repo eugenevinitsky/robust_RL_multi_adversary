@@ -488,8 +488,9 @@ if __name__ == "__main__":
                     run_list = cheetah_run_list
                     test_list = cheetah_test_list
                 elif config['env'] == "MAAntEnv":
-                    from visualize.mujoco.transfer_tests import ant_run_list
+                    from visualize.mujoco.transfer_tests import ant_run_list, ant_test_list
                     run_list = ant_run_list
+                    test_list = ant_test_list
 
                 ray.shutdown()
                 ray.init()

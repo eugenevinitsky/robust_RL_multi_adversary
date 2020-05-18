@@ -66,8 +66,9 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/s3_test")):
             lerrel_run_list = cheetah_run_list
             test_list = cheetah_test_list
         elif config['env'] == "MAAntEnv":
-            from visualize.mujoco.transfer_tests import ant_run_list
+            from visualize.mujoco.transfer_tests import ant_run_list, ant_test_list
             lerrel_run_list = ant_run_list
+            test_list = ant_test_list
 
         elif config['env'] == "MAFetchReachEnv":
             from visualize.mujoco.transfer_tests import fetch_reach_run_list
