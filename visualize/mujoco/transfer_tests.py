@@ -261,7 +261,6 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
 
     elif 'MAAntEnv' == rllib_config['env']:
-        import ipdb; ipdb.set_trace()
         reward_means = np.array(temp_output)[1:, 0].reshape(len(ant_mass_sweep), len(ant_friction_sweep))
         output_name = output_file_name + 'rew'
         save_heatmap(reward_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
