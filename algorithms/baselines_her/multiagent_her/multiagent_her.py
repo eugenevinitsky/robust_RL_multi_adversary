@@ -156,9 +156,9 @@ def learn(*, network, env, total_timesteps,
     params_copy = deepcopy(params)
     policy_dict.update({'agent': config.configure_ddpg(dims=dims, params=params, clip_return=clip_return, name='agent')})
     for i in range(num_adv):
-        policy_dict.update({'adversary_{}'.format(i): config.configure_ddpg(dims=dims, params=deepcopy(params_copy),
+        policy_dict.update({'adversary{}'.format(i): config.configure_ddpg(dims=dims, params=deepcopy(params_copy),
                                                                             clip_return=clip_return,
-                                                                            name='adversary_{}'.format(i))})
+                                                                            name='adversary{}'.format(i))})
     if load_path is not None:
         tf_util.load_variables(load_path)
 
@@ -166,7 +166,7 @@ def learn(*, network, env, total_timesteps,
         'exploit': False,
         'use_target_net': False,
         'use_demo_states': True,
-        'compute_Q': False,
+        'compute_Q': True,
         'T': params['T'],
     }
 
@@ -185,7 +185,9 @@ def learn(*, network, env, total_timesteps,
     eval_env = eval_env or env
 
     rollout_worker = RolloutWorker(env, policy_dict, dims, logger, monitor=True, num_adv=num_adv, **rollout_params)
-    evaluator = RolloutWorker(eval_env, policy_dict, dims, logger, num_adv=num_adv, **eval_params)
+    eval_dict = {'agent': policy_dict['agent']}
+    evaluator = RolloutWorker(eval_env, eval_dict, dims, logger, num_adv=0, **eval_params)
+    # evaluator = RolloutWorker(eval_env, policy_dict, dims, logger, num_adv=1, **eval_params)
 
     n_cycles = params['n_cycles']
     n_epochs = total_timesteps // n_cycles // rollout_worker.T // rollout_worker.rollout_batch_size

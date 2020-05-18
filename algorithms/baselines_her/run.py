@@ -142,7 +142,7 @@ def get_env_type(args):
     if env_id in _game_envs.keys():
         env_type = env_id
         env_id = [g for g in _game_envs[env_type]][0]
-    elif env_id == 'MAFetchReachEnv' or env_id == 'MAFetchReachEnv':
+    elif env_id == 'MAFetchReachEnv' or env_id == 'MAFetchPushEnv':
         env_type = 'robotics'
     else:
         env_type = None

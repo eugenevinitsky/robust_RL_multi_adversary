@@ -173,9 +173,13 @@ def configure_ddpg(dims, params, reuse=False, use_mpi=True, clip_return=True, na
     # DDPG agent
     env = cached_make_env(params['make_env'])
     env.reset()
+    if name != 'agent':
+        clip_pos_returns = False
+    else:
+        clip_pos_returns = True
     ddpg_params.update({'input_dims': input_dims,  # agent takes an input observations
                         'T': params['T'],
-                        'clip_pos_returns': True,  # clip positive returns
+                        'clip_pos_returns': clip_pos_returns,  # clip positive returns
                         'clip_return': (1. / (1. - gamma)) if clip_return else np.inf,  # max abs of return
                         'rollout_batch_size': rollout_batch_size,
                         'subtract_goals': simple_goal_subtract,

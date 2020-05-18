@@ -77,7 +77,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
 
         # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
         # then we are double counting
-        self.strengths = np.linspace(start=0, stop=1,
+        self.strengths = np.linspace(start=0, stop=self.adversary_strength,
                                      num=self.num_adv_strengths + 1)[1:]
         # repeat the bins so that we can index the adversaries easily
         self.strengths = np.repeat(self.strengths, self.advs_per_strength)
@@ -242,6 +242,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         #         # img = self.sim.render(width=img_size, height=img_size, camera_name="external_camera_0")[::-1]
         if self.should_render:
             self.render()
+
         if isinstance(actions, dict):
             # the robot action before any adversary modifies it
             obs_fetch_action = actions['agent']
@@ -255,7 +256,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
 
                     # self._adv_to_xfrc(adv_action)
                     fetch_action += adv_action
-                    # apply clipping to hopper action
+                    # apply clipping to  action
                     if self.clip_actions:
                         fetch_action = np.clip(obs_fetch_action, a_min=self.action_space.low,
                                                 a_max=self.action_space.high)
