@@ -21,7 +21,7 @@ class MAFetchReachEnv(adv_fetch_env.AdvMAFetchEnv, utils.EzPickle):
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
         self.name = "MAFetchReachEnv"
-        self._max_episode_steps = 50
+        self.horizon = 50
 
 
 def reach_env_creator(env_config):

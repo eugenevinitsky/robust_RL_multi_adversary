@@ -108,10 +108,15 @@ class RolloutWorker:
                 # after a reset
                 break
 
+            # TODO(@evinitsky) put back, make useful
             # for i, info_dict in enumerate(info):
             #     for idx, key in enumerate(self.info_keys):
             #         try:
-            #             info_values[idx][t, i] = info[key]
+            #             # TODO(@evinitsky) hack, fix
+            #             if key == 'agent':
+            #                 info_values[idx][t, i] = info[i][key]['agent_reward']
+            #             else:
+            #                 info_values[idx][t, i] = info[i][key]
             #         except:
             #             import ipdb; ipdb.set_trace()
 
@@ -144,7 +149,10 @@ class RolloutWorker:
                            ag=achieved_goals)})
         for agent_id in self.policy.keys():
             for key, value in zip(self.info_keys, info_values):
-                episode_dict[agent_id]['info_{}'.format(key)] = value
+                dict_key = 'info_{}'.format(key)
+                if 'adversary' in agent_id:
+                    dict_key = dict_key.replace('agent', agent_id)
+                episode_dict[agent_id][dict_key] = value
 
         # stats
         successful = np.array(successes)[-1, :]

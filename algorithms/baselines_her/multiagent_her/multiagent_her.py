@@ -47,6 +47,8 @@ def train(*, policy_dict, rollout_worker, evaluator,
             for key, policy in policy_dict.items():
                 policy.store_episode(episode_dict[key])
                 for _ in range(n_batches):
+                    # if 'adversary' in key:
+                    #     import ipdb; ipdb.set_trace()
                     policy.train()
                 policy.update_target_net()
 
@@ -130,7 +132,6 @@ def learn(*, network, env, total_timesteps,
     # params['rollout_batch_size'] = env.num_envs
     # TODO(@ev) put back
     params['rollout_batch_size'] = 1
-
 
     if demo_file is not None:
         params['bc_loss'] = 1

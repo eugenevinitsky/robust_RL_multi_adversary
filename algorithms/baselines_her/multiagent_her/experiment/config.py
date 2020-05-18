@@ -98,14 +98,17 @@ def prepare_params(env, kwargs):
         return env
 
     kwargs['make_env'] = make_env
-    # tmp_env = cached_make_env(env, kwargs['make_env'])
+    # tmp_env = cached_make_env(kwargs['make_env'])
     tmp_env = make_env(env)
     CACHED_ENVS[kwargs['make_env']] = tmp_env
-    # TODO(@evinitsky) fix up!!!! This is a BUGGGGGG. This is always false.
-    if hasattr(tmp_env, '_max_episode_steps'):
-        kwargs['T'] = tmp_env._max_episode_steps
+
+    if hasattr(tmp_env, 'unwrapped') and hasattr(tmp_env.unwrapped, 'spec'):
+        kwargs['T'] = tmp_env.unwrapped.spec.max_episode_steps
+    elif 'MAFetchReachEnv' in tmp_env.__str__():
+        kwargs['T'] = 50
+    elif 'MAFetchPushEnv' in tmp_env.__str__():
+        kwargs['T'] = 100
     else:
-        # TODO(@evinitsky) fix up
         kwargs['T'] = 50
 
     kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']

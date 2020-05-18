@@ -84,6 +84,7 @@ class DDPG(object):
         self.stage_shapes = stage_shapes
 
         self.scope = self.scope + name
+        self.name = name
         # Create network.
         with tf.variable_scope(self.scope):
             self.staging_tf = StagingArea(
@@ -101,6 +102,8 @@ class DDPG(object):
         buffer_shapes['g'] = (buffer_shapes['g'][0], self.dimg)
         buffer_shapes['ag'] = (self.T, self.dimg)
 
+        if self.name != 'agent':
+            buffer_shapes = {key.replace('agent', self.name): val for key, val in buffer_shapes.items()}
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 

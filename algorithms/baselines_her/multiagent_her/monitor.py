@@ -24,6 +24,8 @@ class Monitor(Wrapper):
         self.reset_keywords = reset_keywords
         self.info_keywords = info_keywords
         self.allow_early_resets = allow_early_resets
+        if hasattr(env, 'max_episode_steps'):
+            self.max_episode_steps = env.max_episode_steps
         self.rewards = None
         self.needs_reset = True
         self.episode_rewards = []
