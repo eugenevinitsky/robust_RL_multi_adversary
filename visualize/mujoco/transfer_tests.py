@@ -132,8 +132,14 @@ ant_run_list = [
 hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
 for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
     hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
+
 cheetah_grid = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep)
+for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).T:
+    cheetah_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
+
 ant_grid = np.meshgrid(ant_mass_sweep, ant_friction_sweep)
+for mass, fric in np.vstack((ant_grid[0].ravel(), ant_grid[1].ravel())).T:
+    ant_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
 
 def reset_env(env, num_active_adv=0):
     """Undo parameters that need to be off"""
@@ -255,6 +261,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
 
     elif 'MAAntEnv' == rllib_config['env']:
+        import ipdb; ipdb.set_trace()
         reward_means = np.array(temp_output)[1:, 0].reshape(len(ant_mass_sweep), len(ant_friction_sweep))
         output_name = output_file_name + 'rew'
         save_heatmap(reward_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
