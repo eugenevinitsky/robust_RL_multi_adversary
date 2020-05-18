@@ -124,6 +124,18 @@ num_hopper_custom_tests = len(hopper_run_list)
 cheetah_run_list = [
     ['base', []]
 ]
+cheetah_test_list=[
+    ['friction_hard_torsoheadfthighmax', make_set_fric_hard(max(cheetah_friction_sweep), min(cheetah_friction_sweep), [1, 2, 6])],
+    ['friction_hard_floorheadfshinmax', make_set_fric_hard(max(cheetah_friction_sweep), min(cheetah_friction_sweep), [0, 2, 7])],
+    ['friction_hard_bthighbshinbfootmax', make_set_fric_hard(max(cheetah_friction_sweep), min(cheetah_friction_sweep), [3, 4, 5])],
+    ['friction_hard_floortorsoheadmax', make_set_fric_hard(max(cheetah_friction_sweep), min(cheetah_friction_sweep), [0, 1, 2])],
+    ['friction_hard_floorbshinffootmax', make_set_fric_hard(max(cheetah_friction_sweep), min(cheetah_friction_sweep), [1, 4, 8])],
+    ['friction_hard_bthighbfootffootmax', make_set_fric_hard(max(cheetah_friction_sweep), min(cheetah_friction_sweep), [3, 5, 8])],
+    ['friction_hard_bthighfthighfshinmax', make_set_fric_hard(max(cheetah_friction_sweep), min(cheetah_friction_sweep), [3, 6, 7])],
+    ['friction_hard_headfshinffootmax', make_set_fric_hard(max(cheetah_friction_sweep), min(cheetah_friction_sweep), [2, 7, 8])],
+]
+num_cheetah_custom_tests = len(cheetah_run_list)
+
 
 ant_run_list = [
     ['base', []]
@@ -251,12 +263,12 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         except:
             pass
 
-    elif 'MACheetahEnv' == rllib_config['env']:
-        reward_means = np.array(temp_output)[1:, 0].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
+    elif 'MACheetahEnv' == rllib_config['env'] and len(temp_output) > num_cheetah_custom_tests:
+        reward_means = np.array(temp_output)[num_cheetah_custom_tests:, 0].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
         output_name = output_file_name + 'rew'
         save_heatmap(reward_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
 
-        step_means = np.array(temp_output)[1:, 2].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
+        step_means = np.array(temp_output)[num_cheetah_custom_tests:, 2].reshape(len(cheetah_mass_sweep), len(cheetah_friction_sweep))
         output_name = output_file_name + 'steps'
         save_heatmap(step_means, cheetah_mass_sweep, cheetah_friction_sweep, outdir, output_name, False, 'cheetah')
 
@@ -359,7 +371,10 @@ if __name__ == '__main__':
         else:
             run_list = hopper_run_list
     elif rllib_config['env'] == "MACheetahEnv":
-        run_list = cheetah_run_list
+        if args.run_holdout:
+            run_list = cheetah_test_list
+        else:
+            run_list = cheetah_run_list
     elif rllib_config['env'] == "MAAntEnv":
         run_list = ant_run_list
     elif rllib_config['env'] == "MultiarmBandit":

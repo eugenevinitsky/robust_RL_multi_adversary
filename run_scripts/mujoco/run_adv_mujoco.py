@@ -484,8 +484,9 @@ if __name__ == "__main__":
                     run_list = hopper_run_list
                     test_list = hopper_test_list
                 elif config['env'] == "MACheetahEnv":
-                    from visualize.mujoco.transfer_tests import cheetah_run_list
+                    from visualize.mujoco.transfer_tests import cheetah_run_list, cheetah_test_list
                     run_list = cheetah_run_list
+                    test_list = cheetah_test_list
                 elif config['env'] == "MAAntEnv":
                     from visualize.mujoco.transfer_tests import ant_run_list
                     run_list = ant_run_list
