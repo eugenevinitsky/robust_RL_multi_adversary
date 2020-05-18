@@ -44,7 +44,7 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/s3_test")):
         tune_name = folder.split("/")[-1]
         outer_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         config, checkpoint_path = get_config_from_path(folder, str(args.checkpoint_num))
-
+        test_list = []
         if config['env'] == "MALerrelPendulumEnv":
             from visualize.pendulum.transfer_tests import pendulum_run_list
 
@@ -58,11 +58,13 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/s3_test")):
             lerrel_run_list = cheetah_run_list
 
         elif config['env'] == "MAHopperEnv":
-            from visualize.mujoco.transfer_tests import hopper_run_list
+            from visualize.mujoco.transfer_tests import hopper_run_list, hopper_test_list
             lerrel_run_list = hopper_run_list
+            test_list  = hopper_test_list
         elif config['env'] == "MACheetahEnv":
-            from visualize.mujoco.transfer_tests import cheetah_run_list
+            from visualize.mujoco.transfer_tests import cheetah_run_list, cheetah_test_list
             lerrel_run_list = cheetah_run_list
+            test_list = cheetah_test_list
         elif config['env'] == "MAAntEnv":
             from visualize.mujoco.transfer_tests import ant_run_list
             lerrel_run_list = ant_run_list
@@ -77,6 +79,9 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/s3_test")):
         ray.shutdown()
         ray.init()
         run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=lerrel_run_list)
+        if len(test_list) > 0:
+            run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=test_list, is_test=True)
+
         sample_actions(config, checkpoint_path, 10000, output_path)
 
         # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
