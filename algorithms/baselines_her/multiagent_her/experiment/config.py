@@ -109,6 +109,8 @@ def prepare_params(env, kwargs):
         kwargs['T'] = 50
     elif 'MAFetchPushEnv' in tmp_env.__str__():
         kwargs['T'] = 100
+    elif 'MAFetchSlideEnv' in tmp_env.__str__():
+        kwargs['T'] = 100
     else:
         kwargs['T'] = 50
 

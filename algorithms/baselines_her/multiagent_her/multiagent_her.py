@@ -43,8 +43,8 @@ def train(*, policy_dict, rollout_worker, evaluator,
         rollout_worker.clear_history()
         for i in range(n_cycles):
             print('{} / {}'.format(i, n_cycles))
-            rollout_worker.venv.select_new_adversary()
             if len(policy_dict) > 1:
+                rollout_worker.venv.select_new_adversary()
                 curr_adv = rollout_worker.venv.curr_adversary
                 rollout_worker.selected_adversary = curr_adv
 

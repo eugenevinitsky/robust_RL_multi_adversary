@@ -23,6 +23,8 @@ from algorithms.baselines_her.multiagent_her.wrappers import ClipActionsWrapper
 from utils.pendulum_env_creator import make_create_env
 from envs.robotics.fetch.reach import MAFetchReachEnv
 from envs.robotics.fetch.push import MAFetchPushEnv
+from envs.robotics.fetch.slide import MAFetchSlideEnv
+
 
 def make_vec_env(env_id, env_type, num_env, seed,
                  wrapper_kwargs=None,
@@ -85,11 +87,13 @@ def make_env(env_id, env_type, mpi_rank=0, subrank=0, seed=None, reward_scale=1.
         import retro
         gamestate = gamestate or retro.State.DEFAULT
         env = retro_wrappers.make_retro(game=env_id, max_episode_steps=10000, use_restricted_actions=retro.Actions.DISCRETE, state=gamestate)
-    elif env_id == 'MAFetchReachEnv' or env_id == 'MAFetchPushEnv':
+    elif env_id == 'MAFetchReachEnv' or env_id == 'MAFetchPushEnv' or env_id == 'MAFetchSlideEnv':
         if env_id == 'MAFetchPushEnv':
             create_env_fn = make_create_env(MAFetchPushEnv)
         elif env_id == 'MAFetchReachEnv':
             create_env_fn = make_create_env(MAFetchReachEnv)
+        elif env_id == 'MAFetchSlideEnv':
+            create_env_fn = make_create_env(MAFetchSlideEnv)
         env = create_env_fn(config['env_config'])
     else:
         env = gym.make(env_id, **env_kwargs)

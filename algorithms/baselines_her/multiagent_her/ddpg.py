@@ -9,7 +9,7 @@ from algorithms.baselines_her.multiagent_her.util import (
     import_function, store_args, flatten_grads, transitions_in_episode_batch, convert_episode_to_batch_major)
 from algorithms.baselines_her.multiagent_her.normalizer import Normalizer
 from algorithms.baselines_her.multiagent_her.replay_buffer import ReplayBuffer
-from baselines.common.mpi_adam import MpiAdam
+from algorithms.baselines_her.multiagent_her.mpi_adam import MpiAdam
 from baselines.common import tf_util
 
 

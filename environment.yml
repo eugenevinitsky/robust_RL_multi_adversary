@@ -2,7 +2,7 @@ name: sim2real
 
 dependencies:
     - python==3.6.8
-    - tensorflow==1.15.0
+    - tensorflow==1.14.0
     - pip:
         - numpy==1.17.1
         - gym==0.14.0
