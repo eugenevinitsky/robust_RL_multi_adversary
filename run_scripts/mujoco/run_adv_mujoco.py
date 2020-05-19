@@ -189,16 +189,18 @@ def setup_exps(args):
         config['seed'] = 0
         config['train_batch_size'] = args.train_batch_size
         config['gamma'] = 0.995
+        config['observation_filter'] = 'MeanStdFilter'
         if args.env_name == 'cheetah':
             config['kl_coeff'] = 1.0
+            config['vf_loss_coeff'] = 0.5
             config['clip_param'] = 0.2
             config['grad_clip'] = 0.5
+            config['gamma'] = 0.99
         config['vf_clip_param'] = 100.0
         if args.grid_search:
             if args.env_name == 'cheetah':
                 config['lambda'] = tune.grid_search([0.9, 0.95, 1.0])
-                config ['lr'] = tune.grid_search([1e-4, 5e-4])
-                config['gamma'] = tune.grid_search([0.99, 0.995])
+                config ['lr'] = tune.grid_search([3e-4, 5e-4])
             else:
                 config['lambda'] = tune.grid_search([0.5, 0.9, 1.0])
                 config['lr'] = tune.grid_search([5e-5, 5e-4])
@@ -218,7 +220,6 @@ def setup_exps(args):
         if args.use_lstm:
             config['sgd_minibatch_size'] *= 5
         config['num_sgd_iter'] = 10
-        config['observation_filter'] = 'NoFilter'
     elif args.algorithm == 'SAC':
         config = DEFAULT_SAC_CONFIG
         config['target_network_update_freq'] = 1
