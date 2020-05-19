@@ -86,17 +86,44 @@ def save_barchart(total_scores, output_path, exp_path, file_name, show):
         plt.close(fig)
 
 
-def test_barcharts(exp_path):
-    test_names = [
-         'friction_hard_torsolegmax_floorthighfootmin',
-         'friction_hard_floorthighmax_torsolegfootmin',
-         'friction_hard_footlegmax_floortorsothighmin',
-         'friction_hard_torsothighfloormax_footlegmin',
-         'friction_hard_torsofootmax_floorthighlegmin',
-         'friction_hard_floorthighlegmax_torsofootmin',
-         'friction_hard_floorfootmax_torsothighlegmin',
-         'friction_hard_thighlegmax_floortorsofootmin',
+def test_barcharts(exp_path, exp_name):
+    if exp_name == 'hopper':
+        test_names = [
+             'friction_hard_torsolegmax_floorthighfootmin',
+             'friction_hard_floorthighmax_torsolegfootmin',
+             'friction_hard_footlegmax_floortorsothighmin',
+             'friction_hard_torsothighfloormax_footlegmin',
+             'friction_hard_torsofootmax_floorthighlegmin',
+             'friction_hard_floorthighlegmax_torsofootmin',
+             'friction_hard_floorfootmax_torsothighlegmin',
+             'friction_hard_thighlegmax_floortorsofootmin',
+            ]
+    elif exp_name == 'ant':
+        test_names = [
+            'friction_hard_flla1a3max',
+            'friction_hard_torsoa1rblmax',
+            'friction_hard_frla2blmax',
+            'friction_hard_torsoflla1max',
+            'friction_hard_flla2a4max',
+            'friction_hard_frlbla4max',
+            'friction_hard_frla3rblmax',
+            'friction_hard_a1rbla4max'
         ]
+    elif exp_name == 'cheetah':
+        test_names = [
+            'friction_hard_torsoheadfthighmax',
+            'friction_hard_floorheadfshinmax',
+            'friction_hard_bthighbshinbfootmax',
+            'friction_hard_floortorsoheadmax',
+            'friction_hard_floorbshinffootmax',
+            'friction_hard_bthighbfootffootmax',
+            'friction_hard_bthighfthighfshinmax',
+            'friction_hard_headfshinffootmax'
+        ]
+    else:
+        raise NotImplementedError
+
+
     for test in test_names:
         data = load_data_by_name(exp_path, test)
         means = [x[0] for x in data.values()]
@@ -121,10 +148,11 @@ if __name__ == "__main__":
                                                                             if folder, find best base')
     parser.add_argument('--show_plots', action="store_true", help='Show plots as they are created.')
     parser.add_argument('--test_plots', action="store_true", help="If true, construct the additional test plots")
+    parser.add_argument('--exp_name', type=str, help='Experiment name for test barcharts')
     args = parser.parse_args()
 
     plot_total_transfer_scores(args.output_path, os.path.basename(args.experiment_path), args.experiment_path, base_exp=args.base_experiment, show=args.show_plots)
 
     if args.test_plots:
-        test_barcharts(args.experiment_path)
+        test_barcharts(args.experiment_path, args.exp_name)
 
