@@ -260,7 +260,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
         output_name = "holdout_test_sweep"
     with open('{}/{}_{}_rew.txt'.format(outdir, output_file_name, output_name),
               'wb') as file:
-        np.save(file, np.array(temp_output))
+        np.savetxt(file, np.array(temp_output))
 
     if 'MAHopperEnv' == rllib_config['env'] and len(temp_output) > num_hopper_custom_tests:
         try:
