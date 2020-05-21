@@ -37,7 +37,7 @@ def make_set_mass(mass_coef, mass_body='pole'):
 
 def make_set_mass_and_fric(friction_coef, mass_coef, mass_body='pole'):
     def set_mass(env):
-        mass_bname = 'torso'
+        mass_bname = mass_body
         bnames = env.model.body_names
         bindex = bnames.index(mass_bname)
         env.model.body_mass[bindex] = (env.model.body_mass[bindex] * mass_coef)
