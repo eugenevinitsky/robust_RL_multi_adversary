@@ -89,14 +89,14 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                         else:
                             flat_obs = _flatten_action(a_obs)[np.newaxis, :]
 
-                        logits, _ = policy.model.from_batch({"obs": flat_obs,
-                                                             "prev_action": prev_action})
+                        # logits, _ = policy.model.from_batch({"obs": flat_obs,
+                        #                                      "prev_action": prev_action})
                     else:
                         if isinstance(a_obs, dict):
                             flat_obs = np.concatenate([val for val in a_obs.values()])[np.newaxis, :]
                         else:
                             flat_obs = _flatten_action(a_obs)[np.newaxis, :]
-                        logits, _ = policy.model.from_batch({"obs": flat_obs})
+                        # logits, _ = policy.model.from_batch({"obs": flat_obs})
                         prev_action = _flatten_action(prev_actions[agent_id])
                         flat_action = _flatten_action(a_obs)
                         a_action = agent.compute_action(
@@ -110,7 +110,7 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                         if isinstance(a_action[0], np.ndarray):
                             a_action[0] = a_action[0].flatten()
                     action_dict[agent_id] = a_action
-                    action_dist_dict[agent_id] = DiagGaussian(logits, None)
+                    # action_dist_dict[agent_id] = DiagGaussian(logits, None)
                     prev_action = _flatten_action(a_action)  # tuple actions
                     prev_actions[agent_id] = prev_action
 
@@ -133,23 +133,23 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
 
                                 heat_map[action_index, obs_index, obs_loop_index, action_loop_index] += 1
 
-            for agent_id in multi_obs.keys():
-                if agent_id != 'agent':
-                    # Now iterate through the agents and compute the kl_diff
-
-                    curr_id = int(agent_id.split('adversary')[1])
-                    your_action_dist = action_dist_dict[agent_id]
-                    # mean, log_std = np.split(your_logits[0], 2)
-                    for i in range(num_adversaries):
-                        # KL diff of something with itself is zero
-                        if i == curr_id:
-                            pass
-                        # otherwise just compute the kl difference between the agents
-                        else:
-                            other_action_dist = action_dist_dict['adversary{}'.format(i)]
-                            # other_mean, other_log_std = np.split(other_logits.numpy()[0], 2)
-                            kl_diff = your_action_dist.kl(other_action_dist)
-                            kl_grid[curr_id, i] += kl_diff
+            # for agent_id in multi_obs.keys():
+            #     if agent_id != 'agent':
+            #         # Now iterate through the agents and compute the kl_diff
+            #
+            #         curr_id = int(agent_id.split('adversary')[1])
+            #         your_action_dist = action_dist_dict[agent_id]
+            #         # mean, log_std = np.split(your_logits[0], 2)
+            #         for i in range(num_adversaries):
+            #             # KL diff of something with itself is zero
+            #             if i == curr_id:
+            #                 pass
+            #             # otherwise just compute the kl difference between the agents
+            #             else:
+            #                 other_action_dist = action_dist_dict['adversary{}'.format(i)]
+            #                 # other_mean, other_log_std = np.split(other_logits.numpy()[0], 2)
+            #                 kl_diff = your_action_dist.kl(other_action_dist)
+            #                 kl_grid[curr_id, i] += kl_diff
 
             action = action_dict
 
@@ -209,10 +209,10 @@ def visualize_adversaries(rllib_config, checkpoint, grid_size, num_rollouts, out
                 plt.savefig(output_str)
 
     # Plot the kl difference between agents
-    plt.figure()
-    sns.heatmap(kl_grid / total_steps)
-    output_str = '{}/{}'.format(outdir, 'kl_heatmap.png')
-    plt.savefig(output_str)
+    # plt.figure()
+    # sns.heatmap(kl_grid / total_steps)
+    # output_str = '{}/{}'.format(outdir, 'kl_heatmap.png')
+    # plt.savefig(output_str)
 
 
 

@@ -15,6 +15,9 @@ DEFAULT_ENV_PARAMS = {
         'n_cycles': 10,
         'buffer_size': int(1E4)
     },
+    'MAFetchPushEnv': {
+        'buffer_size': int(1E4)
+    },
 }
 
 

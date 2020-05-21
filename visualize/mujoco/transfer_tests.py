@@ -30,7 +30,7 @@ def make_set_mass_all(mass_coef):
     def set_mass(env):
         env.model.body_mass[:] = (env.model.body_mass[:] * mass_coef)
         if hasattr(env, 'mass_coef'):
-            env.fric_coef = mass_coef
+            env.mass_coef = mass_coef
     return set_mass
 
 def make_set_mass(mass_coef, mass_body='pole'):
@@ -39,7 +39,7 @@ def make_set_mass(mass_coef, mass_body='pole'):
         bindex = bnames.index(mass_body)
         env.model.body_mass[bindex] = (env.model.body_mass[bindex] * mass_coef)
         if hasattr(env, 'mass_coef'):
-            env.fric_coef = mass_coef
+            env.mass_coef = mass_coef
     return set_mass
 
 def make_set_mass_and_fric(friction_coef, mass_coef, mass_body='pole'):

@@ -117,6 +117,7 @@ def learn(*, network, env, total_timesteps,
           load_path=None,
           save_path=None,
           num_adv=0,
+          batch_size_scaling=1,
           **kwargs
           ):
     override_params = override_params or {}
@@ -145,6 +146,8 @@ def learn(*, network, env, total_timesteps,
     # params['rollout_batch_size'] = env.num_envs
     # TODO(@ev) put back
     params['rollout_batch_size'] = 1
+    params['_batch_size'] = batch_size_scaling * params['_batch_size']
+    params['ddpg_params']['batch_size'] = batch_size_scaling * params['ddpg_params']['batch_size']
 
     if demo_file is not None:
         params['bc_loss'] = 1
@@ -225,7 +228,9 @@ def learn(*, network, env, total_timesteps,
 @click.option('--clip_return', type=int, default=1, help='whether or not returns should be clipped')
 @click.option('--demo_file', type=str, default='PATH/TO/DEMO/DATA/FILE.npz', help='demo data file path')
 # TODO(@evinitsky) figure out why this isn't actually being used or interacting with argparse
-@click.option('--num_adv', type=int, default=1, help='number of active adversaries')
+@click.option('--num_adv', type=int, default=7, help='number of active adversaries')
+@click.option('--batch_size_scaling', type=int, default=4, help='how much to scale up train batch size')
+
 def main(**kwargs):
     learn(**kwargs)
 

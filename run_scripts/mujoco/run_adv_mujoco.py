@@ -351,7 +351,7 @@ def setup_exps(args):
         config["tau"] = 0.05
         config["buffer_size"] = int(1e6)
         config["observation_filter"] = "MeanStdFilter"
-
+        config["train_batch_size"] = 256 * 8
 
         if args.local_mode:
             config['learning_starts'] = 5000
