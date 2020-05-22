@@ -114,7 +114,7 @@ def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show
         plt.xticks(ticks=np.arange(len(friction_sweep))[0::2], labels=["{:0.2f}".format(x) for x in friction_sweep][0::2])
         plt.xlabel("Friction coef", fontsize=fontsize)
     elif exp_type == 'cheetah':
-        plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=2000, vmax=9000)
+        plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=2000, vmax=8000)
         plt.title(file_name, fontsize=title_fontsize)
         plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x * 6.0) for x in mass_sweep])
         plt.ylabel("Mass coef", fontsize=fontsize)
