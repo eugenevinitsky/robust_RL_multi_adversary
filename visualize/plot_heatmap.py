@@ -17,8 +17,8 @@ hopper_mass_sweep = np.linspace(.7, 1.3, 11)
 hopper_friction_sweep = np.linspace(0.7, 1.3, 11)
 
 cheetah_mass_sweep = np.linspace(.5, 1.5, 11)
-cheetah_friction_sweep_good = np.linspace(0.5, 1.5, 11)
-cheetah_friction_sweep = np.linspace(0.1, 0.9, 11)
+cheetah_friction_sweep = np.linspace(0.5, 1.5, 11)
+cheetah_friction_sweep_bad = np.linspace(0.1, 0.9, 11)
 
 ant_mass_sweep = np.linspace(.5, 1.5, 11)
 ant_friction_sweep = np.linspace(0.1, 0.9, 11)
