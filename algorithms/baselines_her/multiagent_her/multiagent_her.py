@@ -38,13 +38,14 @@ def train(*, policy_dict, rollout_worker, evaluator,
         if policy.bc_loss == 1: policy.init_demo_buffer(demo_file)  # initialize demo buffer if training with demonstrations
 
     # num_timesteps = n_epochs * n_cycles * rollout_length * number of rollout workers
+    curr_adv = 0
     for epoch in range(n_epochs):
         # train
         rollout_worker.clear_history()
         for i in range(n_cycles):
             print('{} / {}'.format(i, n_cycles))
             if len(policy_dict) > 1:
-                rollout_worker.venv.select_new_adversary()
+                rollout_worker.venv.set_new_adversary(curr_adv)
                 curr_adv = rollout_worker.venv.curr_adversary
                 rollout_worker.selected_adversary = curr_adv
 
@@ -64,6 +65,9 @@ def train(*, policy_dict, rollout_worker, evaluator,
                     #     import ipdb; ipdb.set_trace()
                     policy.train()
                 policy.update_target_net()
+
+            curr_adv += 1
+            curr_adv %= len(policy_dict) - 1
 
         # test
         evaluator.clear_history()
@@ -229,7 +233,7 @@ def learn(*, network, env, total_timesteps,
 @click.option('--demo_file', type=str, default='PATH/TO/DEMO/DATA/FILE.npz', help='demo data file path')
 # TODO(@evinitsky) figure out why this isn't actually being used or interacting with argparse
 @click.option('--num_adv', type=int, default=7, help='number of active adversaries')
-@click.option('--batch_size_scaling', type=int, default=4, help='how much to scale up train batch size')
+@click.option('--batch_size_scaling', type=int, default=1, help='how much to scale up train batch size')
 
 def main(**kwargs):
     learn(**kwargs)

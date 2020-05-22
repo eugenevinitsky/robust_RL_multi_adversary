@@ -370,7 +370,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     rllib_config, checkpoint = get_config(args)
 
-    ray.init(num_cpus=args.num_cpus)
+    ray.init(num_cpus=args.num_cpus, local_mode=True)
 
     if rllib_config['env'] == "MAPendulumEnv":
         run_list = pendulum_run_list

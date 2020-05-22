@@ -94,7 +94,6 @@ def test_MpiAdam():
         print(i,l)
         losslist_test.append(l)
 
-    import ipdb; ipdb.set_trace()
     np.testing.assert_allclose(np.array(losslist_ref), np.array(losslist_test), atol=1e-4)
 
 

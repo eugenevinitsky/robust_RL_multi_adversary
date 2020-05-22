@@ -207,6 +207,10 @@ def get_parser(parser):
     parser.add_argument('--num_push_curriculum_iters', type=int, default=100,
                         help='How many iterations the curriculum should run over')
     parser.add_argument('--horizon', type=int, default=100)
+
+    # special param just for mujoco fetch envs
+    parser.add_argument('--return_all_obs', action='store_true', default=False,
+                        help='If running Fetch envs not using RLlib, you need to set this to true ')
     return parser
 
 def get_env_config(args, config):
@@ -253,6 +257,10 @@ def get_env_config(args, config):
     # curriculum config
     config['env_config']['push_curriculum'] = args.push_curriculum
     config['env_config']['num_push_curriculum_iters'] = args.num_push_curriculum_iters
+
+    # random params
+    config['env_config']['return_all_obs'] = args.return_all_obs
+
     return config
 
 def setup_exps(args):
@@ -351,7 +359,8 @@ def setup_exps(args):
         config["tau"] = 0.05
         config["buffer_size"] = int(1e6)
         config["observation_filter"] = "MeanStdFilter"
-        config["train_batch_size"] = 256 * 8
+        config["train_batch_size"] = 256 * args.num_cpus
+        config["num_workers"] = args.num_cpus
 
         if args.local_mode:
             config['learning_starts'] = 5000
@@ -539,7 +548,7 @@ def on_episode_end(info):
             if hasattr(env, 'adv_actions'):
                 episode.custom_metrics["mean_adv{}_action".format(env.curr_adversary)] = \
                     np.nan_to_num(np.mean(episode.user_data["mean_adv_action"]))
-        if env.adversarial_domain_randomization:
+        if hasattr(env, 'adversarial_domain_randomization') and env.adversarial_domain_randomization:
             episode.custom_metrics["adv{}_mass_coeff".format(env.curr_adversary)] = env.mass_coef
             episode.custom_metrics["adv{}_friction_coeff".format(env.curr_adversary)] = env.friction_coef
 

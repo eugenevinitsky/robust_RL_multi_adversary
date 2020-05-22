@@ -23,6 +23,8 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
 
         self.total_reward = 0
 
+        self.return_all_obs = config["return_all_obs"]
+
         self.num_adv_strengths = config["num_adv_strengths"]
         self.adversary_strength = config["adversary_strength"]
         # This sets how many adversaries exist per strength level
@@ -131,15 +133,17 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
 
         self.original_friction = deepcopy(np.array(self.sim.model.geom_friction))
         self.original_mass_all = deepcopy(self.sim.model.body_mass)
-        # obs_space = self.observation_space['all_obs']
-        # if self.concat_actions:
-        #     action_space = self.action_space
-        #     low = np.tile(np.concatenate((obs_space.low, action_space.low * 1000)), self.num_concat_states)
-        #     high = np.tile(np.concatenate((obs_space.high, action_space.high * 1000)), self.num_concat_states)
-        # else:
-        #     low = np.tile(obs_space.low, self.num_concat_states)
-        #     high = np.tile(obs_space.high, self.num_concat_states)
-        # self.observation_space = Box(low=low, high=high, dtype=np.float32)
+
+        if not self.return_all_obs:
+            obs_space = self.observation_space['all_obs']
+            if self.concat_actions:
+                action_space = self.action_space
+                low = np.tile(np.concatenate((obs_space.low, action_space.low * 1000)), self.num_concat_states)
+                high = np.tile(np.concatenate((obs_space.high, action_space.high * 1000)), self.num_concat_states)
+            else:
+                low = np.tile(obs_space.low, self.num_concat_states)
+                high = np.tile(obs_space.high, self.num_concat_states)
+            self.observation_space = Box(low=low, high=high, dtype=np.float32)
 
         # instantiate the l2 memory tracker
         if self.adversary_range > 0 and self.l2_memory:
@@ -172,7 +176,10 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
                                'is_active': Box(low=-1.0, high=1.0, shape=(1,), dtype=np.int32)})
             return dict_space
         else:
-            return self.observation_space['all_obs']
+            if not self.return_all_obs:
+                return self.observation_space
+            else:
+                return self.observation_space['all_obs']
 
     def update_push_curriculum(self, iter):
         self.num_iters = iter
@@ -206,6 +213,9 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         if self.adversary_range > 0:
             # the -1 corresponds to not having any adversary on at all
             self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
+
+    def set_new_adversary(self, adversary_int):
+        self.curr_adversary = adversary_int
 
     def extreme_randomize_domain(self):
         num_geoms = len(self.sim.model.geom_friction)
@@ -384,11 +394,18 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
                     reward_dict.update({'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]})
 
             done_dict = {'__all__': done}
-            obs.update(obs_dict)
-            info.update({'is_success': self._is_success(obs['achieved_goal'], self.goal)})
+            if self.return_all_obs:
+                obs.update(obs_dict)
+            else:
+                obs = obs_dict
+            if self.return_all_obs:
+                info.update({'is_success': self._is_success(obs['achieved_goal'], self.goal)})
             return obs, reward_dict, done_dict, info
         else:
-            return obs, reward, done, {}
+            if self.return_all_obs:
+                return obs, reward, done, {}
+            else:
+                return ob, reward, done, {}
 
     def reset(self):
         self.step_num = 0
@@ -423,7 +440,9 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             if self.l2_memory:
                 self.local_num_observed_l2_samples[self.curr_adversary] += 1
 
-        curr_obs.update(self._get_obs())
+        if self.return_all_obs:
+            curr_obs.update(self._get_obs())
+
         return curr_obs
 
     def _reset_sim(self):
