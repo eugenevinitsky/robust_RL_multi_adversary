@@ -24,6 +24,7 @@ class MAFetchPushEnv(adv_fetch_env.AdvMAFetchEnv, utils.EzPickle):
         self.horizon = 100
         self.name = "MAFetchPushEnv"
 
+
 def reach_env_creator(env_config):
     env = MAFetchPushEnv(env_config)
     return env

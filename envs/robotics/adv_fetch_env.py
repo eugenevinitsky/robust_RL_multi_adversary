@@ -403,7 +403,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             return obs, reward_dict, done_dict, info
         else:
             if self.return_all_obs:
-                return obs, reward, done, {}
+                return obs, reward, done, {'is_success': self._is_success(obs['achieved_goal'], self.goal)}
             else:
                 return ob, reward, done, {}
 

@@ -15,7 +15,8 @@ from envs.multiarm_bandit import MultiarmBandit, PSEUDORANDOM_TRANSFER
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from visualize.mujoco.run_rollout import run_rollout, instantiate_rollout
-from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep, fetch_friction_sweep, fetch_mass_sweep
+from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, \
+    cheetah_mass_sweep, fetch_friction_sweep, fetch_mass_sweep, slide_friction_sweep
 import errno
 
 
@@ -96,7 +97,6 @@ def make_bandit_transfer_list(num_arms):
         run_list.append(['hard', make_bandit_transfer_example(means=np.array([-5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))])
     return run_list
 
-
 # test name, is_env_config, config_value, params_name, params_value
 run_list = [
     ['base', []],
@@ -141,6 +141,13 @@ fetch_reach_run_list = [
 fetch_push_run_list = [
     ['base', []]
 ]
+
+fetch_slide_run_list = [
+    ['base', []]
+]
+
+# for fric in slide_friction_sweep:
+#     fetch_slide_run_list.append(['f_{}'.format(fric), make_set_puck_fric(fric)])
 
 
 hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
