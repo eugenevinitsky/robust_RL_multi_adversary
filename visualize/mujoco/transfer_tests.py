@@ -320,6 +320,8 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
                     plt.close(fig)
 
     num_advs = rllib_config['env_config']['advs_per_strength'] * rllib_config['env_config']['num_adv_strengths']
+    if num_advs > 11:
+        return
     adv_names = ["adversary{}".format(adv_num) for adv_num in range(num_advs)]
     if num_advs:
         temp_output = [run_test.remote(test_name="adversary{}".format(adv_num),
