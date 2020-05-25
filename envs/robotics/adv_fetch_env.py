@@ -416,6 +416,9 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             return obs, reward_dict, done_dict, info
         else:
             if self.return_all_obs:
+                if self.concat_actions:
+                    obs['observation'] = np.concatenate((obs['observation'], obs_fetch_action))
+                    obs['all_obs'] = np.concatenate((obs['all_obs'], obs_fetch_action))
                 return obs, reward, done, {'is_success': self._is_success(obs['achieved_goal'], self.goal)}
             else:
                 return ob, reward, done, {}
