@@ -20,15 +20,17 @@ from envs.mujoco.adv_cheetah import AdvMAHalfCheetahEnv
 from envs.mujoco.adv_ant import AdvMAAnt
 
 from envs.linear_env import LinearEnv
-from envs.multiarm_bandit import MultiarmBandit
+from envs.bernoulli_bandit import BernoulliMultiarmBandit
 
 from utils.pendulum_env_creator import make_create_env
 
 from models.conv_lstm import ConvLSTM
 from models.recurrent_tf_model_v2 import LSTM
+from models.lstm import LSTM as bandit_lstm
 
 ModelCatalog.register_custom_model("rnn", ConvLSTM)
 ModelCatalog.register_custom_model("rnn", LSTM)
+ModelCatalog.register_custom_model("lstm", bandit_lstm)
 
 class DefaultMapping(collections.defaultdict):
     """default_factory now takes as an argument the missing key."""
@@ -62,9 +64,9 @@ def instantiate_rollout(rllib_config, checkpoint):
     elif rllib_config['env'] == "LinearEnv":
         env_name = "LinearEnv"
         create_env_fn = make_create_env(LinearEnv)
-    elif rllib_config['env'] == "MultiarmBandit":
-        env_name = "MultiarmBandit"
-        create_env_fn = make_create_env(MultiarmBandit)
+    elif rllib_config['env'] == "BernoulliMultiarmBandit":
+        env_name = "BernoulliMultiarmBandit"
+        create_env_fn = make_create_env(BernoulliMultiarmBandit)
 
     register_env(env_name, create_env_fn)
 
@@ -99,6 +101,44 @@ def instantiate_rollout(rllib_config, checkpoint):
 
     return env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init
 
+def run_non_rl_rollout(env, strategy, num_rollouts):
+    """ Runs a set of rollouts on the env using 'strategy' for the agent. Note that strategy must be a function
+    that takes an env, and returns the agent's action
+    """
+    rewards = []
+    step_nums = []
+
+    # actually do the rollout
+    for r_itr in range(num_rollouts):
+        obs = env.reset()
+        prev_rewards = collections.defaultdict(lambda: 0.)
+        done = False
+        reward_total = 0.0
+        step_num = 0
+        while not done:
+            step_num += 1
+            # we turn the adversaries off so you only send in the pendulum keys
+            next_obs, reward, done, info = env.step({}, custom_strategy=strategy)
+            # we only want the robot reward, not the adversary reward
+            if env.config['report_raw_reward']:
+                reward_total += info['agent']['agent_raw_score']
+            else:
+                reward_total += info['agent']['agent_reward']
+            obs = next_obs
+
+            if isinstance(done, dict):
+                done = done['__all__']
+
+        # print("Episode reward", reward_total)
+
+        rewards.append(reward_total)
+        step_nums.append(step_num)
+
+    env.close()
+
+    print('the average reward is ', np.mean(rewards))
+    return rewards, step_num
+
 
 def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init, num_rollouts, render, adv_num=None):
 
@@ -122,7 +162,10 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
         while not done:
             step_num += 1
             if adv_num is not None:
-                multi_obs = {'agent': obs['agent'], 'adversary{}'.format(adv_num): obs['agent']}
+                if type(env) == BernoulliMultiarmBandit:
+                    multi_obs = {'agent': obs['agent'], 'adversary{}'.format(adv_num): np.array([0.0])}
+                else:
+                    multi_obs = {'agent': obs['agent'], 'adversary{}'.format(adv_num): obs['agent']}
             else:
                 multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
             action_dict = {}
@@ -148,7 +191,7 @@ def run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping, state_in
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id)
                     # handle the tuple case
-                    if len(a_action) > 1:
+                    if type(a_action) is not np.int64  and len(a_action) > 1:
                         if isinstance(a_action[0], np.ndarray):
                             a_action[0] = a_action[0].flatten()
                     action_dict[agent_id] = a_action

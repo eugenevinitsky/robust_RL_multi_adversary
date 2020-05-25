@@ -26,15 +26,11 @@ if sys.platform == 'darwin':
 
 PSEUDORANDOM_TRANSFER = 'pseudorandom'
 
-class MultiarmBandit(MultiAgentEnv, gym.Env):
+class BernoulliMultiarmBandit(MultiAgentEnv, gym.Env):
 
     def __init__(self, config):
         self.config = config
         
-        self.min_mean_reward = -5
-        self.max_mean_reward = 5
-        self.min_std = 0.1
-        self.max_std = 1
         self.num_arms = config["num_arms"]
         self.rollout_num = 0
 
@@ -58,15 +54,12 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
 
         # This is how many previous observations we concatenate to get the current observation
         self.num_concat_states = config["num_concat_states"]
-        # This is whether we concatenate the agent action into the observation
-        self.concat_actions = config["concat_actions"]
+        assert self.num_concat_states == 1, "Are you sure you want to concat states?"
 
         # Whether we should compute the reward as regret
         self.regret = config["regret_formulation"]
 
-        self.obs_size = 1
-        if self.concat_actions:
-            self.obs_size += 1
+        self.obs_size = 1 + self.num_arms
 
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
 
@@ -80,8 +73,7 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
 
         self.transfer = None
 
-        self.means = []
-        self.std_devs = []
+        self.probabilites = []
 
         self.adversary_range = self.num_adv_strengths * self.advs_per_strength
         self.curr_adversary = 0
@@ -125,8 +117,7 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
 
     @property
     def observation_space(self):
-        # set large enough that mean + std should not exceed bounds
-        return Box(low=-np.infty, high=np.infty, shape=(self.obs_size * self.num_concat_states, )) # with concat
+        return Box(low=-np.infty, high=np.infty, shape=((1 + self.num_arms) * self.num_concat_states, )) 
 
     @property
     def action_space(self):
@@ -143,28 +134,26 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
 
     @property
     def adv_action_space(self):
-        low = [self.min_mean_reward] * self.num_arms + [self.min_std] * self.num_arms
-        high = [self.max_mean_reward] * self.num_arms + [self.max_std] * self.num_arms
+        low = np.zeros(self.num_arms)
+        high = np.ones(self.num_arms)
         return Box(low=np.array(low), high=np.array(high))
 
     def step(self, action_dict, custom_strategy=None):
-        if self.step_num == 0:
+        self.step_num += 1
+        if self.step_num == 1:
             if self.transfer:
                 prng = np.random.RandomState(self.rollout_num)
                 if self.transfer == PSEUDORANDOM_TRANSFER:
-                    self.means = prng.uniform(self.min_mean_reward, self.max_mean_reward, self.num_arms)
-                    self.std_devs = prng.uniform(self.min_std, self.max_std, self.num_arms)
+                    self.probabilites = prng.uniform(0, 1, self.num_arms)
                 else:
                     # breaking an abstration barrier here but yolo
-                    self.means = self.transfer[0]
-                    self.std_devs = self.transfer[1]
+                    self.probabilites = self.transfer[0]
 
                 self.rollout_num += 1
                 random_arm_order = prng.permutation(self.num_arms)
             elif self.adversary_range > 0:
-                self.means = action_dict['adversary{}'.format(self.curr_adversary)][:self.num_arms]
-                self.std_devs = action_dict['adversary{}'.format(self.curr_adversary)][self.num_arms:]
-                assert len(self.means) == len(self.std_devs)
+                self.probabilites = action_dict['adversary{}'.format(self.curr_adversary)]
+
                 # store this since the adversary won't get a reward until the last step
                 if self.l2_reward and not self.l2_memory:
                     self.action_list = [action_dict['adversary{}'.format(i)] for i in range(self.adversary_range)]
@@ -174,37 +163,42 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
                     
                 random_arm_order = np.random.permutation(self.num_arms)
             else:
-                self.means = np.random.uniform(low=self.min_mean_reward, high=self.max_mean_reward, size=self.num_arms)
-                self.std_devs = np.random.uniform(low=self.min_std, high=self.max_std, size=self.num_arms)
+                self.probabilites = np.random.uniform(low=0, high=1, size=self.num_arms)
                 random_arm_order = np.random.permutation(self.num_arms)
 
             if custom_strategy:
                 custom_strategy.reset()
 
-            self.means = self.means[random_arm_order]
-            self.std_devs = self.std_devs[random_arm_order]
+            self.probabilites = self.probabilites[random_arm_order]
+            # print(self.probabilites)
 
         if custom_strategy:
             arm_choice = custom_strategy.get_arm(self, self.step_num)
         else:
             arm_choice = action_dict['agent']
-        base_rew = np.random.normal(loc=self.means[arm_choice], scale=self.std_devs[arm_choice])
+
+        base_rew = np.random.binomial(n=1, p=self.probabilites[arm_choice])
+
+        # print(arm_choice, base_rew)
 
         if custom_strategy:
             custom_strategy.add_reward(arm_choice, base_rew)
 
         if self.regret:
-            base_rew = base_rew - max(self.means)
-        done = self.step_num > self.horizon
-
-        if self.concat_actions:
-            self.update_observed_obs(np.array((base_rew, arm_choice)))
+            calc_rew = base_rew - max(self.probabilites)
         else:
-            self.update_observed_obs(base_rew)
+            calc_rew = base_rew
+
+        done = self.step_num >= self.horizon
+
+        obs = np.zeros(self.num_arms + 1)
+        obs[0] = calc_rew
+        obs[arm_choice + 1] = 1
+        self.update_observed_obs(obs)
 
         curr_obs = {'agent': self.observed_states}
-        curr_rew = {'agent': base_rew}
-        self.total_rew += base_rew
+        curr_rew = {'agent': calc_rew}
+        self.total_rew += calc_rew
 
         if self.adversary_range > 0:
 
@@ -278,11 +272,10 @@ class MultiarmBandit(MultiAgentEnv, gym.Env):
                 #     #     'adversary{}'.format(self.curr_adversary): adv_reward[self.curr_adversary]
                 #     # })
 
-        info = {'agent': {'agent_reward': base_rew}}
+        info = {'agent': {'agent_reward': calc_rew, 'agent_raw_score': base_rew}}
 
         done_dict = {'__all__': done}
 
-        self.step_num += 1
         return curr_obs, curr_rew, done_dict, info
 
 
