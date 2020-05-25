@@ -1,15 +1,16 @@
-import argparse
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
-import ray
 
-from envs.robotics.fetch.slide import MAFetchSlideEnv
-slide_mass_sweep = np.linspace(0.5, 3.5, 20)
-slide_friction_sweep = np.linspace(0.01, 0.2, 20)
+num_samples = 3
+slide_mass_sweep = np.linspace(0.5, 3.5, num_samples)
+slide_friction_sweep = np.linspace(0.01, 0.2, num_samples)
 
-push_friction_sweep = np.linspace(0.1, 2.0, 20)
-push_mass_sweep = np.linspace(0.5, 3.5, 20)
+# default values are mass 2.0, friction [1.0, .005, .0001]
+push_friction_sweep = np.linspace(0.1, 2.0, num_samples)
+push_mass_sweep = np.linspace(0.5, 3.5, num_samples)
+# table_height_sweep
 
 
 # use this
@@ -22,8 +23,9 @@ def set_mass(env, mass):
 def set_friction(env, fric):
     bnames = env.sim.model.geom_names
     bindex = bnames.index('object0')
-    env.sim.model.geom_friction[bindex] = [fric, env.sim.model.geom_friction[bindex][1],
-                                           env.sim.model.geom_friction[bindex][2]]
+    env.sim.model.geom_friction[bindex] = [fric * env.sim.model.geom_friction[bindex][0],
+                                           fric * env.sim.model.geom_friction[bindex][1],
+                                           fric * env.sim.model.geom_friction[bindex][2]]
 
 
 def run_rollout(env, model):
@@ -38,7 +40,25 @@ def run_rollout(env, model):
     return info['is_success']
 
 
+def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show, exp_type):
+    # with open('{}/{}_{}.png'.format(output_path, file_name, "transfer_heatmap"),'wb') as heatmap:
+    fig = plt.figure()
+    plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=0, vmax=1)
+    plt.title(file_name)
+    plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x) for x in mass_sweep])
+    plt.ylabel("Mass coef")
+    plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
+    plt.xlabel("Friction coef")
+    plt.colorbar()
+    plt.tight_layout()
+    plt.savefig('{}/{}_{}.png'.format(output_path, file_name, "transfer_heatmap"))
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
 def run_transfer_tests(output_path, env, env_id, model, num_rollouts):
+    global_results_list = []
     if env_id == 'MAFetchSlideEnv':
         for i, mass in enumerate(slide_mass_sweep):
             for j, fric in enumerate(slide_friction_sweep):
@@ -49,6 +69,7 @@ def run_transfer_tests(output_path, env, env_id, model, num_rollouts):
                 for j in range(num_rollouts):
                     results_list.append(run_rollout(env, model))
                 print('average success rate for m {}, f {} is {}'.format(mass, fric, np.mean(results_list)))
+                global_results_list.append(np.mean(results_list))
                 with open(os.path.join(output_path, 'slide_f{}_m{}.txt').format(fric, mass), 'wb') as file:
                     np.savetxt(file, results_list)
     elif env_id == 'MAFetchPushEnv':
@@ -61,5 +82,12 @@ def run_transfer_tests(output_path, env, env_id, model, num_rollouts):
                 for j in range(num_rollouts):
                     results_list.append(run_rollout(env, model))
                 print('average success rate for m {}, f {} is {}'.format(mass, fric, np.mean(results_list)))
+                global_results_list.append(np.mean(results_list))
                 with open(os.path.join(output_path, 'push_f{}_m{}.txt').format(fric, mass), 'wb') as file:
                     np.savetxt(file, results_list)
+
+    reward_means = np.array(global_results_list).reshape(num_samples, num_samples)
+    if env_id == 'MAFetchSlideEnv':
+        save_heatmap(reward_means, slide_mass_sweep, slide_friction_sweep, output_path, 'slide', False, 'slide')
+    elif env_id == 'MAFetchPushEnv':
+        save_heatmap(reward_means, push_mass_sweep, push_friction_sweep, output_path, 'push', False, 'push')

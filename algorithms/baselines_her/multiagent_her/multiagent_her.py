@@ -66,8 +66,9 @@ def train(*, policy_dict, rollout_worker, evaluator,
                     policy.train()
                 policy.update_target_net()
 
-            curr_adv += 1
-            curr_adv %= len(policy_dict) - 1
+            if len(policy_dict) > 1:
+                curr_adv += 1
+                curr_adv %= len(policy_dict) - 1
 
         # test
         evaluator.clear_history()

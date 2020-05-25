@@ -144,6 +144,14 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
                 low = np.tile(obs_space.low, self.num_concat_states)
                 high = np.tile(obs_space.high, self.num_concat_states)
             self.observation_space = Box(low=low, high=high, dtype=np.float32)
+        else:
+            if self.concat_actions:
+                self.observation_space = Dict(
+                    {'achieved_goal': self.observation_space['achieved_goal'],
+                     'desired_goal': self.observation_space['desired_goal'],
+                     'all_obs': Box(low=-np.inf, high=np.inf, shape=(35 * self.num_concat_states,)),
+                     'observation': Box(low=-np.inf, high=np.inf, shape=(29 * self.num_concat_states,))}
+                )
 
         # instantiate the l2 memory tracker
         if self.adversary_range > 0 and self.l2_memory:
@@ -304,6 +312,8 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         done = done or self.step_num >= self.horizon
 
         if self.concat_actions:
+            if len(obs_fetch_action.shape) > 1:
+                obs_fetch_action = obs_fetch_action[0]
             self.update_observed_obs(np.concatenate((ob, obs_fetch_action)))
         else:
             self.update_observed_obs(ob)
@@ -311,7 +321,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         self.total_reward += reward
         if isinstance(actions, dict):
             info = {'agent': {'agent_reward': reward}}
-            obs_dict = {'agent': ob / 100.0}
+            obs_dict = {'agent': self.observed_states / 100.0}
             reward_dict = {'agent': reward}
 
             if self.adversary_range > 0 and self.curr_adversary >= 0:
@@ -395,6 +405,9 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
 
             done_dict = {'__all__': done}
             if self.return_all_obs:
+                if self.concat_actions:
+                    obs['observation'] = np.concatenate((obs['observation'], obs_fetch_action))
+                    obs['all_obs'] = np.concatenate((obs['all_obs'], obs_fetch_action))
                 obs.update(obs_dict)
             else:
                 obs = obs_dict
@@ -420,11 +433,11 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         obs = self._get_obs()['all_obs']
 
         if self.concat_actions:
-            self.update_observed_obs(np.concatenate((obs, [0.0] * 3)))
+            self.update_observed_obs(np.concatenate((obs, [0.0] * 4)))
         else:
             self.update_observed_obs(obs)
 
-        curr_obs = {'agent': obs / 100.0}
+        curr_obs = {'agent': self.observed_states / 100.0}
         if self.adversary_range > 0 and self.curr_adversary >= 0:
             if self.kl_reward or (self.l2_reward and not self.l2_memory):
                 is_active = [1 if i == self.curr_adversary else 0 for i in range(self.adversary_range)]
@@ -441,7 +454,13 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
                 self.local_num_observed_l2_samples[self.curr_adversary] += 1
 
         if self.return_all_obs:
-            curr_obs.update(self._get_obs())
+            if self.concat_actions:
+                obs_dict = self._get_obs()
+                obs_dict['observation'] = np.concatenate((obs_dict['observation'], [0.0] * 4))
+                obs_dict['all_obs'] = np.concatenate((obs_dict['all_obs'], [0.0] * 4))
+                curr_obs.update(obs_dict)
+            else:
+                curr_obs.update(self._get_obs())
 
         return curr_obs
 
