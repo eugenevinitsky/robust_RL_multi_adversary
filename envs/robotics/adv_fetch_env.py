@@ -130,6 +130,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         if self.concat_actions:
             self.obs_size += self.num_actions
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
+        self.partial_observed_states = np.zeros((self.obs_size - 6) * self.num_concat_states)
 
         self.original_friction = deepcopy(np.array(self.sim.model.geom_friction))
         self.original_mass_all = deepcopy(self.sim.model.body_mass)
@@ -249,6 +250,13 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         self.observed_states[0: original_shape] = new_obs
         return self.observed_states
 
+    def update_partial_observed_obs(self, new_obs):
+        """Add in the new observations and overwrite the stale ones"""
+        original_shape = new_obs.shape[0]
+        self.partial_observed_states = np.roll(self.partial_observed_states, shift=original_shape, axis=-1)
+        self.partial_observed_states[0: original_shape] = new_obs
+        return self.partial_observed_states
+
     def _random_action(self, n):
         return np.random.uniform(low=-np.abs(self.action_space.low),
                                  high=self.action_space.high, size=(n))
@@ -305,6 +313,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         self.success = self._is_success(obs['achieved_goal'], self.goal)
         reward = self.compute_reward(obs['achieved_goal'], self.goal, info)
         ob = obs['all_obs']
+        partial_obs = obs['observation']
 
         # you are allowed to observe the mass and friction coefficients
         if self.cheating:
@@ -315,8 +324,10 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             if len(obs_fetch_action.shape) > 1:
                 obs_fetch_action = obs_fetch_action[0]
             self.update_observed_obs(np.concatenate((ob, obs_fetch_action)))
+            self.update_partial_observed_obs(np.concatenate((partial_obs, obs_fetch_action)))
         else:
             self.update_observed_obs(ob)
+            self.update_partial_observed_obs(partial_obs)
 
         self.total_reward += reward
         if isinstance(actions, dict):
@@ -406,8 +417,8 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             done_dict = {'__all__': done}
             if self.return_all_obs:
                 if self.concat_actions:
-                    obs['observation'] = np.concatenate((obs['observation'], obs_fetch_action))
-                    obs['all_obs'] = np.concatenate((obs['all_obs'], obs_fetch_action))
+                    obs['observation'] = self.partial_observed_states
+                    obs['all_obs'] = self.observed_states
                 obs.update(obs_dict)
             else:
                 obs = obs_dict
@@ -417,8 +428,8 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         else:
             if self.return_all_obs:
                 if self.concat_actions:
-                    obs['observation'] = np.concatenate((obs['observation'], obs_fetch_action))
-                    obs['all_obs'] = np.concatenate((obs['all_obs'], obs_fetch_action))
+                    obs['observation'] = self.partial_observed_states
+                    obs['all_obs'] = self.observed_states
                 return obs, reward, done, {'is_success': self._is_success(obs['achieved_goal'], self.goal)}
             else:
                 return ob, reward, done, {}
@@ -427,6 +438,7 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         self.step_num = 0
         self.success = False
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
+        self.partial_observed_states = np.zeros((self.obs_size - 6) * self.num_concat_states)
         self.total_reward = 0
         self.reach_obj = -1
         did_reset_sim = False
@@ -434,11 +446,14 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
             did_reset_sim = self._reset_sim()
         self.goal = self._sample_goal().copy()
         obs = self._get_obs()['all_obs']
+        partial_obs = self._get_obs()['observation']
 
         if self.concat_actions:
             self.update_observed_obs(np.concatenate((obs, [0.0] * 4)))
+            self.update_partial_observed_obs(np.concatenate((partial_obs, [0.0] * 4)))
         else:
             self.update_observed_obs(obs)
+            self.update_partial_observed_obs(partial_obs)
 
         curr_obs = {'agent': self.observed_states / 100.0}
         if self.adversary_range > 0 and self.curr_adversary >= 0:
@@ -459,8 +474,8 @@ class AdvMAFetchEnv(FetchEnv, MultiAgentEnv):
         if self.return_all_obs:
             if self.concat_actions:
                 obs_dict = self._get_obs()
-                obs_dict['observation'] = np.concatenate((obs_dict['observation'], [0.0] * 4))
-                obs_dict['all_obs'] = np.concatenate((obs_dict['all_obs'], [0.0] * 4))
+                obs_dict['observation'] = self.partial_observed_states
+                obs_dict['all_obs'] = self.observed_states
                 curr_obs.update(obs_dict)
             else:
                 curr_obs.update(self._get_obs())

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 num_samples = 3
+# default values are mass 2.0, friction [0.1, .005, .0001]
 slide_mass_sweep = np.linspace(0.5, 3.5, num_samples)
 slide_friction_sweep = np.linspace(0.01, 0.2, num_samples)
 
@@ -71,8 +72,14 @@ def run_transfer_tests(output_path, env, env_id, model, num_rollouts):
                 print('average success rate for m {}, f {} is {}'.format(mass, fric, np.mean(results_list)))
                 global_results_list.append(np.mean(results_list))
                 with open(os.path.join(output_path, 'slide_f{}_m{}.txt').format(fric, mass), 'wb') as file:
-                    np.savetxt(file, results_list)
+                    np.savetxt(file, results_list[1:])
     elif env_id == 'MAFetchPushEnv':
+        results_list = []
+        for j in range(num_rollouts):
+            results_list.append(run_rollout(env, model))
+        with open(os.path.join(output_path, 'push_base'), 'wb') as file:
+            np.savetxt(file, results_list)
+        print('average success rate for base is'.format(np.mean(results_list)))
         for i, mass in enumerate(push_mass_sweep):
             for j, fric in enumerate(push_friction_sweep):
                 results_list = []
