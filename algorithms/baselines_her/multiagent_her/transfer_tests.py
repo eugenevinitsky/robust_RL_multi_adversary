@@ -44,7 +44,7 @@ def run_rollout(env, model):
 def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show, exp_type):
     # with open('{}/{}_{}.png'.format(output_path, file_name, "transfer_heatmap"),'wb') as heatmap:
     fig = plt.figure()
-    plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=0, vmax=1)
+    plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=0, vmax=0.5)
     plt.title(file_name)
     plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x) for x in mass_sweep])
     plt.ylabel("Mass coef")
@@ -61,6 +61,13 @@ def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show
 def run_transfer_tests(output_path, env, env_id, model, num_rollouts):
     global_results_list = []
     if env_id == 'MAFetchSlideEnv':
+        results_list = []
+        for j in range(num_rollouts):
+            results_list.append(run_rollout(env, model))
+        with open(os.path.join(output_path, 'slide_base'), 'wb') as file:
+            np.savetxt(file, results_list)
+        print('average success rate for base is {}'.format(np.mean(results_list)))
+
         for i, mass in enumerate(slide_mass_sweep):
             for j, fric in enumerate(slide_friction_sweep):
                 results_list = []

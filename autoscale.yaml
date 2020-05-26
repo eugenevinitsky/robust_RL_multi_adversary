@@ -127,8 +127,9 @@ setup_commands:
     # - sudo dpkg --configure -a
     - git clone https://github.com/openai/baselines.git
     - cd baselines && pip install -e .
-    - sudo apt install libopenmpi-dev
-    - pip install mpi4py
+# TODO enable this
+#    - sudo apt install libopenmpi-dev
+#    - pip install mpi4py
 
 # Custom commands that will be run on the head node after common setup.
 head_setup_commands:

@@ -18,6 +18,9 @@ DEFAULT_ENV_PARAMS = {
     'MAFetchPushEnv': {
         'buffer_size': int(1E4)
     },
+    'MAFetchSlideEnv': {
+        'buffer_size': int(1E4)
+    },
 }
 
 
@@ -205,8 +208,9 @@ def configure_ddpg(dims, params, reuse=False, use_mpi=True, clip_return=True, na
     return policy
 
 
-def configure_dims(params):
-    env = cached_make_env(params['make_env'])
+def configure_dims(params, env=None):
+    if not env is None:
+        env = cached_make_env(params['make_env'])
     env.reset()
     if hasattr(env, 'adv_observation_space') and env.adversary_range > 0:
         obs, _, _, info = env.step({'agent': env.action_space.sample(),
