@@ -209,7 +209,7 @@ def configure_ddpg(dims, params, reuse=False, use_mpi=True, clip_return=True, na
 
 
 def configure_dims(params, env=None):
-    if not env is None:
+    if env is None:
         env = cached_make_env(params['make_env'])
     env.reset()
     if hasattr(env, 'adv_observation_space') and env.adversary_range > 0:
