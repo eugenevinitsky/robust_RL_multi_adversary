@@ -59,6 +59,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
         self.no_end_if_fall = config['no_end_if_fall']
         self.adv_all_actions = config['adv_all_actions']
         self.clip_actions = config['clip_actions']
+        self.rng_generate = config['rng_generate']
 
         # here we note that num_adversaries includes the num adv per strength so if we don't divide by this
         # then we are double counting
@@ -155,7 +156,7 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
 
     @property
     def adv_observation_space(self):
-        shape = self.action_space.low.shape[0] + self.original_obs_space.low.shape[0]
+        shape = self.action_space.low.shape[0] + self.original_obs_space.low.shape[0] + self.rng_generate
         space = Box(low=-np.inf, high=np.inf, shape=(shape,))
         if self.kl_reward or (self.l2_reward and not self.l2_memory):
             dict_space = Dict({'obs': space,
@@ -287,9 +288,14 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                                                   "is_active": np.array([is_active[i]])}
                         for i in range(self.adversary_range)})
                 else:
-                    obs_dict.update({
-                        'adversary{}'.format(self.curr_adversary): np.concatenate((ob, obs_hopper_action))
-                    })
+                    if self.rng_generate:
+                        obs_dict.update({
+                            'adversary{}'.format(self.curr_adversary): np.concatenate((ob, obs_hopper_action, [self.rng_generate]))
+                        })
+                    else:
+                        obs_dict.update({
+                            'adversary{}'.format(self.curr_adversary): np.concatenate((ob, obs_hopper_action))
+                        })
 
                 if self.simple_adv_reward:
                     adv_reward = [(self.reward_targets[i] / self.horizon) -
@@ -379,6 +385,8 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
     def reset(self):
         self.adv_actions = np.zeros(self.adv_action_space.low.shape[0])
         self.step_num = 0
+        if self.rng_generate:
+            self.rand_number = np.random.randint(low=0, high=5)
         self.observed_states = np.zeros(self.obs_size * self.num_concat_states)
         self.total_reward = 0
         obs = super().reset()
@@ -396,9 +404,14 @@ class AdvMAHopper(HopperEnv, MultiAgentEnv):
                     'adversary{}'.format(i): {"obs": self.observed_states, "is_active": np.array([is_active[i]])}
                     for i in range(self.adversary_range)})
             else:
-                curr_obs.update({
-                    'adversary{}'.format(self.curr_adversary): np.concatenate((obs, [0.0] * 3))
-                })
+                if self.rng_generate:
+                    curr_obs.update({
+                        'adversary{}'.format(self.curr_adversary): np.concatenate((obs, [0.0] * 3, [self.rand_number]))
+                    })
+                else:
+                    curr_obs.update({
+                        'adversary{}'.format(self.curr_adversary): np.concatenate((obs, [0.0] * 3))
+                    })
 
             # track how many times each adversary was used
             if self.l2_memory:

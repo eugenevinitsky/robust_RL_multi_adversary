@@ -48,7 +48,7 @@ def main(args):
     env_id = "MAFetchSlideEnv"
     env = make_env(env_id, "", config=passed_config,
                    flatten_dict_observations=False)
-    env.env.env.should_render = True
+    # env.env.env.should_render = True
     env.adversary_range = 0
     env_name = "MAFetchSlideEnv-v1"
     params['env_name'] = env_name

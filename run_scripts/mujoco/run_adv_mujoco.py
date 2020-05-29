@@ -200,6 +200,8 @@ def get_parser(parser):
                         help='PPO lambda value')
     parser.add_argument('--lr', type=float, default=5e-4,
                         help='PPO lambda value')
+    parser.add_argument('--rng_generate', action='store_true', default=False,
+                        help='If true, the adversary is conditioned on a random number at the start of each rollout')
 
     # parameters for the curriculum
     parser.add_argument('--push_curriculum', action='store_true', default=False,
@@ -249,6 +251,7 @@ def get_env_config(args, config):
     config['env_config']['adversarial_domain_randomization'] = args.adversarial_domain_randomization
     config['env_config']['mixed_nash_adversary'] = args.mixed_nash_adversary
     config['env_config']['num_adv_strategies'] = args.num_adv_strategies
+    config['env_config']['rng_generate'] = args.rng_generate
 
     config['env_config']['entropy_coeff'] = args.entropy_coeff
     config['env_config']['clip_actions'] = args.clip_actions
