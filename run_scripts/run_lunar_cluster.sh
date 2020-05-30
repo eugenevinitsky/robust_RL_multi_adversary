@@ -52,9 +52,44 @@
 #############################################################################################
 ####################              5/18
 #############################################################################################
+#ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/lunar_lander/run_lunar_lander.py \
+#--num_iters 1000 --train_batch_size 10000 --timesteps_total 1000000 --checkpoint_freq 100 --num_concat_states 1 \
+#--num_adv_strengths 1 --advs_per_strength 1 --advs_per_rew 1 --num_adv_rews 1 --grid_search --use_s3 \
+#--exp_title lunar_RARL_1adv_concat1_grid_r6 --num_cpus 9 --run_transfer_tests --multi_node \
+#--adv_strength 0.25 --adv_all_actions --algorithm PPO" \
+#--start --stop --tmux --cluster-name=ev_lun_test6
+
+#############################################################################################
+####################              5/30. GRID SEARCH.
+#############################################################################################
+
+# DR Baseline
 ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/lunar_lander/run_lunar_lander.py \
---num_iters 1000 --train_batch_size 10000 --timesteps_total 1000000 --checkpoint_freq 100 --num_concat_states 1 \
+--num_iters 1000 --checkpoint_freq 100 --timesteps_total 1000000 --num_concat_states 1 \
+--num_adv_strengths 0 --advs_per_strength 0 --advs_per_rew 9 --num_adv_rews 0 --grid_search --use_s3 \
+--exp_title lunar_dr_concat1_grid_r6 --num_cpus 2 --run_transfer_tests --multi_node --domain_randomization --algorithm PPO" \
+--start --stop --tmux --cluster-name=ev_lun_test1
+
+# 1 ADV RARL lunar lander w/o memory
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/lunar_lander/run_lunar_lander.py \
+--num_iters 1000 --train_batch_size 10000 --checkpoint_freq 100 --num_concat_states 1 \
 --num_adv_strengths 1 --advs_per_strength 1 --advs_per_rew 1 --num_adv_rews 1 --grid_search --use_s3 \
---exp_title lunar_RARL_1adv_concat1_grid_r6 --num_cpus 9 --run_transfer_tests --multi_node \
---adv_strength 0.25 --adv_all_actions --algorithm PPO" \
---start --stop --tmux --cluster-name=ev_lun_test6
+--exp_title lunar_RARL_1adv_concat1_grid --num_cpus 2 --run_transfer_tests --multi_node \
+--adv_all_actions --algorithm PPO" \
+--start --stop --tmux --cluster-name=ev_lun_test2
+
+# 3 ADV RARL lunar lander w/o memory
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/lunar_lander/run_lunar_lander.py \
+--num_iters 1000 --train_batch_size 10000 --checkpoint_freq 100 --num_concat_states 1 \
+--num_adv_strengths 1 --advs_per_strength 3 --advs_per_rew 3 --num_adv_rews 1 --grid_search --use_s3 \
+--exp_title lunar_RARL_3adv_concat1_grid --num_cpus 2 --run_transfer_tests --multi_node \
+--adv_all_actions --algorithm PPO" \
+--start --stop --tmux --cluster-name=ev_lun_test3
+
+# 5 ADV RARL lunar lander w/o memory
+ray exec ../autoscale.yaml "python /home/ubuntu/adversarial_sim2real/run_scripts/lunar_lander/run_lunar_lander.py \
+--num_iters 1000 --train_batch_size 10000 --checkpoint_freq 100 --num_concat_states 1 \
+--num_adv_strengths 1 --advs_per_strength 5 --advs_per_rew 5 --num_adv_rews 1 --grid_search --use_s3 \
+--exp_title lunar_RARL_5adv_concat1_grid --num_cpus 2 --run_transfer_tests --multi_node \
+--adv_all_actions --algorithm PPO" \
+--start --stop --tmux --cluster-name=ev_lun_test4
