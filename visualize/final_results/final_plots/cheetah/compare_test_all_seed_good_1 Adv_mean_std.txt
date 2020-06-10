@@ -1,0 +1,8 @@
+name mean stdfriction_hard_torsoheadfthighmax 4659.654896314356 2787.5292126851623
+friction_hard_floorheadfshinmax 4599.614466047588 2468.668968011969
+friction_hard_bthighbshinbfootmax 5679.114382159139 1862.2543697968804
+friction_hard_floortorsoheadmax 4535.52964857438 2340.0226819409577
+friction_hard_floorbshinffootmax 5208.8901067528295 1827.9455902962
+friction_hard_bthighbfootffootmax 5332.384964084857 1749.4420708222492
+friction_hard_bthighfthighfshinmax 5651.010897137654 1808.4083383008249
+friction_hard_headfshinffootmax 4588.798553326576 2214.8356012500312
