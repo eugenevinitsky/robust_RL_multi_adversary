@@ -9,7 +9,7 @@ import numpy as np
 from visualize.linear_env.test_eigenvals import plot_eigenvals
 from visualize.plot_heatmap import make_heatmap
 from visualize.plot_heatmap import load_data, load_data_by_name
-from visualize.mujoco.transfer_tests import cheetah_grid, cheetah_mass_sweep, ant_run_list, hopper_run_list
+from visualize.mujoco.transfer_tests import cheetah_grid, cheetah_mass_sweep, ant_run_list, hopper_run_list, hopper_friction_sweep, hopper_mass_sweep, ant_mass_sweep, ant_friction_sweep
 
 
 def generate_bar_plots(file_list, title, file_name, x_title=None, y_title=None, open_cmd=lambda x: np.load(x),
@@ -95,11 +95,12 @@ def plot_across_seeds(outer_folder_list, test_names, file_names, legend_names, n
         colors = cm.rainbow(np.linspace(0.1, 0.5, len(outer_folder_list)))
     else:
         colors = cm.rainbow(np.linspace(0.6, 1.0, len(outer_folder_list)))
-
+    if not validation_set:
+        use_std = False
     for i, folder in enumerate(outer_folder_list):
         for (dirpath, dirnames, filenames) in os.walk(folder):
             for file in filenames:
-                found_idx = [test_name in file and '.png' not in file for test_name in test_names]
+                found_idx = ['_' + test_name + '_' in file and '.png' not in file for test_name in test_names]
                 if np.sum(found_idx) > 0:
                     idx = np.where(np.array(found_idx) > 0)
                     test_idx = idx[0][0]
@@ -107,8 +108,8 @@ def plot_across_seeds(outer_folder_list, test_names, file_names, legend_names, n
                     std_deviations[i][test_idx].append(np.mean(open_cmd(os.path.join(dirpath, file))))
 
     if avg_across_tests:
+        std_deviations = np.sqrt(np.var(test_results, axis=0)/(num_seeds * len(test_names)))
         test_results = np.mean(test_results, axis=0) / num_seeds
-        std_deviations = np.sqrt(np.var(test_results, axis=0) /num_seeds)
 
         plt.figure()
         if use_std:
@@ -129,7 +130,13 @@ def plot_across_seeds(outer_folder_list, test_names, file_names, legend_names, n
         plt.title(titles[-1], pad=10, fontsize=title_fontsize)
         plt.tight_layout()
 
-        plt.savefig(file_names)
+        plt.savefig(file_names, bbox_inches='tight')
+
+        # Now write the means and standard deviations to a file for easy readout
+        for i in range(len(outer_folder_list)):
+            with open(file_names + '_' + legend_names[i] + '_' + 'mean_std.txt', 'w') as file:
+                file.write('name mean std')
+                file.write(str(test_results[i]) + ' ' + str(std_deviations[i]) + '\n')
 
     else:
         for i, test in enumerate(test_names):
@@ -169,7 +176,7 @@ def plot_across_seeds(outer_folder_list, test_names, file_names, legend_names, n
         plt.title(titles[-1], pad=10, fontsize=title_fontsize)
         plt.tight_layout()
 
-        plt.savefig(file_names[-1])
+        plt.savefig(file_names[-1], bbox_inches='tight')
 
         # Now write the means and standard deviations to a file for easy readout
         for i in range(len(outer_folder_list)):
@@ -178,11 +185,51 @@ def plot_across_seeds(outer_folder_list, test_names, file_names, legend_names, n
                 for j, test_name in enumerate(test_names):
                     file.write(test_name + ' ' + str(np.mean(std_deviations[i][j])) + ' ' + str(np.std(std_deviations[i][j])) + '\n')
 
+def plot_across_seeds_heatmap(exp_type, mass_sweep, friction_sweep, outer_folder_list, test_names, file_name, num_seeds,
+                      titles=[], open_cmd=lambda x: np.loadtxt(x), fontsize=22, title_fontsize=16):
+
+    test_results = np.zeros((len(test_names), len(outer_folder_list)))
+    for i, folder in enumerate(outer_folder_list):
+        for (dirpath, dirnames, filenames) in os.walk(folder):
+            for file in filenames:
+                found_idx = ['_' + test_name + '_' in file and '.png' not in file for test_name in test_names]
+                if np.sum(found_idx) > 0:
+                    idx = np.where(np.array(found_idx) > 0)
+                    test_idx = idx[0][0]
+                    test_results[test_idx, i] += np.mean(open_cmd(os.path.join(dirpath, file)))
+    for i in range(len(outer_folder_list)):
+        means = test_results[:,i].reshape(len(mass_sweep), len(friction_sweep)) / num_seeds
+        fig = plt.figure()
+        if exp_type == 'hopper':
+            plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+            plt.title(titles[i], fontsize=title_fontsize)
+            plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x) for x in mass_sweep], fontsize=10)
+            plt.ylabel("Mass coef", fontsize=fontsize)
+            plt.xticks(ticks=np.arange(len(friction_sweep))[0::2], labels=["{:0.2f}".format(x) for x in friction_sweep][0::2], fontsize=10)
+            plt.xlabel("Friction coef", fontsize=fontsize)
+        elif exp_type == 'cheetah':
+            plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=2000, vmax=7000)
+            plt.title(titles[i], fontsize=title_fontsize)
+            plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x) for x in mass_sweep], fontsize=10)
+            plt.ylabel("Mass coef", fontsize=fontsize)
+            plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep], fontsize=10)
+            plt.xlabel("Friction coef", fontsize=fontsize)
+        elif exp_type == 'ant':
+            plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=2000, vmax=7000)
+            plt.title(titles[i], fontsize=title_fontsize)
+            plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x) for x in mass_sweep], fontsize=10)
+            plt.ylabel("Mass coef", fontsize=fontsize)
+            plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep], fontsize=10)
+            plt.xlabel("Friction coef", fontsize=fontsize)
+        plt.colorbar()
+        plt.tight_layout()
+        plt.savefig(file_name[i], bbox_inches='tight')
+
 
 if __name__ == '__main__':
     ### CONSTANTS
-    fontsize = 14
-    title_fontsize = 18
+    fontsize = 22
+    title_fontsize = 24
     ###################################################################################################################
     ######################################### CHEETAH #########################################################
     ###################################################################################################################
@@ -208,29 +255,36 @@ if __name__ == '__main__':
     for mass, fric in np.vstack((cheetah_grid_bad[0].ravel(), cheetah_grid_bad[1].ravel())).T:
         transfer_test_names_bad.append('m_{}_f_{}'.format(mass, fric))
 
-
     output_files = 'final_plots/cheetah/hc_compare_valid_all_seeds_good.png'
     file_names_good = [data_dir + 'hc_0adv_concat1_seed_good/',
                   data_dir + 'hc_0adv_concat1_seed_dr_good/',
                   data_dir + 'hc_1adv_concat1_seed_str0p1_good/',
+                  data_dir + 'hc_3adv_concat1_seed_str0p1_norew_good/',
                   data_dir + 'hc_5adv_concat1_seed_str0p1_norew_good/']
-    legend_names = ['Baseline', 'DR Oracle', '1 Adv', '5 Adv']
-    titles = ['Cheetah, Validation Set Reward -- Good']
+    legend_names = ['0 Adv', 'DR', '1 Adv', '3 Adv', '5 Adv']
+    titles = ['Cheetah, Valid. Set Reward - Good Param.']
 
     plot_across_seeds(file_names_good, transfer_test_names_good, output_files, legend_names, num_seeds=10, yaxis=[0, 7000], titles=titles,
                       fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, validation_set=True, use_std=True)
+    output_files = ['final_plots/cheetah/hc_heat0adv_good.png', 'final_plots/cheetah/hc_heatdr_good.png', 'final_plots/cheetah/hc_heat1adv_good.png', 'final_plots/cheetah/hc_heat3adv_good.png', 'final_plots/cheetah/hc_heat5adv_good.png']
+    plot_across_seeds_heatmap(exp_type='cheetah', mass_sweep=cheetah_mass_sweep, friction_sweep=cheetah_friction_sweep_good,  outer_folder_list=file_names_good, test_names=transfer_test_names_good, file_name=output_files,
+                       titles=legend_names, num_seeds=10, title_fontsize=title_fontsize)
+
 
     output_files = 'final_plots/cheetah/hc_compare_valid_all_seeds_bad.png'
     file_names_bad = [data_dir + 'hc_0adv_concat1_seed_bad/',
                   data_dir + 'hc_0adv_concat1_seed_dr_bad/',
                   data_dir + 'hc_1adv_concat1_seed_str0p1_bad/',
+                  data_dir + 'hc_3adv_concat1_seed_str0p1_norew_bad/',
                   data_dir + 'hc_5adv_concat1_seed_str0p1_norew_bad/']
-    legend_names = ['Baseline', 'DR Oracle', '1 Adv', '5 Adv']
-    titles = ['Cheetah, Validation Set Reward -- Bad']
+    legend_names = ['0 Adv', 'DR', '1 Adv', '3 Adv', '5 Adv']
+    titles = ['Cheetah, Valid. Set Reward - Bad Param.']
 
     plot_across_seeds(file_names_bad, transfer_test_names_bad, output_files, legend_names, num_seeds=10, yaxis=[0, 7000], titles=titles,
                       fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, validation_set=True, use_std=True)
-
+    output_files = ['final_plots/cheetah/hc_heat0adv_bad.png', 'final_plots/cheetah/hc_heatdr_bad.png', 'final_plots/cheetah/hc_heat1adv_bad.png', 'final_plots/cheetah/hc_heat3adv_bad.png', 'final_plots/cheetah/hc_heat5adv_bad.png']
+    plot_across_seeds_heatmap(exp_type='cheetah', mass_sweep=cheetah_mass_sweep, friction_sweep=cheetah_friction_sweep_bad,  outer_folder_list=file_names_bad, test_names=transfer_test_names_bad, file_name=output_files,
+                      titles=legend_names, num_seeds=10, title_fontsize=title_fontsize)
 
     # generate the test set maps for the best validation set result
     test_names = [
@@ -246,37 +300,37 @@ if __name__ == '__main__':
 
     #good
     output_files = 'final_plots/cheetah/hc_avg_test_all_seed_good.png'
-    titles = ['Cheetah, Test Set Reward -- Good']
+    titles = ['Cheetah, Test Set Reward - Good Param.']
     plot_across_seeds(file_names_good, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 7000],
                       titles=titles,
                       fontsize=fontsize, title_fontsize=title_fontsize,avg_across_tests=True, use_std=True)
 
-    # output_files = ['final_plots/cheetah/hc_seed_good_' + name for name in test_names]
-    # output_files.append('final_plots/cheetah/compare_test_all_seed_good')
-    # titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
-    #
-    # plot_across_seeds(file_names_good, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000], titles=titles,
-    #                   fontsize=fontsize, title_fontsize=title_fontsize)
-    # output_files[-1] = 'final_plots/cheetah/compare_test_all_seed_std_good'
-    # plot_across_seeds(file_names_good, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000], titles=titles,
-    #                   fontsize=fontsize, title_fontsize=title_fontsize,use_std=True)
+    output_files = ['final_plots/cheetah/hc_seed_good_' + name for name in test_names]
+    output_files.append('final_plots/cheetah/compare_test_all_seed_good')
+    titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
+
+    plot_across_seeds(file_names_good, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000], titles=titles,
+                      fontsize=fontsize, title_fontsize=title_fontsize)
+    output_files[-1] = 'final_plots/cheetah/compare_test_all_seed_std_good'
+    plot_across_seeds(file_names_good, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000], titles=titles,
+                      fontsize=fontsize, title_fontsize=title_fontsize,use_std=True)
 
     #bad
     output_files = 'final_plots/cheetah/hc_avg_test_all_seed_bad.png'
-    titles = ['Cheetah, Test Set Reward -- Bad ']
+    titles = ['Cheetah, Test Set Reward - Bad Param.']
     plot_across_seeds(file_names_bad, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 7000],
                       titles=titles,
                       fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, use_std=True)
 
-    # output_files = ['final_plots/cheetah/hc_seed_bad_' + name for name in test_names]
-    # output_files.append('final_plots/cheetah/compare_test_all_seed_bad')
-    # titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
-    #
-    # plot_across_seeds(file_names_bad, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000], titles=titles,
-    #                   fontsize=fontsize, title_fontsize=title_fontsize)
-    # output_files[-1] = 'final_plots/cheetah/compare_test_all_seed_std_bad'
-    # plot_across_seeds(file_names_bad, test_names, output_files, legend_names, num_seeds=10,yaxis=[0, 8000], titles=titles,
-    #                   fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
+    output_files = ['final_plots/cheetah/hc_seed_bad_' + name for name in test_names]
+    output_files.append('final_plots/cheetah/compare_test_all_seed_bad')
+    titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
+
+    plot_across_seeds(file_names_bad, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000], titles=titles,
+                      fontsize=fontsize, title_fontsize=title_fontsize)
+    output_files[-1] = 'final_plots/cheetah/compare_test_all_seed_std_bad'
+    plot_across_seeds(file_names_bad, test_names, output_files, legend_names, num_seeds=10,yaxis=[0, 8000], titles=titles,
+                      fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
 
     ###################################################################################################################
     ######################################### ANT #########################################################
@@ -290,21 +344,28 @@ if __name__ == '__main__':
     # generate the bar charts comparing 0 adv, dr, and 5 adv for hopper
     # generate validation set bar charts
     transfer_test_names = []
-    for test in ant_run_list:
-        transfer_test_names.append(test[0])
+
+    ant_grid = np.meshgrid(ant_mass_sweep, ant_friction_sweep)
+    for mass, fric in np.vstack((ant_grid[0].ravel(), ant_grid[1].ravel())).T:
+        transfer_test_names.append('m_{}_f_{}'.format(mass, fric))
 
 
     output_files = 'final_plots/ant/ant_compare_valid_all_seeds.png'
     file_names = [data_dir + 'ant_0adv_concat1_seed/',
                        data_dir + 'ant_0adv_concat1_seed_dr/',
                        data_dir + 'ant_1adv_concat1_seed_str0p15/',
+                       data_dir + 'ant_3adv_concat1_seed_str0p15_norew/',
                        data_dir + 'ant_5adv_concat1_seed_str0p15_norew/']
-    legend_names = ['Baseline', 'DR Oracle', '1 Adv', '5 Adv']
+    legend_names = ['0 Adv', 'DR', '1 Adv', '3 Adv', '5 Adv']
     titles = ['Ant, Validation Set Reward']
 
     plot_across_seeds(file_names, transfer_test_names, output_files, legend_names, num_seeds=10,
                       yaxis=[0, 7000], titles=titles,
                       fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, validation_set=True, use_std=True)
+    output_files = ['final_plots/ant/ant_heat0adv.png', 'final_plots/ant/ant_heatdr.png', 'final_plots/ant/ant_heat1adv.png', 'final_plots/ant/ant_heat3adv.png', 'final_plots/ant/ant_heat5adv.png']
+
+    plot_across_seeds_heatmap(exp_type='ant', mass_sweep=ant_mass_sweep, friction_sweep=ant_friction_sweep,  outer_folder_list=file_names, test_names=transfer_test_names, file_name=output_files,
+                      titles=legend_names, num_seeds=10, title_fontsize=title_fontsize)
 
     # generate the test set maps for the best validation set result
     test_names = [
@@ -324,17 +385,17 @@ if __name__ == '__main__':
                       titles=titles,
                       fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, use_std=True)
 
-    # output_files = ['final_plots/ant/ant_seed_' + name for name in test_names]
-    # output_files.append('final_plots/ant/compare_test_all_seed')
-    # titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
-    #
-    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000],
-    #                   titles=titles,
-    #                   fontsize=fontsize, title_fontsize=title_fontsize)
-    # output_files[-1] = 'final_plots/ant/compare_test_all_seed_std'
-    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000],
-    #                   titles=titles,
-    #                   fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
+    output_files = ['final_plots/ant/ant_seed_' + name for name in test_names]
+    output_files.append('final_plots/ant/compare_test_all_seed')
+    titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
+
+    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000],
+                      titles=titles,
+                      fontsize=fontsize, title_fontsize=title_fontsize)
+    output_files[-1] = 'final_plots/ant/compare_test_all_seed_std'
+    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000],
+                      titles=titles,
+                      fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
 
     ###################################################################################################################
     ######################################### HOPPER #########################################################
@@ -348,9 +409,10 @@ if __name__ == '__main__':
     # generate the bar charts comparing 0 adv, dr, and 5 adv for hopper
     # generate validation set bar charts
     transfer_test_names = []
-    for test in hopper_run_list:
-        transfer_test_names.append(test[0])
 
+    hop_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
+    for mass, fric in np.vstack((hop_grid[0].ravel(), hop_grid[1].ravel())).T:
+        transfer_test_names.append('m_{}_f_{}'.format(mass, fric))
 
     output_files = 'final_plots/hopper/hop_compare_valid_all_seeds.png'
     file_names = [data_dir + 'hop_0adv_concat1_seed/',
@@ -358,7 +420,7 @@ if __name__ == '__main__':
                        data_dir + 'hop_1adv_concat1_seed_str0p25/',
                        data_dir + 'hop_3adv_concat1_seed_str0p25/',
                        data_dir + 'hop_5adv_concat1_seed_str0p25_norew/']
-    legend_names = ['Baseline', 'DR Oracle', '1 Adv', '3 Adv', '5 Adv']
+    legend_names = ['0 Adv', 'DR', '1 Adv', '3 Adv', '5 Adv']
     titles = ['Hopper, Validation Set Reward']
 
     plot_across_seeds(file_names, transfer_test_names, output_files, legend_names, num_seeds=10,
@@ -382,18 +444,21 @@ if __name__ == '__main__':
     plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
                       titles=titles,
                       fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, use_std=True)
+    output_files = ['final_plots/hopper/hop_heat0adv.png', 'final_plots/hopper/hop_heatdr.png', 'final_plots/hopper/hop_heat1adv.png', 'final_plots/hopper/hop_heat3adv.png', 'final_plots/hopper/hop_heat5adv.png']
+    plot_across_seeds_heatmap(exp_type='hopper', mass_sweep=hopper_mass_sweep, friction_sweep=hopper_friction_sweep,  outer_folder_list=file_names, test_names=transfer_test_names, file_name=output_files,
+                      titles=legend_names, num_seeds=10, title_fontsize=title_fontsize)
 
-    # output_files = ['final_plots/hopper/hop_seed_' + name for name in test_names]
-    # output_files.append('final_plots/hopper/compare_test_all_seed')
-    # titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
-    #
-    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
-    #                   titles=titles,
-    #                   fontsize=fontsize, title_fontsize=title_fontsize)
-    # output_files[-1] = 'final_plots/hopper/compare_test_all_seed_std'
-    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
-    #                   titles=titles,
-    #                   fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
+    output_files = ['final_plots/hopper/hop_seed_' + name for name in test_names]
+    output_files.append('final_plots/hopper/compare_test_all_seed')
+    titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
+
+    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
+                      titles=titles,
+                      fontsize=fontsize, title_fontsize=title_fontsize)
+    output_files[-1] = 'final_plots/hopper/compare_test_all_seed_std'
+    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
+                      titles=titles,
+                      fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
 
     ###################################################################################################################
     ######################################### HOPPER NUMADV #########################################################
@@ -445,14 +510,14 @@ if __name__ == '__main__':
                       titles=titles,
                       fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, use_std=True)
 
-    # output_files = ['final_plots/hopper/hop_test_seed_numadv_' + name for name in test_names]
-    # output_files.append('final_plots/hopper/compare_test_all_seed_numadv')
-    # titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
-    #
-    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
-    #                   titles=titles,
-    #                   fontsize=fontsize, title_fontsize=title_fontsize)
-    # output_files[-1] = 'final_plots/hopper/compare_test_all_seed_std_numadv'
-    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
-    #                   titles=titles,
-    #                   fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
+    output_files = ['final_plots/hopper/hop_test_seed_numadv_' + name for name in test_names]
+    output_files.append('final_plots/hopper/compare_test_all_seed_numadv')
+    titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
+
+    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
+                      titles=titles,
+                      fontsize=fontsize, title_fontsize=title_fontsize)
+    output_files[-1] = 'final_plots/hopper/compare_test_all_seed_std_numadv'
+    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
+                      titles=titles,
+                      fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
