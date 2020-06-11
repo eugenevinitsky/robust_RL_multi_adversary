@@ -6,7 +6,6 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 
-from visualize.linear_env.test_eigenvals import plot_eigenvals
 from visualize.plot_heatmap import make_heatmap
 from visualize.plot_heatmap import load_data, load_data_by_name
 from visualize.mujoco.transfer_tests import cheetah_grid, cheetah_mass_sweep, ant_run_list, hopper_run_list, hopper_friction_sweep, hopper_mass_sweep, ant_mass_sweep, ant_friction_sweep
@@ -131,6 +130,7 @@ def plot_across_seeds(outer_folder_list, test_names, file_names, legend_names, n
         plt.tight_layout()
 
         plt.savefig(file_names, bbox_inches='tight')
+        plt.close()
 
         # Now write the means and standard deviations to a file for easy readout
         for i in range(len(outer_folder_list)):
@@ -142,7 +142,6 @@ def plot_across_seeds(outer_folder_list, test_names, file_names, legend_names, n
         for i, test in enumerate(test_names):
             plt.figure()
             if use_std:
-                # TODO(@evinitsky) add error bars
                 ax = plt.bar(np.arange(len(outer_folder_list)), test_results[i, :] / num_seeds, color=colors, capsize=3, alpha=0.7)
             else:
                 ax = plt.bar(np.arange(len(outer_folder_list)), test_results[i, :] / num_seeds, color=colors, capsize=3, alpha=0.7)
@@ -177,6 +176,7 @@ def plot_across_seeds(outer_folder_list, test_names, file_names, legend_names, n
         plt.tight_layout()
 
         plt.savefig(file_names[-1], bbox_inches='tight')
+        plt.close()
 
         # Now write the means and standard deviations to a file for easy readout
         for i in range(len(outer_folder_list)):
@@ -184,6 +184,7 @@ def plot_across_seeds(outer_folder_list, test_names, file_names, legend_names, n
                 file.write('name mean std')
                 for j, test_name in enumerate(test_names):
                     file.write(test_name + ' ' + str(np.mean(std_deviations[i][j])) + ' ' + str(np.std(std_deviations[i][j])) + '\n')
+
 
 def plot_across_seeds_heatmap(exp_type, mass_sweep, friction_sweep, outer_folder_list, test_names, file_name, num_seeds,
                       titles=[], open_cmd=lambda x: np.loadtxt(x), fontsize=22, title_fontsize=16):
@@ -224,6 +225,7 @@ def plot_across_seeds_heatmap(exp_type, mass_sweep, friction_sweep, outer_folder
         plt.colorbar()
         plt.tight_layout()
         plt.savefig(file_name[i], bbox_inches='tight')
+        plt.close()
 
 
 if __name__ == '__main__':
@@ -521,3 +523,42 @@ if __name__ == '__main__':
     plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
                       titles=titles,
                       fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
+
+    ###################################################################################################################
+    ######################################### HOPPER POLICY CORRELATION MATRIX #########################################
+    ###################################################################################################################
+    adv_1_file = data_dir + 'policy_correlation_data/results_1adv.txt'
+
+    with open(adv_1_file, 'rb') as file:
+        adv_1_results = np.loadtxt(file)
+
+    plt.figure()
+    plt.tight_layout()
+    plt.imshow(adv_1_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+    plt.colorbar()
+    fontsize = 18
+    title_fontsize = 20
+    plt.yticks(ticks=np.arange(adv_1_results.shape[1]))
+    plt.xticks(ticks=np.arange(adv_1_results.shape[0]))
+    plt.ylabel('agent seed index', fontsize=fontsize)
+    plt.xlabel('adversary seed index', fontsize=fontsize)
+    plt.title('1 Adversary', fontsize=title_fontsize)
+    plt.savefig('final_results/final_plots/hopper/adv_1_correlation.png', bbox_inches="tight")
+
+    adv_3_file = data_dir + 'policy_correlation_data/results_3adv.txt'
+
+    with open(adv_3_file, 'rb') as file:
+        adv_3_results = np.loadtxt(file)
+
+    plt.figure()
+    plt.imshow(adv_3_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+    plt.tight_layout()
+    plt.colorbar()
+    fontsize = 18
+    title_fontsize = 20
+    plt.yticks(ticks=np.arange(adv_3_results.shape[1]))
+    plt.xticks(ticks=np.arange(adv_3_results.shape[0]))
+    plt.ylabel('agent seed index', fontsize=fontsize)
+    plt.xlabel('adversary seed index', fontsize=fontsize)
+    plt.title('3 Adversaries', fontsize=title_fontsize)
+    plt.savefig('final_results/final_plots/hopper/adv_3_correlation.png', bbox_inches="tight")

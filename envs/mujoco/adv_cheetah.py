@@ -91,7 +91,6 @@ class AdvMAHalfCheetahEnv(HalfCheetahEnv, MultiAgentEnv):
             self.comp_adversaries.append([low_range, high_range])
 
         # used to track the previously observed states to induce a memory
-        # TODO(@evinitsky) bad hardcoding
         self.obs_size = 17
         if self.cheating:
             self.obs_size += 2

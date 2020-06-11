@@ -16,7 +16,6 @@ prefix_list = ['base', 'friction', 'gaussian_action_noise', 'gaussian_state_nois
 rew_results = [[] for _ in range(len(prefix_list))]
 
 # Now lets walk through the folder
-# TODO(@evinitsky) remove all these loops
 for (dirpath, dirnames, filenames) in os.walk(args.results_path):
     for file in filenames:
         for i, prefix in enumerate(prefix_list):
@@ -31,7 +30,6 @@ output_path = args.results_path.split('/')[-1]
 if not os.path.exists('transfer_results/pendulum/{}'.format(output_path)):
     os.makedirs('transfer_results/pendulum/{}'.format(output_path))
 
-# TODO(@evinitsky) go through the results and pull out the one with the highest mean for a given experiment
 unique_rew_results = []
 for result in rew_results:
     temp_results = []

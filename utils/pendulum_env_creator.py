@@ -1,5 +1,4 @@
 import gym
-from envs.linear_env import LinearEnv
 from envs.mujoco.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from gym.envs.mujoco.inverted_pendulum import InvertedPendulumEnv
 

@@ -15,7 +15,6 @@ from visualize.mujoco.run_rollout import instantiate_rollout, DefaultMapping
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config_from_path
 
-# TODO(@evinitsky) make this work for the case where you have multiple adversaries
 def visualize_adversaries(config_out_dir, checkpoint_num, grid_size, num_rollouts, outdir, plot_base_case,
                           extension):
 

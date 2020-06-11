@@ -19,9 +19,6 @@ from envs.mujoco.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.mujoco.adv_cheetah import AdvMAHalfCheetahEnv
 from envs.mujoco.adv_ant import AdvMAAnt
 
-from envs.linear_env import LinearEnv
-from envs.multiarm_bandit import MultiarmBandit
-
 from utils.pendulum_env_creator import make_create_env
 
 from models.conv_lstm import ConvLSTM
@@ -62,12 +59,6 @@ def instantiate_rollout(rllib_config, checkpoint):
     elif rllib_config['env'] == "MAAntEnv":
         env_name = "MAAntEnv"
         create_env_fn = make_create_env(AdvMAAnt)
-    elif rllib_config['env'] == "LinearEnv":
-        env_name = "LinearEnv"
-        create_env_fn = make_create_env(LinearEnv)
-    elif rllib_config['env'] == "MultiarmBandit":
-        env_name = "MultiarmBandit"
-        create_env_fn = make_create_env(MultiarmBandit)
 
     register_env(env_name, create_env_fn)
 

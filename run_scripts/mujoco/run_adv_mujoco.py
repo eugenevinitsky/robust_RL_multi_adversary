@@ -476,7 +476,6 @@ if __name__ == "__main__":
                 config, checkpoint_path = get_config_from_path(folder, dirpath.split('_')[-1])
 
                 test_list = []
-                # TODO(@ev) gross find somewhere else to put this
                 if config['env'] == "MAPendulumEnv":
                     from visualize.mujoco.transfer_tests import pendulum_run_list
                     run_list = pendulum_run_list

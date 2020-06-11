@@ -262,23 +262,7 @@ class AdvMAAnt(AntEnv, MultiAgentEnv):
                         'adversary{}'.format(self.curr_adversary): self.observed_states
                     })
 
-                if self.reward_range:
-                    # we make this a positive reward that peaks at the reward target so that the adversary
-                    # isn't trying to make the rollout end as fast as possible. It wants the rollout to continue.
-
-                    # we also rescale by horizon because this can BLOW UP
-
-                    # an explainer because this is confusing. We are trying to get the agent to a reward target.
-                    # we treat the reward as evenly distributed per timestep, so at each time we take the abs difference
-                    # between a linear function of step_num from 0 to the target and the current total reward.
-                    # we then subtract this value off from the linear function again. This creates a reward
-                    # that peaks at the target value. We then scale it by (1 / max(1, self.step_num)) because
-                    # if we are not actually able to hit the target, this reward can blow up.
-                    adv_reward = [((float(self.step_num) / self.horizon) * self.reward_targets[
-                        i] - 1 * np.abs((float(self.step_num) / self.horizon) * self.reward_targets[
-                        i] - self.total_reward)) * (1 / max(1, self.step_num)) for i in range(self.adversary_range)]
-                else:
-                    adv_reward = [-reward for _ in range(self.adversary_range)]
+                adv_reward = [-reward for _ in range(self.adversary_range)]
 
                 if self.l2_reward and self.adversary_range > 1:
                     # to do the kl or l2 reward exactly we have to get actions from all the agents

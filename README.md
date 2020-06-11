@@ -1,5 +1,5 @@
-# D-MALT: Diverse Multi-Adversarial Learning for Transfer
-We investigate the effect of sim2real via multiple types of parametrized adversaries
+# Robust Reinforcement Learning via adversary pools
+We investigate the effect of sim2real via the use of multiple minimax adversaries
 
 ## Setup instructions
 To install the code with anaconda run 
@@ -15,7 +15,3 @@ To simply rerun the plot generation on existing data just run:
 To recreate the results completely go to `run_scripts/recreate_results` and read 
 and run the files there. However, to do this you will either need an AWS account that is properly
 set up or to run each python command in there locally.
-
-## Unit tests
-To run unit tests cd to the outer directory and run `python -m pytest`. Please do this before
-merging any PR. This will be automated later.
