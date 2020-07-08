@@ -15,7 +15,7 @@ from visualize.mujoco.run_rollout import instantiate_rollout, DefaultMapping
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config_from_path
 
-def visualize_adversaries(config_out_dir, checkpoint_num, grid_size, num_rollouts, outdir, plot_base_case,
+def visualize_adversaries(config_out_dir, checkpoint_num, num_rollouts, outdir, plot_base_case,
                           extension):
 
     agent_list = []
@@ -177,7 +177,6 @@ def visualize_adversaries(config_out_dir, checkpoint_num, grid_size, num_rollout
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
     parser = replay_parser(parser)
-    parser.add_argument('--grid_size', type=int, default=50, help='How fine to make the adversary action grid')
     parser.add_argument('--output_dir', type=str, default='~/transfer_results',
                         help='Directory to output the files into')
     parser.add_argument('--plot_base_case', action='store_true', default=False,
@@ -191,7 +190,7 @@ def main():
 
     ray.init(num_cpus=args.num_cpus)
 
-    visualize_adversaries(args.result_dir, args.checkpoint_num, args.grid_size, args.num_rollouts, args.output_dir,
+    visualize_adversaries(args.result_dir, args.checkpoint_num, args.num_rollouts, args.output_dir,
                           args.plot_base_case, args.extension)
 
 if __name__ == '__main__':

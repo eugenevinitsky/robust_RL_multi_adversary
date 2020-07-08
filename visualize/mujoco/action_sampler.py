@@ -7,6 +7,7 @@ import logging
 import os
 
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import ray
 from ray.rllib.env.base_env import _DUMMY_AGENT_ID
@@ -72,11 +73,10 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
             obs, reward, done, info = env.step(new_dict)
             sample_idx += 1
 
-    file_path = os.path.dirname(os.path.abspath(__file__))
-    output_file_path = os.path.join(file_path, outdir)
-    if not os.path.exists(output_file_path):
+    outdir = os.path.expanduser(outdir)
+    if not os.path.exists(outdir):
         try:
-            os.makedirs(os.path.dirname(output_file_path))
+            os.makedirs(outdir)
         except OSError as exc:
             if exc.errno != errno.EEXIST:
                 raise
@@ -94,15 +94,48 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
             plt.savefig(output_str)
             plt.close(fig)
 
-
         fig = plt.figure()
         plt.hist2d(sampled_actions[:, 0], sampled_actions[:, 1])
-        output_str = '{}/{}'.format(outdir, adversary + 'action_2dhistogram.png')
+        output_str = '{}/{}'.format(outdir, adversary + 'action_2dhistogram_12.png')
         plt.xlabel('Action 1 magnitude')
         plt.ylabel('Action 2 magnitude')
         plt.title('Histograms of actions over {} sampled obs'.format(num_samples))
         plt.savefig(output_str)
         plt.close(fig)
+
+        fig = plt.figure()
+        plt.hist2d(sampled_actions[:, 0], sampled_actions[:, 2])
+        output_str = '{}/{}'.format(outdir, adversary + 'action_2dhistogram_13.png')
+        plt.xlabel('Action 1 magnitude')
+        plt.ylabel('Action 3 magnitude')
+        plt.title('Histograms of actions over {} sampled obs'.format(num_samples))
+        plt.savefig(output_str)
+        plt.close(fig)
+
+        fig = plt.figure()
+        plt.hist2d(sampled_actions[:, 1], sampled_actions[:, 2])
+        output_str = '{}/{}'.format(outdir, adversary + 'action_2dhistogram_23.png')
+        plt.xlabel('Action 2 magnitude')
+        plt.ylabel('Action 3 magnitude')
+        plt.title('Histograms of actions over {} sampled obs'.format(num_samples))
+        plt.savefig(output_str)
+        plt.close(fig)
+
+    # make a t-sne like plot
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    # finish later
+    colors = ['r', 'g', 'b']
+    i = 0
+    for adversary, adv_dict in adversary_grid_dict.items():
+        sampled_actions = adv_dict['sampled_actions']
+        ax.scatter(sampled_actions[:, 0], sampled_actions[:, 1], sampled_actions[:, 2], c=colors[i])
+        i += 1
+    output_str = '{}/{}'.format(outdir, 'test.png')
+    plt.xlabel('Action 1 magnitude')
+    plt.ylabel('Action 2 magnitude')
+    plt.title('Scatter plot of actions over {} sampled obs'.format(num_samples))
+    plt.savefig(output_str)
 
     for agent, agent_dict in agent_dict.items():
         sampled_actions = agent_dict['sampled_actions']
@@ -116,20 +149,11 @@ def sample_actions(rllib_config, checkpoint, num_samples, outdir):
             plt.savefig(output_str)
             plt.close(fig)
 
-        fig = plt.figure()
-        plt.hist2d(sampled_actions[:, 0], sampled_actions[:, 1])
-        output_str = '{}/{}'.format(outdir, agent + 'action_2dhistogram.png')
-        plt.xlabel('Action 1 magnitude')
-        plt.ylabel('Action 2 magnitude')
-        plt.title('Histograms of actions over {} sampled obs'.format(num_samples))
-        plt.savefig(output_str)
-        plt.close(fig)
-
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
     parser = replay_parser(parser)
     parser.add_argument('--num_samples', type=int, default=1000, help='How many observations to sample')
-    parser.add_argument('--output_dir', type=str, default='transfer_results',
+    parser.add_argument('--output_dir', type=str, default='~/transfer_results/action_samples',
                         help='Directory to output the files into')
     args = parser.parse_args()
 

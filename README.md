@@ -10,7 +10,7 @@ To install the code with anaconda run
 
 ## Results reproduction
 To simply rerun the plot generation on existing data just run:
-`python visualize/generate_all_plots.py`
+`python visualize/final_results/generate_all_plots_neurips.py`
 
 To recreate the results completely go to `run_scripts/recreate_results` and read 
 and run the files there. However, to do this you will either need an AWS account that is properly
