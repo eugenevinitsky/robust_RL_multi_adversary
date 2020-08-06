@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 plt.rcParams["axes.grid"] = False
 import ray
 
-from envs.multiarm_bandit import MultiarmBandit, PSEUDORANDOM_TRANSFER
+from envs.bernoulli_bandit import BernoulliMultiarmBandit, PSEUDORANDOM_TRANSFER
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from visualize.mujoco.run_rollout import run_rollout, instantiate_rollout
@@ -56,32 +56,41 @@ def make_set_fric_hard(max_fric_coeff, min_fric_coeff, high_fric_idx, mass_body=
 def set_pseudorandom_transfer(env):
     env.transfer = PSEUDORANDOM_TRANSFER
 
-def make_bandit_transfer_example(means, stds):
+def make_bernoulli_transfer_example(probabilities):
     def set_env_transfer(env):
-        env.transfer = [means, stds]
+        env.transfer = [probabilities]
     return set_env_transfer
 
-def make_bandit_transfer_list(num_arms):
+def make_bernoulli_bandit_transfer_list(num_arms):
     run_list = [
         ['pseudorandom_base', set_pseudorandom_transfer]
     ]
-    if num_arms == 2:
-        run_list.append(['hard', make_bandit_transfer_example(means=np.array([-5.0, 5.0]), stds=np.array([1.0, 1.0]))])
-        run_list.append(['easy', make_bandit_transfer_example(means=np.array([-5.0, 5.0]), stds=np.array([0.1, 0.1]))])
-        run_list.append(['2, max_std', make_bandit_transfer_example(means=np.array([-2, 2]), stds=np.array([1.0, 1.0]))])
-        run_list.append(['2, lopsided', make_bandit_transfer_example(means=np.array([-2, 2]), stds=np.array([1.0, 0.3]))])
-    elif num_arms == 5:
-        run_list.append(['spread_high_std', make_bandit_transfer_example(means=np.array([-5.0, -2.5, 0.0, 2.5, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0]))])
-        run_list.append(['cluster_high_std', make_bandit_transfer_example(means=np.array([-1.0, -0.5, 0.0, 0.5, 1.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0]))])
-        run_list.append(['one_good_boi', make_bandit_transfer_example(means=np.array([0.0, 0.0, 0.0, 0.0, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 0.1]))])
-        run_list.append(['needle_in_haystack', make_bandit_transfer_example(means=np.array([-0.5, -0.5, -0.5, -0.5, 5.0]), stds=np.array([0.1, 0.1, 0.1, 0.1, 0.1]))])
-        run_list.append(['hard', make_bandit_transfer_example(means=np.array([-5.0, -5.0, -5.0, -5.0, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0]))])
+    if num_arms == 5:
+        run_list.append(['even_spread', make_bernoulli_transfer_example(np.array([0.0, 0.25, 0.5, 0.75, 1.0]))])
+        run_list.append(['clustered_even', make_bernoulli_transfer_example(np.array([0.3, 0.4, 0.5, 0.6, 0.7]))])
+        run_list.append(['one_good_boi', make_bernoulli_transfer_example(np.array([0.0, 0.0, 0.0, 0.0, 1.0]))])
+        run_list.append(['low_but_not_zero', make_bernoulli_transfer_example(np.array([0.1, 0.1, 0.1, 0.1, 1.0]))])
+        run_list.append(['clustered_low_even', make_bernoulli_transfer_example(np.array([0.0, 0.1, 0.2, 0.3, 0.4]))])
+        run_list.append(['clustered_high_even', make_bernoulli_transfer_example(np.array([0.5, 0.6, 0.7, 0.8, 0.9]))])
     elif num_arms == 10:
-        run_list.append(['spread_high_std', make_bandit_transfer_example(means=np.array([-5.0, -3.75, -2.5, -1.25, -0.5, 0.5, 1.25, 2.5, 3.75, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))])
-        run_list.append(['cluster_high_std', make_bandit_transfer_example(means=np.array([-0.8, -0.6, -0.4, -0.2, -1.0, 1.0, 0.2, 0.4, 0.6, 0.8]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))])
-        run_list.append(['one_good_boi', make_bandit_transfer_example(means=np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.1]))])
-        run_list.append(['needle_in_haystack', make_bandit_transfer_example(means=np.array([-0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 5.0]), stds=np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]))])
-        run_list.append(['hard', make_bandit_transfer_example(means=np.array([-5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, 5.0]), stds=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))])
+        run_list.append(['even_spread', make_bernoulli_transfer_example(np.linspace(0.0, 1.0, 10))])
+        run_list.append(['clustered_even', make_bernoulli_transfer_example(np.linspace(0.0, 1.0, 10))])
+        run_list.append(['one_good_boi', make_bernoulli_transfer_example(np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]))])
+        run_list.append(['low_but_not_zero', make_bernoulli_transfer_example(np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1.0]))])
+        run_list.append(['almost_zero_one', make_bernoulli_transfer_example(np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.9]))])
+        run_list.append(['clustered_low_even', make_bernoulli_transfer_example(np.linspace(0.0, 0.5, 10))])
+        run_list.append(['clustered_high_even', make_bernoulli_transfer_example(np.linspace(0.5, 1.0, 10))])
+    elif num_arms == 50:
+        run_list.append(['even_spread', make_bernoulli_transfer_example(np.linspace(0.0, 1.0, 50))])
+        run_list.append(['clustered_even', make_bernoulli_transfer_example(np.linspace(0.0, 1.0, 50))])
+        run_list.append(['one_good_boi', make_bernoulli_transfer_example(np.array([0.0]*49 + [1.0]))])
+        run_list.append(['low_but_not_zero', make_bernoulli_transfer_example(np.array([0.1]*49 + [1.0]))])
+        run_list.append(['almost_zero_one', make_bernoulli_transfer_example(np.array([0.1]*49 + [0.9]))])
+        run_list.append(['clustered_low_even', make_bernoulli_transfer_example(np.linspace(0.0, 0.5, 50))])
+        run_list.append(['clustered_high_even', make_bernoulli_transfer_example(np.linspace(0.5, 1.0, 50))])
+        run_list.append(['chunked_spread', make_bernoulli_transfer_example(np.repeat(np.linspace(0.0, 1.0, 5), 10))])
+        run_list.append(['polar_fiftyfifty_spread', make_bernoulli_transfer_example(np.array([0.1]*25 + [0.9]*25))])
+        run_list.append(['lopsided', make_bernoulli_transfer_example(np.array([0.1]*40 + [0.9]*10))])
     return run_list
 
 
@@ -188,8 +197,6 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     # env.observation_space = spaces.Box(low=-1 * high, high=high, dtype=env.observation_space.dtype)
     if callable(env_modifier):
         env_modifier(env)
-    elif type(env) is MultiarmBandit:
-        env.transfer = env_modifier
     elif len(env_modifier) > 0:
         setattr(env, env_modifier[0], env_modifier[1])
     rewards, step_num = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,
@@ -205,7 +212,7 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     return np.mean(rewards), np.std(rewards), np.mean(step_num), np.std(step_num)
 
 
-def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir, run_list, is_test=False, render=False):
+def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name, outdir, run_list, is_test=False, render=False, run_adversary_tests=True):
 
     output_file_path = os.path.join(outdir, output_file_name)
     if not os.path.exists(os.path.dirname(output_file_path)):
@@ -276,7 +283,7 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
 
     num_advs = rllib_config['env_config']['advs_per_strength'] * rllib_config['env_config']['num_adv_strengths']
     adv_names = ["adversary{}".format(adv_num) for adv_num in range(num_advs)]
-    if num_advs:
+    if num_advs and run_adversary_tests:
         temp_output = [run_test.remote(test_name="adversary{}".format(adv_num),
                     outdir=outdir, output_file_name=output_file_name,
                     num_rollouts=num_rollouts,
@@ -328,7 +335,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     rllib_config, checkpoint = get_config(args)
 
-    ray.init(num_cpus=args.num_cpus)
+    ray.init(num_cpus=args.num_cpus, local_mode=True)
 
     if rllib_config['env'] == "MAPendulumEnv":
         run_list = pendulum_run_list
@@ -339,8 +346,8 @@ if __name__ == '__main__':
             run_list = hopper_run_list
     elif rllib_config['env'] == "MACheetahEnv":
         run_list = cheetah_run_list
-    elif rllib_config['env'] == "MultiarmBandit":
-        run_list = make_bandit_transfer_list(rllib_config['env_config']['num_arms'])
+    elif rllib_config['env'] == "BernoulliMultiarmBandit":
+        run_list = make_bernoulli_bandit_transfer_list(rllib_config['env_config']['num_arms'])
 
     if 'run' not in rllib_config['env_config']:
         rllib_config['env_config'].update({'run': 'PPO'})

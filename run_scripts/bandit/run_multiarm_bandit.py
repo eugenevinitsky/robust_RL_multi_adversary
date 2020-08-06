@@ -18,18 +18,16 @@ from ray.tune.registry import register_env
 
 from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
 from algorithms.custom_kl_distribution import LogitsDist
-from envs.multiarm_bandit import MultiarmBandit
+from envs.bernoulli_bandit import BernoulliMultiarmBandit
 from visualize.bandit.visualize_adversaries import visualize_adversaries
-from visualize.pendulum.transfer_tests import run_transfer_tests, make_bandit_transfer_list
-# from visualize.pendulum.visualize_adversaries import visualize_adversaries
+from visualize.mujoco.transfer_tests import run_transfer_tests, make_bernoulli_bandit_transfer_list, set_pseudorandom_transfer
 from utils.pendulum_env_creator import make_create_env
 from utils.parsers import init_parser, ray_parser, ma_env_parser
 from utils.rllib_utils import get_config_from_path
 
-from models.recurrent_tf_model_v2 import LSTM
+from models.lstm import LSTM as bandit_lstm
 
-
-def setup_ma_config(config, create_env):
+def setup_ma_config(args, config, create_env):
     env = create_env(config['env_config'])
     policies_to_train = ['agent']
 
@@ -37,18 +35,19 @@ def setup_ma_config(config, create_env):
     if num_adversaries == 0:
         return
     adv_policies = ['adversary' + str(i) for i in range(num_adversaries)]
-    adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}}
+    adversary_config = {"model": {'fcnet_hiddens': [64, 64], 'use_lstm': False}, "lr": args.adv_lr}
+    agent_config = {"model": {'custom_model': 'lstm', 'lstm_cell_size': 256}, "lr": args.lr}
     if config['env_config']['kl_reward']:
         ModelCatalog.register_custom_action_dist("logits_dist", LogitsDist)
         adversary_config['model']['custom_action_dist'] = "logits_dist"
     # for both of these we need a graph that zeros out agents that weren't active
     if config['env_config']['kl_reward'] or (config['env_config']['l2_reward'] and not config['env_config']['l2_memory']):
-        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, agent_config)}
         policy_graphs.update({adv_policies[i]: (CustomPPOPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in
                               range(num_adversaries)})
     else:
-        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, {})}
+        policy_graphs = {'agent': (PPOTFPolicy, env.observation_space, env.action_space, agent_config)}
         policy_graphs.update({adv_policies[i]: (PPOTFPolicy, env.adv_observation_space,
                                                 env.adv_action_space, adversary_config) for i in
                               range(num_adversaries)})
@@ -88,6 +87,7 @@ def setup_exps(args, parser=None):
                         choices=['pendulum', 'hopper', 'cheetah'])
     parser.add_argument('--horizon', type=int, default=10)
     parser.add_argument('--num_arms', type=int, default=3)
+    parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
                                                                          'Multiply this by `advs_per_strength` to get the total number of adversaries'
@@ -129,8 +129,8 @@ def setup_exps(args, parser=None):
                         help='If true we compute reward as difference between obtained reward and expected reward'
                              'if the best arm was picked.')
 
-    parser.add_argument('--lr', type=float, default=5e-3, help='The lower range that adversaries try'
-                                                                      'to push you to')
+    parser.add_argument('--lr', type=float, default=5e-3, help='lr for agent')
+    parser.add_argument('--adv_lr', type=float, default=5e-3, help='lr for adversaries')
     parser.add_argument('--gae_lambda', type=float, default=0.5, help='The upper range that adversaries try'
                                                                           'to push you to')
     args = parser.parse_args(args)
@@ -142,26 +142,20 @@ def setup_exps(args, parser=None):
 
     if args.algorithm == 'PPO':
         config = deepcopy(DEFAULT_PPO_CONFIG)
-        config['train_batch_size'] = args.train_batch_size
-        config['gamma'] = 1.0
-        if args.grid_search:
-            config['lr'] = tune.grid_search([5e-4, 5e-3])
-            config['lambda'] = tune.grid_search([0.3, 0.5, 0.9])
-        else:
-            config['lambda'] = args.gae_lambda
-            config['lr'] = args.lr
-        config['sgd_minibatch_size'] = 64 * max(int(args.train_batch_size / 1e4), 1)
-        if args.use_lstm:
-            config['sgd_minibatch_size'] *= 5
-        config['num_sgd_iter'] = 10
+        config['train_batch_size'] = 250000
+        config['gamma'] = 0.99
+        config['lambda'] = 0.3
+        config['sgd_minibatch_size'] = 1024
+        config['num_sgd_iter'] = 1
         config['observation_filter'] = 'NoFilter'
+
 
     if config['observation_filter'] == 'MeanStdFilter' and args.l2_reward:
         sys.exit('Mean std filter MUST be off if using the l2 reward')
 
     # Universal hyperparams
     config['num_workers'] = args.num_cpus
-    config['seed'] = 0
+    config['seed'] = args.seed
 
     config['env_config']['horizon'] = args.horizon
     config['env_config']['num_arms'] = args.num_arms
@@ -184,22 +178,17 @@ def setup_exps(args, parser=None):
 
     config['env_config']['run'] = alg_run
 
-    ModelCatalog.register_custom_model("rnn", LSTM)
-    config['model']['fcnet_hiddens'] = []
-    # TODO(@evinitsky) turn this on
-    if args.use_lstm:
-        config['model']['fcnet_hiddens'] = [64]
-        config['model']['use_lstm'] = False
-        config['model']['lstm_use_prev_action_reward'] = True
-        config['model']['lstm_cell_size'] = 64
+    config['env_config']['report_raw_reward'] = False
 
-    env_name = "MultiarmBandit"
-    create_env_fn = make_create_env(MultiarmBandit)
+    ModelCatalog.register_custom_model("lstm", bandit_lstm)
+
+    env_name = "BernoulliMultiarmBandit"
+    create_env_fn = make_create_env(BernoulliMultiarmBandit)
 
     config['env'] = env_name
     register_env(env_name, create_env_fn)
 
-    setup_ma_config(config, create_env_fn)
+    setup_ma_config(args, config, create_env_fn)
 
     # add the callbacks
     config["callbacks"] = {"on_train_result": on_train_result,
@@ -293,10 +282,9 @@ if __name__ == "__main__":
     else:
         ray.init()
 
-    run_tune(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
+    run_tune(**exp_dict, queue_trials=True, raise_on_failed_trial=False)
     num_adversaries = args.num_adv_strengths * args.advs_per_strength
 
-    
     # Now we add code to loop through the results and create scores of the results
     if args.run_transfer_tests:
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/bandit'), date),
@@ -318,8 +306,11 @@ if __name__ == "__main__":
 
                 ray.shutdown()
                 ray.init()
-                run_transfer_tests(config, checkpoint_path, 1000, args.exp_title, output_path, run_list=make_bandit_transfer_list(args.num_arms))
-                visualize_adversaries(config, checkpoint_path, 100, output_path)
+                run_transfer_tests(config, checkpoint_path, 1000, args.exp_title, output_path, run_list=make_bernoulli_bandit_transfer_list(args.num_arms))
+                config['env_config']['report_raw_reward'] = True
+                raw_score_path = os.path.join(output_path, "rawscore")
+                run_transfer_tests(config, checkpoint_path, 1000, args.exp_title, raw_score_path, run_list=[['pseudorandom_rawscore_base', set_pseudorandom_transfer]], run_adversary_tests=False)
+                # visualize_adversaries(config, checkpoint_path, 100, output_path)
 
                 if args.use_s3:
                     for i in range(4):
