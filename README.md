@@ -1,5 +1,5 @@
 # Robust Reinforcement Learning via adversary pools
-We investigate the effect of sim2real via the use of multiple minimax adversaries
+We investigate the effect of population based training on the robustness of solutions to the robust MDP.
 
 ## Setup instructions
 To install the code with anaconda run 
