@@ -1,4 +1,4 @@
-name: sim2real
+name: adversary_pools
 
 dependencies:
     - python==3.6.8
