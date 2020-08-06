@@ -4,7 +4,7 @@ We investigate the effect of population based training on the robustness of solu
 ## Setup instructions
 To install the code with anaconda run 
 - `conda env create -f environment.yml`
-- `conda activate sim2real`
+- `conda activate adversary_pools`
 - `python setup.py develop` 
 - If you want to run videos make sure to install ffmpeg. If you have brew you can run `brew install ffmpeg`.
 
