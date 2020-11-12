@@ -1,2 +1,2 @@
 from setuptools import setup
-setup(name='sim2real')
+setup(name='robust_adv')
