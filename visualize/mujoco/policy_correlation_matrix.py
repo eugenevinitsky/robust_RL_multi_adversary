@@ -15,12 +15,11 @@ from visualize.mujoco.run_rollout import instantiate_rollout, DefaultMapping
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config_from_path
 
-def visualize_adversaries(config_out_dir, checkpoint_num, grid_size, num_rollouts, outdir, plot_base_case,
-                          extension):
+def visualize_adversaries(config_out_dir, checkpoint_num, num_rollouts, outdir, plot_base_case,
+                          extension, config_out_dir2=None, checkpoint_num_2=None):
 
     agent_list = []
     index = 0
-    # max_index = 20000
     multiagent = True
     for (dirpath, dirnames, filenames) in os.walk(config_out_dir):
         if "params.pkl" in filenames:
@@ -31,6 +30,18 @@ def visualize_adversaries(config_out_dir, checkpoint_num, grid_size, num_rollout
                 instantiate_rollout(rllib_config, checkpoint)
             agent_list.append(agent)
             # index += 1
+
+    if config_out_dir2:
+        agent_2_list = []
+        for (dirpath, dirnames, filenames) in os.walk(config_out_dir2):
+            if "params.pkl" in filenames:
+                # if index > max_index:
+                #     break
+                rllib_config, checkpoint = get_config_from_path(dirpath, checkpoint_num_2)
+                env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
+                    instantiate_rollout(rllib_config, checkpoint)
+                agent_2_list.append(agent)
+                # index += 1
 
     # figure out how many adversaries you have and initialize their grids
     num_adversaries = env.num_adv_strengths * env.advs_per_strength
@@ -113,11 +124,19 @@ def visualize_adversaries(config_out_dir, checkpoint_num, grid_size, num_rollout
                                     else:
                                         prev_action = _flatten_action(prev_actions[agent_id])
                                         flat_action = _flatten_action(a_obs)
-                                        a_action = agent_list[adversary_col_index].compute_action(
-                                            flat_action,
-                                            prev_action=prev_action,
-                                            prev_reward=prev_rewards[agent_id],
-                                            policy_id=policy_id)
+                                        # get the adversaries from the second checkpoint if available
+                                        if checkpoint_num_2:
+                                            a_action = agent_2_list[adversary_col_index].compute_action(
+                                                flat_action,
+                                                prev_action=prev_action,
+                                                prev_reward=prev_rewards[agent_id],
+                                                policy_id=policy_id)
+                                        else:
+                                            a_action = agent_list[adversary_col_index].compute_action(
+                                                flat_action,
+                                                prev_action=prev_action,
+                                                prev_reward=prev_rewards[agent_id],
+                                                policy_id=policy_id)
 
                             action_dict[agent_id] = a_action
                             prev_action = _flatten_action(a_action)  # tuple actions
@@ -176,8 +195,15 @@ def visualize_adversaries(config_out_dir, checkpoint_num, grid_size, num_rollout
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser = replay_parser(parser)
-    parser.add_argument('--grid_size', type=int, default=50, help='How fine to make the adversary action grid')
+    parser.add_argument(
+        'result_dir', type=str, help='Directory containing results')
+    parser.add_argument('checkpoint_num', type=str, help='Checkpoint number.')
+    parser.add_argument(
+        '--result_dir2', type=str, help='Directory containing results for the second policy. If set'
+                                        'we use the adversaries from this checkpoint', default=None)
+    parser.add_argument('--checkpoint_num2', type=str, help='Checkpoint number for the second policy.', default=None)
+    parser.add_argument('--num_cpus', type=int, default=1, help='Number of cpus to run experiment with')
+    parser.add_argument('--num_rollouts', type=int, default=1)
     parser.add_argument('--output_dir', type=str, default='~/transfer_results',
                         help='Directory to output the files into')
     parser.add_argument('--plot_base_case', action='store_true', default=False,
@@ -191,8 +217,8 @@ def main():
 
     ray.init(num_cpus=args.num_cpus)
 
-    visualize_adversaries(args.result_dir, args.checkpoint_num, args.grid_size, args.num_rollouts, args.output_dir,
-                          args.plot_base_case, args.extension)
+    visualize_adversaries(args.result_dir, args.checkpoint_num, args.num_rollouts, args.output_dir,
+                          args.plot_base_case, args.extension, args.result_dir2, args.checkpoint_num2)
 
 if __name__ == '__main__':
     main()

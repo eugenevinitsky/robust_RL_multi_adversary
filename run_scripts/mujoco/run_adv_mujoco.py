@@ -29,6 +29,8 @@ from envs.mujoco.adv_hopper import AdvMAHopper
 from envs.mujoco.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.mujoco.adv_cheetah import AdvMAHalfCheetahEnv
 from envs.mujoco.adv_ant import AdvMAAnt
+from envs.mujoco.adv_humanoid import AdvMAHumanoid
+from envs.mujoco.adv_walker import AdvMA2dWalker
 
 from visualize.mujoco.transfer_tests import run_transfer_tests
 from visualize.mujoco.action_sampler import sample_actions
@@ -96,7 +98,9 @@ def setup_exps(args):
     parser = init_parser()
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
-    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper', 'cheetah', 'ant'])
+    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper',
+                                                                                                'cheetah', 'ant',
+                                                                                                'humanoid', 'walker'])
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO, SAC, TD3')
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
@@ -308,6 +312,14 @@ def setup_exps(args):
         env_name = "MAAntEnv"
         env_tag = "ant"
         create_env_fn = make_create_env(AdvMAAnt)
+    elif args.env_name == "humanoid":
+        env_name = "MAHumanoidEnv"
+        env_tag = "humanoid"
+        create_env_fn = make_create_env(AdvMAHumanoid)
+    elif args.env_name == "walker":
+        env_name = "MAWalkerEnv"
+        env_tag = "humanoid"
+        create_env_fn = make_create_env(AdvMA2dWalker)
 
     config['env'] = env_name
     register_env(env_name, create_env_fn)
@@ -488,6 +500,16 @@ if __name__ == "__main__":
                     run_list = cheetah_run_list
                     test_list = cheetah_test_list
                 elif config['env'] == "MAAntEnv":
+                    from visualize.mujoco.transfer_tests import ant_run_list, ant_test_list
+                    run_list = ant_run_list
+                    test_list = ant_test_list
+                elif config['env'] == "MAHumanoidEnv":
+                    raise NotImplementedError
+                    from visualize.mujoco.transfer_tests import ant_run_list, ant_test_list
+                    run_list = ant_run_list
+                    test_list = ant_test_list
+                elif config['env'] == "MAWalkerEnv":
+                    raise NotImplementedError
                     from visualize.mujoco.transfer_tests import ant_run_list, ant_test_list
                     run_list = ant_run_list
                     test_list = ant_test_list
