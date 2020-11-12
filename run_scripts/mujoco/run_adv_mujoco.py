@@ -5,8 +5,6 @@ import os
 import subprocess
 import sys
 
-os.environ['MUJOCO_GL'] = "osmesa"
-
 import numpy as np
 import psutil
 import pytz
