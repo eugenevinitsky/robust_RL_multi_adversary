@@ -5,6 +5,7 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 import dmc2gym
 from visualize.plot_heatmap import ball_mass_sweep, cup_mass_sweep
 
+from gym.utils import seeding
 
 class AdvMABallInCup(MultiAgentEnv):
     def __init__(self, config):
@@ -333,7 +334,7 @@ class AdvMABallInCup(MultiAgentEnv):
         obs = self._env.reset()
 
         if self.concat_actions:
-            self.update_observed_obs(np.concatenate((obs, [0.0] * 3)))
+            self.update_observed_obs(np.concatenate((obs, [0.0] * 2)))
         else:
             self.update_observed_obs(obs)
 
@@ -354,6 +355,10 @@ class AdvMABallInCup(MultiAgentEnv):
                 self.local_num_observed_l2_samples[self.curr_adversary] += 1
 
         return curr_obs
+
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
 
 def cup_env_creator(env_config):
     env = AdvMABallInCup(env_config)
