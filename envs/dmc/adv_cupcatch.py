@@ -3,7 +3,7 @@ from gym.spaces import Box, Dict
 import numpy as np
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 import dmc2gym
-from visualize.plot_heatmap import ball_friction_sweep, cup_mass_sweep
+from visualize.plot_heatmap import ball_mass_sweep, cup_mass_sweep
 
 
 class AdvMABallInCup(MultiAgentEnv):
@@ -182,7 +182,7 @@ class AdvMABallInCup(MultiAgentEnv):
     def randomize_domain(self):
         for param, idx in self.dr_idx_dict.items():
             if 'ball' in param:
-                coeff = np.random.choice(ball_friction_sweep)
+                coeff = np.random.choice(ball_mass_sweep)
             elif 'cup' in param:
                 coeff = np.random.choice(cup_mass_sweep)
             else:
