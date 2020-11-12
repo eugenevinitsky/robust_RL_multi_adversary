@@ -18,6 +18,7 @@ from envs.mujoco.adv_hopper import AdvMAHopper
 from envs.mujoco.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.mujoco.adv_cheetah import AdvMAHalfCheetahEnv
 from envs.mujoco.adv_ant import AdvMAAnt
+from envs.mujoco.adv_walker import AdvMA2dWalker
 
 from utils.pendulum_env_creator import make_create_env
 
@@ -59,6 +60,9 @@ def instantiate_rollout(rllib_config, checkpoint):
     elif rllib_config['env'] == "MAAntEnv":
         env_name = "MAAntEnv"
         create_env_fn = make_create_env(AdvMAAnt)
+    elif rllib_config['env'] == "MAWalkerEnv":
+        env_name = "MAWalkerEnv"
+        create_env_fn = make_create_env(AdvMA2dWalker)
 
     register_env(env_name, create_env_fn)
 

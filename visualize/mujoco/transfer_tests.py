@@ -14,7 +14,8 @@ import ray
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from visualize.mujoco.run_rollout import run_rollout, instantiate_rollout
-from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep, ant_mass_sweep, ant_friction_sweep
+from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, \
+    cheetah_mass_sweep, ant_mass_sweep, ant_friction_sweep, walker_mass_sweep, walker_friction_sweep
 import errno
 
 
@@ -100,6 +101,21 @@ ant_test_list=[
 ]
 num_ant_custom_tests = len(ant_test_list)
 
+walker_run_list = [
+    ['base', []]
+]
+walker_test_list=[
+    ['friction_hard_flla1a3max', make_set_fric_hard(max(walker_friction_sweep), min(walker_friction_sweep), [2, 3, 7])],
+    ['friction_hard_torsoa1rblmax', make_set_fric_hard(max(walker_friction_sweep), min(walker_friction_sweep), [1, 3, 4])],
+    ['friction_hard_frla2blmax', make_set_fric_hard(max(walker_friction_sweep), min(walker_friction_sweep), [4, 5, 6])],
+    ['friction_hard_torsoflla1max', make_set_fric_hard(max(walker_friction_sweep), min(walker_friction_sweep), [1, 2, 3])],
+    ['friction_hard_flla2a4max', make_set_fric_hard(max(walker_friction_sweep), min(walker_friction_sweep), [2, 5, 0])],
+    ['friction_hard_frlbla4max', make_set_fric_hard(max(walker_friction_sweep), min(walker_friction_sweep), [4, 6, 2])],
+    ['friction_hard_frla3rblmax', make_set_fric_hard(max(walker_friction_sweep), min(walker_friction_sweep), [4, 7, 0])],
+    ['friction_hard_a1rbla4max', make_set_fric_hard(max(walker_friction_sweep), min(walker_friction_sweep), [3, 1, 5])],
+]
+num_walker_custom_tests = len(walker_test_list)
+
 hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
 for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
     hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
@@ -111,6 +127,10 @@ for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).
 ant_grid = np.meshgrid(ant_mass_sweep, ant_friction_sweep)
 for mass, fric in np.vstack((ant_grid[0].ravel(), ant_grid[1].ravel())).T:
     ant_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
+
+walker_grid = np.meshgrid(walker_mass_sweep, walker_friction_sweep)
+for mass, fric in np.vstack((walker_grid[0].ravel(), walker_grid[1].ravel())).T:
+    walker_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
 
 def reset_env(env, num_active_adv=0):
     """Undo parameters that need to be off"""
@@ -170,8 +190,6 @@ def run_test(test_name, outdir, output_file_name, num_rollouts,
     # env.observation_space = spaces.Box(low=-1 * high, high=high, dtype=env.observation_space.dtype)
     if callable(env_modifier):
         env_modifier(env)
-    elif type(env) is MultiarmBandit:
-        env.transfer = env_modifier
     elif len(env_modifier) > 0:
         setattr(env, env_modifier[0], env_modifier[1])
     rewards, step_num = run_rollout(env, agent, multiagent, use_lstm, policy_agent_mapping,

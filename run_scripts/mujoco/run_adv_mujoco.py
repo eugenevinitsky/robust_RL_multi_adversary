@@ -509,10 +509,9 @@ if __name__ == "__main__":
                     run_list = ant_run_list
                     test_list = ant_test_list
                 elif config['env'] == "MAWalkerEnv":
-                    raise NotImplementedError
-                    from visualize.mujoco.transfer_tests import ant_run_list, ant_test_list
-                    run_list = ant_run_list
-                    test_list = ant_test_list
+                    from visualize.mujoco.transfer_tests import walker_run_list, walker_test_list
+                    run_list = walker_run_list
+                    test_list = walker_test_list
 
                 ray.shutdown()
                 ray.init()
