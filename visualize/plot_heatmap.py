@@ -23,6 +23,9 @@ cheetah_friction_sweep = np.linspace(0.1, 0.9, 11)
 ant_mass_sweep = np.linspace(.5, 1.5, 11)
 ant_friction_sweep = np.linspace(0.1, 0.9, 11)
 
+cup_mass_sweep = np.linspace(.1, 2, 11)
+ball_friction_sweep = np.linspace(0.1, 2, 11)
+
 def load_data(results_path):
     all_file_names = OrderedDict()
     for (dirpath, dirnames, filenames) in os.walk(results_path):
