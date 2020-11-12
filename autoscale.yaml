@@ -114,8 +114,9 @@ setup_commands:
     # Note: if you're developing Ray, you probably want to create an AMI that
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
-    - cd ~/adversarial_sim2real && git fetch; git checkout iclr_exps && git pull
-    - source activate sim2real && pip install psutil && pip install tensorflow==1.15.0 && pip install ray==0.8.0 && pip install seaborn
+    - git clone https://github.com/eugenevinitsky/robust_RL_multi_adversary.git
+    - cd ~/robust_RL_multi_adversary && git fetch; git checkout iclr_exps && git pull
+    - source activate sim2real && cd ~/robust_RL_multi_adversary && python setup.py develop && pip install psutil && pip install tensorflow==1.15.0 && pip install ray==0.8.0 && pip install seaborn
     - echo PATH="$HOME/anaconda3/envs/sim2real/bin:$PATH" >> /home/ubuntu/.bashrc && source /home/ubuntu/.bashrc
 
     # Consider uncommenting these if you also want to run apt-get commands during setup
