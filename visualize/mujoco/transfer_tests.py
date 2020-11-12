@@ -15,7 +15,7 @@ from envs.multiarm_bandit import MultiarmBandit, PSEUDORANDOM_TRANSFER
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from visualize.mujoco.run_rollout import run_rollout, instantiate_rollout
-from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep, ant_mass_sweep, ant_friction_sweep
+from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep, ant_mass_sweep, ant_friction_sweep, cup_mass_sweep, ball_mass_sweep
 import errno
 
 
@@ -44,6 +44,17 @@ def make_set_mass_and_fric(friction_coef, mass_coef, mass_body='pole'):
         env.model.geom_friction[:] = (env.model.geom_friction * friction_coef)[:]
     return set_mass
 
+def make_set_mass_cup_ball(cup_mass_coeff, ball_mass_coeff):
+    def set_mass(env):
+        for param, idx in env.dr_idx_dict.items():
+            if 'ball' in param:
+                env._env.physics.model.body_mass[idx] = env._env.physics.model.body_mass[idx] * ball_mass_coeff
+            elif 'cup' in param:
+                env._env.physics.model.body_mass[idx] = env._env.physics.model.body_mass[idx] * cup_mass_coeff
+            else:
+                raise NotImplementedError
+
+    return set_mass
 
 def make_set_fric_hard(max_fric_coeff, min_fric_coeff, high_fric_idx, mass_body='pole'):
     def set_mass(env):
@@ -152,6 +163,10 @@ ant_test_list=[
 ]
 num_ant_custom_tests = len(ant_test_list)
 
+cup_run_list = [
+    ['base', []]
+]
+
 hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
 for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
     hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
@@ -163,6 +178,11 @@ for mass, fric in np.vstack((cheetah_grid[0].ravel(), cheetah_grid[1].ravel())).
 ant_grid = np.meshgrid(ant_mass_sweep, ant_friction_sweep)
 for mass, fric in np.vstack((ant_grid[0].ravel(), ant_grid[1].ravel())).T:
     ant_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
+
+cup_grid = np.meshgrid(cup_mass_sweep, ball_mass_sweep)
+for mass_cup, mass_ball in np.vstack((cup_grid[0].ravel(), cup_grid[1].ravel())).T:
+    cup_run_list.append(['m_{}_f_{}'.format(mass_cup, mass_ball), make_set_mass_cup_ball(mass_cup, mass_ball)])
+
 
 def reset_env(env, num_active_adv=0):
     """Undo parameters that need to be off"""
@@ -294,6 +314,17 @@ def run_transfer_tests(rllib_config, checkpoint, num_rollouts, output_file_name,
             output_name = output_file_name + 'steps'
             save_heatmap(step_means, ant_mass_sweep, ant_friction_sweep, outdir, output_name, False, 'ant')
 
+    elif 'MABalInCupEnv' == rllib_config['env']:
+        if not is_test:
+            reward_means = np.array(temp_output)[1:, 0].reshape(len(cup_mass_sweep), len(ball_mass_sweep))
+            output_name = output_file_name + 'rew'
+            save_heatmap(reward_means, cup_mass_sweep, ball_mass_sweep, outdir, output_name, False, 'cup')
+
+            step_means = np.array(temp_output)[1:, 2].reshape(len(cup_mass_sweep), len(ball_mass_sweep))
+            output_name = output_file_name + 'steps'
+            save_heatmap(step_means, cup_mass_sweep, ball_mass_sweep, outdir, output_name, False, 'cup')
+
+
     elif 'MAPendulumEnv' in rllib_config['env']:
         means = np.array(temp_output)[1:, 0]
         with open('{}/{}_{}.png'.format(outdir, output_file_name, "transfer_robustness"), 'wb') as transfer_robustness:
@@ -394,6 +425,8 @@ if __name__ == '__main__':
             run_list = ant_test_list
         else:
             run_list = ant_run_list
+    elif rllib_config['env'] == "MABallInCupEnv":
+        run_list = cup_run_list
     elif rllib_config['env'] == "MultiarmBandit":
         run_list = make_bandit_transfer_list(rllib_config['env_config']['num_arms'])
 
