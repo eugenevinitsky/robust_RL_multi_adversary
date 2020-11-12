@@ -5,6 +5,8 @@ import os
 import subprocess
 import sys
 
+os.environ['MUJOCO_GL'] = "osmesa"
+
 import numpy as np
 import psutil
 import pytz
@@ -439,6 +441,7 @@ class AlternateTraining(Trainable):
 
 
 if __name__ == "__main__":
+
 
     exp_dict, args = setup_exps(sys.argv[1:])
 
