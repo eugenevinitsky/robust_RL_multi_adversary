@@ -61,7 +61,7 @@ def make_set_mass_damp_finger(spinner_mass_coeff, proximal_damping_coeff):
         for param, idx in env.dr_idx_dict.items():
             if 'spinner' in param:
                 env._env.physics.model.body_mass[idx] = env._env.physics.model.body_mass[idx] * spinner_mass_coeff
-            elif 'distal' in param:
+            elif 'proximal' in param:
                 env._env.physics.model.dof_damping[idx] = env._env.physics.model.dof_damping[idx] * proximal_damping_coeff
             else:
                 raise NotImplementedError
