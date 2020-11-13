@@ -26,6 +26,9 @@ ant_friction_sweep = np.linspace(0.1, 0.9, 11)
 cup_mass_sweep = np.linspace(.1, 2, 11)
 ball_mass_sweep = np.linspace(0.1, 2, 11)
 
+spinner_mass_sweep = np.linspace(.1, 2, 11)
+proximal_damping_sweep = np.linspace(0.1, 2, 11)
+
 def load_data(results_path):
     all_file_names = OrderedDict()
     for (dirpath, dirnames, filenames) in os.walk(results_path):

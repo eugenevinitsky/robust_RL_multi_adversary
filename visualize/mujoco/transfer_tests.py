@@ -15,7 +15,7 @@ from envs.multiarm_bandit import MultiarmBandit, PSEUDORANDOM_TRANSFER
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
 from visualize.mujoco.run_rollout import run_rollout, instantiate_rollout
-from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep, ant_mass_sweep, ant_friction_sweep, cup_mass_sweep, ball_mass_sweep
+from visualize.plot_heatmap import save_heatmap, hopper_friction_sweep, hopper_mass_sweep, cheetah_friction_sweep, cheetah_mass_sweep, ant_mass_sweep, ant_friction_sweep, cup_mass_sweep, ball_mass_sweep, spinner_mass_sweep, proximal_damping_sweep
 import errno
 
 
@@ -51,6 +51,18 @@ def make_set_mass_cup_ball(cup_mass_coeff, ball_mass_coeff):
                 env._env.physics.model.body_mass[idx] = env._env.physics.model.body_mass[idx] * ball_mass_coeff
             elif 'cup' in param:
                 env._env.physics.model.body_mass[idx] = env._env.physics.model.body_mass[idx] * cup_mass_coeff
+            else:
+                raise NotImplementedError
+
+    return set_mass
+
+def make_set_mass_damp_finger(spinner_mass_coeff, proximal_damping_coeff):
+    def set_mass(env):
+        for param, idx in env.dr_idx_dict.items():
+            if 'spinner' in param:
+                env._env.physics.model.body_mass[idx] = env._env.physics.model.body_mass[idx] * spinner_mass_coeff
+            elif 'distal' in param:
+                env._env.physics.model.dof_damping[idx] = env._env.physics.model.dof_damping[idx] * proximal_damping_coeff
             else:
                 raise NotImplementedError
 
@@ -167,6 +179,10 @@ cup_run_list = [
     ['base', []]
 ]
 
+finger_run_list = [
+    ['base', []]
+]
+
 hopper_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
 for mass, fric in np.vstack((hopper_grid[0].ravel(), hopper_grid[1].ravel())).T:
     hopper_run_list.append(['m_{}_f_{}'.format(mass, fric), make_set_mass_and_fric(fric, mass, mass_body="torso")])
@@ -182,6 +198,10 @@ for mass, fric in np.vstack((ant_grid[0].ravel(), ant_grid[1].ravel())).T:
 cup_grid = np.meshgrid(cup_mass_sweep, ball_mass_sweep)
 for mass_cup, mass_ball in np.vstack((cup_grid[0].ravel(), cup_grid[1].ravel())).T:
     cup_run_list.append(['m_{}_f_{}'.format(mass_cup, mass_ball), make_set_mass_cup_ball(mass_cup, mass_ball)])
+
+finger_grid = np.meshgrid(spinner_mass_sweep, proximal_damping_sweep)
+for spinner_mass, proximal_damping in np.vstack((finger_grid[0].ravel(), finger_grid[1].ravel())).T:
+    finger_run_list.append(['m_{}_f_{}'.format(spinner_mass, proximal_damping), make_set_mass_damp_finger(spinner_mass, proximal_damping)])
 
 
 def reset_env(env, num_active_adv=0):
@@ -427,6 +447,9 @@ if __name__ == '__main__':
             run_list = ant_run_list
     elif rllib_config['env'] == "MABallInCupEnv":
         run_list = cup_run_list
+    elif rllib_config['env'] == "MAFingerEnv":
+        run_list = finger_run_list
+
     elif rllib_config['env'] == "MultiarmBandit":
         run_list = make_bandit_transfer_list(rllib_config['env_config']['num_arms'])
 

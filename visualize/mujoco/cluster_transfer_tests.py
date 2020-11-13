@@ -72,6 +72,9 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/s3_test")):
         elif config['env'] == "MABallInCupEnv":
             from visualize.mujoco.transfer_tests import cup_run_list
             lerrel_run_list = cup_run_list
+        elif config['env'] == "MAFingerEnv":
+            from visualize.mujoco.transfer_tests import finger_run_list
+            lerrel_run_list = finger_run_list
 
         elif config['env'] == "MAFetchReachEnv":
             from visualize.mujoco.transfer_tests import fetch_reach_run_list

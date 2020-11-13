@@ -19,6 +19,7 @@ from envs.mujoco.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.mujoco.adv_cheetah import AdvMAHalfCheetahEnv
 from envs.mujoco.adv_ant import AdvMAAnt
 from envs.dmc.adv_cupcatch import AdvMABallInCup
+from envs.dmc.adv_finger import AdvMAFinger
 
 from envs.linear_env import LinearEnv
 from envs.multiarm_bandit import MultiarmBandit
@@ -66,6 +67,9 @@ def instantiate_rollout(rllib_config, checkpoint):
     elif rllib_config['env'] == "MABallInCupEnv":
         env_name = "MABallInCupEnv"
         create_env_fn = make_create_env(AdvMABallInCup)
+    elif rllib_config['env'] == "MAFingerEnv":
+        env_name = "MAFingerEnv"
+        create_env_fn = make_create_env(AdvMAFinger)
     elif rllib_config['env'] == "LinearEnv":
         env_name = "LinearEnv"
         create_env_fn = make_create_env(LinearEnv)
