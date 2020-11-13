@@ -360,6 +360,12 @@ class AdvMABallInCup(MultiAgentEnv):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
+    def close(self):
+        if self.viewer is not None:
+            # self.viewer.finish()
+            self.viewer = None
+            self._viewers = {}
+
 def cup_env_creator(env_config):
     env = AdvMABallInCup(env_config)
     return env
