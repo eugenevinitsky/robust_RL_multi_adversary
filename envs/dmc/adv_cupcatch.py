@@ -361,6 +361,7 @@ class AdvMABallInCup(MultiAgentEnv):
         return [seed]
 
     def close(self):
+        self._env.close()
         return
 
 def cup_env_creator(env_config):
