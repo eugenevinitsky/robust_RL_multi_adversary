@@ -213,7 +213,7 @@ class AdvMABallInCup(MultiAgentEnv):
                 cup_action += adv_action
                 # apply clipping to ant action
                 if self.clip_actions:
-                    ant_action = np.clip(obs_cup_action, a_min=self.action_space.low,
+                    cup_action = np.clip(obs_cup_action, a_min=self.action_space.low,
                                             a_max=self.action_space.high)
         else:
             assert actions in self.action_space
