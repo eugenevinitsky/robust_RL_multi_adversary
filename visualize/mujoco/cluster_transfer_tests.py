@@ -82,7 +82,7 @@ for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/s3_test")):
 
         ray.shutdown()
         ray.init()
-        run_transfer_tests(config, checkpoint_path, 1, args.exp_title, output_path, run_list=lerrel_run_list)
+        run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=lerrel_run_list)
         if len(test_list) > 0:
             run_transfer_tests(config, checkpoint_path, 20, args.exp_title, output_path, run_list=test_list, is_test=True)
 
