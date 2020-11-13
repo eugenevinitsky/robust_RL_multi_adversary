@@ -361,10 +361,7 @@ class AdvMABallInCup(MultiAgentEnv):
         return [seed]
 
     def close(self):
-        if self.viewer is not None:
-            # self.viewer.finish()
-            self.viewer = None
-            self._viewers = {}
+        return
 
 def cup_env_creator(env_config):
     env = AdvMABallInCup(env_config)
