@@ -41,6 +41,8 @@ from utils.rllib_utils import get_config_from_path
 
 from models.recurrent_tf_model_v2 import LSTM
 
+os.environ["MUJOCO_GL"] = "osmesa"
+
 def setup_ma_config(config, create_env):
     env = create_env(config['env_config'])
     policies_to_train = ['agent']

@@ -43,7 +43,7 @@ if __name__ == '__main__':
           raise
     for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser(args.results_dir)):
       # if "checkpoint_{}".format(args.num_iters) in dirpath:
-      if "checkpoint" in dirpath and dirpath.split('/')[-3] == args.exp_title:
+      if "checkpoint" in dirpath:
 
         # grab the experiment name
         folder = os.path.dirname(dirpath)
