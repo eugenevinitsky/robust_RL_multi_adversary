@@ -120,6 +120,17 @@ def test_barcharts(exp_path, exp_name):
             'friction_hard_bthighfthighfshinmax',
             'friction_hard_headfshinffootmax'
         ]
+    elif exp_name == 'walker':
+        test_names = [
+            'friction_hard_flla1a3max',
+            'friction_hard_torsoa1rblmax',
+            'friction_hard_frla2blmax',
+            'friction_hard_torsoflla1max',
+            'friction_hard_flla2a4max',
+            'friction_hard_frlbla4max',
+            'friction_hard_frla3rblmax',
+            'friction_hard_a1rbla4max'
+        ]
     else:
         raise NotImplementedError
 
