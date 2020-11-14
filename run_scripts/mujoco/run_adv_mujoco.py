@@ -23,6 +23,8 @@ from ray.tune.logger import pretty_print
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
+os.environ["MUJOCO_GL"] = "osmesa"
+
 from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
 from algorithms.custom_kl_distribution import LogitsDist
 from envs.mujoco.adv_hopper import AdvMAHopper
@@ -40,8 +42,6 @@ from utils.parsers import init_parser, ray_parser, ma_env_parser
 from utils.rllib_utils import get_config_from_path
 
 from models.recurrent_tf_model_v2 import LSTM
-
-os.environ["MUJOCO_GL"] = "osmesa"
 
 def setup_ma_config(config, create_env):
     env = create_env(config['env_config'])
