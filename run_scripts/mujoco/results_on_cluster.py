@@ -38,8 +38,7 @@ if __name__ == '__main__':
       # if "checkpoint_{}".format(args.num_iters) in dirpath:
       if "checkpoint" in dirpath:
 
-        import ipdb; ipdb.set_trace()
-        temp_path = dirpath.split('/')[-3] + '/' + dirpath.split('/')[-2]
+        temp_path = dirpath.split('/')[-3] + args.upload_dir + '/' + dirpath.split('/')[-2]
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), date),
                                    temp_path)
         if not os.path.exists(output_path):
