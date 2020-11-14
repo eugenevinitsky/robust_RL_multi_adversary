@@ -34,16 +34,19 @@ if __name__ == '__main__':
       ray.init()
 
     # Now we add code to loop through the results and create scores of the results
-    output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), date), args.upload_dir)
-    if not os.path.exists(output_path):
-      try:
-        os.makedirs(output_path)
-      except OSError as exc:
-        if exc.errno != errno.EEXIST:
-          raise
     for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser(args.results_dir)):
       # if "checkpoint_{}".format(args.num_iters) in dirpath:
       if "checkpoint" in dirpath:
+
+        import ipdb; ipdb.set_trace()
+        output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), date),
+                                   args.upload_dir)
+        if not os.path.exists(output_path):
+          try:
+            os.makedirs(output_path)
+          except OSError as exc:
+            if exc.errno != errno.EEXIST:
+              raise
 
         # grab the experiment name
         folder = os.path.dirname(dirpath)
