@@ -39,8 +39,9 @@ if __name__ == '__main__':
       if "checkpoint" in dirpath:
 
         import ipdb; ipdb.set_trace()
+        temp_path = dirpath.split('/')[-3] + '/' + dirpath.split('/')[-2]
         output_path = os.path.join(os.path.join(os.path.expanduser('~/transfer_results/adv_robust'), date),
-                                   args.upload_dir)
+                                   temp_path)
         if not os.path.exists(output_path):
           try:
             os.makedirs(output_path)
@@ -98,7 +99,7 @@ if __name__ == '__main__':
             try:
               p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
                                                                's3://sim2real/transfer_results/adv_robust/' \
-                                                               + date + '/' + args.upload_dir
+                                                               + date + '/' + temp_path
                                                                ).split(
                 ' '))
               p1.wait(50)
