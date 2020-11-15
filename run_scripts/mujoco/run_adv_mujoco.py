@@ -25,23 +25,25 @@ from ray.tune.registry import register_env
 
 os.environ["MUJOCO_GL"] = "osmesa"
 
-from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
+# from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
 from algorithms.custom_kl_distribution import LogitsDist
 from envs.mujoco.adv_hopper import AdvMAHopper
 from envs.mujoco.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.mujoco.adv_cheetah import AdvMAHalfCheetahEnv
 from envs.mujoco.adv_ant import AdvMAAnt
-from envs.dmc.adv_cupcatch import AdvMABallInCup
-from envs.dmc.adv_finger import AdvMAFinger
+# from envs.dmc.adv_cupcatch import AdvMABallInCup
+# from envs.dmc.adv_finger import AdvMAFinger
+from envs.grid.maze import MultiMazeEnv
 
 from visualize.mujoco.transfer_tests import run_transfer_tests
 from visualize.mujoco.action_sampler import sample_actions
 # from visualize.mujoco.visualize_adversaries import visualize_adversaries
-from utils.pendulum_env_creator import make_create_env
+from utils.pendulum_env_creator import make_create_env, make_create_maze_env
 from utils.parsers import init_parser, ray_parser, ma_env_parser
 from utils.rllib_utils import get_config_from_path
 
-from models.recurrent_tf_model_v2 import LSTM
+# from models.recurrent_tf_model_v2 import LSTM
+# from models.conv_lstm import ConvLSTM
 
 def setup_ma_config(config, create_env):
     env = create_env(config['env_config'])
@@ -97,10 +99,13 @@ def setup_ma_config(config, create_env):
 
 
 def setup_exps(args):
+    os.environ["MUJOCO_GL"] = "osmesa"
     parser = init_parser()
     parser = ray_parser(parser)
     parser = ma_env_parser(parser)
-    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper', 'cheetah', 'ant', 'cup', 'finger'])
+    parser.add_argument('--env_name', default='pendulum', const='pendulum', nargs='?', choices=['pendulum', 'hopper',
+                                                                                                'cheetah', 'ant', 'cup',
+                                                                                                'finger', 'maze'])
     parser.add_argument('--algorithm', default='PPO', type=str, help='Options are PPO, SAC, TD3')
     parser.add_argument('--custom_ppo', action='store_true', default=False, help='If true, we use the PPO with a KL penalty')
     parser.add_argument('--num_adv_strengths', type=int, default=1, help='Number of adversary strength ranges. '
@@ -288,8 +293,16 @@ def setup_exps(args):
 
     config['env_config']['run'] = alg_run
 
-    ModelCatalog.register_custom_model("rnn", LSTM)
-    config['model']['fcnet_hiddens'] = [64, 64]
+    # ModelCatalog.register_custom_model("rnn", LSTM)
+    # ModelCatalog.register_custom_model("conv_lstm", ConvLSTM)
+
+    if args.env_name == 'maze':
+        import ipdb; ipdb.set_trace()
+        config['model'] = {"dim": 5, "conv_filters": [[16, [2, 2], 1], [32, [2, 2], 1], [64, [2, 2], 1]]}
+        if args.use_lstm:
+            config['model']['use_lstm'] = True
+    else:
+        config['model']['fcnet_hiddens'] = [64, 64]
     if args.use_lstm:
         config['model']['fcnet_hiddens'] = [64]
         config['model']['use_lstm'] = True
@@ -320,6 +333,10 @@ def setup_exps(args):
         env_name = "MAFingerEnv"
         env_tag = "finger"
         create_env_fn = make_create_env(AdvMAFinger)
+    elif args.env_name == "maze":
+        env_name = "MAMazeEnv"
+        env_tag = "maze"
+        create_env_fn = make_create_maze_env(MultiMazeEnv)
 
     config['env'] = env_name
     register_env(env_name, create_env_fn)
@@ -357,6 +374,7 @@ def setup_exps(args):
         'checkpoint_at_end': True,
         'stop': stop_dict,
         'config': config,
+        'max_failures': 0,
         'num_samples': args.num_samples,
     }
     return exp_dict, args

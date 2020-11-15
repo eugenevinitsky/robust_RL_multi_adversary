@@ -18,3 +18,8 @@ def make_create_env(env_class):
     def create_env(config):
         return env_class(config)
     return create_env
+
+def make_create_maze_env(env_class):
+    def create_env(config):
+        return env_class(config=config)
+    return create_env
