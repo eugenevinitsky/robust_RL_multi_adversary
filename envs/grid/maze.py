@@ -182,6 +182,7 @@ class MultiMazeEnv(MultiAgentEnv, MiniGridEnv):
   # @property
   # def action_space(self):
   #   return Discrete(3)
+    self.observation_space = gym.spaces.Dict({'image': gym.spaces.Box(low=0, high=255, shape=(75,))})
 
   @property
   def adv_observation_space(self):
@@ -189,7 +190,7 @@ class MultiMazeEnv(MultiAgentEnv, MiniGridEnv):
 
   @property
   def adv_action_space(self):
-    low = -(self.grid_size + 1) * np.ones(2)
+    low = np.zeros(2)
     high = (self.grid_size + 1) * np.ones(2)
     return gym.spaces.Box(low=np.array(low), high=np.array(high))
 
@@ -259,16 +260,16 @@ class MultiMazeEnv(MultiAgentEnv, MiniGridEnv):
     obs = self.gen_obs()
 
     self.step_num += 1
-    if self.step_num == 1:
-      if self.adversary_range > 0:
-        adv_action = action_dict['adversary{}'.format(self.curr_adversary)]
-        while self.bit_map[int(adv_action[0]), int(adv_action[1])]:
-          adv_action[0] += np.random.randint(low=-1, high=1)
-          adv_action[1] += np.random.randint(low=-1, high=1)
-        self.put_obj(Goal(), int(adv_action[0]), int(adv_action[1]))
+    # if self.step_num == 1:
+    #   if self.adversary_range > 0:
+    #     adv_action = action_dict['adversary{}'.format(self.curr_adversary)]
+    #     while self.bit_map[int(adv_action[0]), int(adv_action[1])]:
+    #       adv_action[0] += np.random.randint(low=-1, high=1)
+    #       adv_action[1] += np.random.randint(low=-1, high=1)
+    #       adv_action = np.clip(adv_action, 0, self.grid_size - 1)
+    #       self.put_obj(Goal(), int(adv_action[0]), int(adv_action[1]))
 
-
-    curr_obs = {'agent': obs}
+    curr_obs = {'agent': {"image": obs['image'].flatten()}}
     curr_rew = {'agent': reward}
     self.total_rew += reward
 
@@ -282,6 +283,7 @@ class MultiMazeEnv(MultiAgentEnv, MiniGridEnv):
         curr_rew.update(adv_rew_dict)
 
     done_dict = {'__all__': done}
+    # self.temp_render()
 
     return curr_obs, curr_rew, done_dict, {}
 
@@ -313,7 +315,7 @@ class MultiMazeEnv(MultiAgentEnv, MiniGridEnv):
 
     # Return first observation
     obs = self.gen_obs()
-    curr_obs = {'agent': {"image": obs['image']}}
+    curr_obs = {'agent': {"image": obs['image'].flatten()}}
     if self.adversary_range > 0:
       curr_obs.update({
         'adversary{}'.format(self.curr_adversary): np.ones(10)
@@ -323,6 +325,65 @@ class MultiMazeEnv(MultiAgentEnv, MiniGridEnv):
   def select_new_adversary(self):
     if self.adversary_range > 0:
       self.curr_adversary = np.random.randint(low=0, high=self.adversary_range)
+
+  def temp_render(self, mode='human', close=False, highlight=True, tile_size=TILE_PIXELS):
+    """
+    Render the whole-grid human view
+    """
+
+    if close:
+      if self.window:
+        self.window.close()
+      return
+
+    if mode == 'human' and not self.window:
+      import gym_minigrid.window
+      self.window = gym_minigrid.window.Window('gym_minigrid')
+      self.window.show(block=False)
+
+    # Compute which cells are visible to the agent
+    _, vis_mask = self.gen_obs_grid()
+
+    # Compute the world coordinates of the bottom-left corner
+    # of the agent's view area
+    f_vec = self.dir_vec
+    r_vec = self.right_vec
+    top_left = self.agent_pos + f_vec * (self.agent_view_size - 1) - r_vec * (self.agent_view_size // 2)
+
+    # Mask of which cells to highlight
+    highlight_mask = np.zeros(shape=(self.width, self.height), dtype=np.bool)
+
+    # For each cell in the visibility mask
+    for vis_j in range(0, self.agent_view_size):
+      for vis_i in range(0, self.agent_view_size):
+        # If this cell is not visible, don't highlight it
+        if not vis_mask[vis_i, vis_j]:
+          continue
+
+        # Compute the world coordinates of this cell
+        abs_i, abs_j = top_left - (f_vec * vis_j) + (r_vec * vis_i)
+
+        if abs_i < 0 or abs_i >= self.width:
+          continue
+        if abs_j < 0 or abs_j >= self.height:
+          continue
+
+        # Mark this cell to be highlighted
+        highlight_mask[abs_i, abs_j] = True
+
+    # Render the whole grid
+    img = self.grid.render(
+      tile_size,
+      self.agent_pos,
+      self.agent_dir,
+      highlight_mask=highlight_mask if highlight else None
+    )
+
+    if mode == 'human':
+      self.window.show_img(img)
+      self.window.set_caption(self.mission)
+
+    return img
 
 
 if hasattr(__loader__, 'name'):

@@ -33,7 +33,7 @@ def load_data(results_path):
     all_file_names = OrderedDict()
     for (dirpath, dirnames, filenames) in os.walk(results_path):
         for run in filenames:
-            if "sweep_rew.txt" in run and not "adv_mean_sweep_rew" in run:
+            if "sweep_rew.txt" in run and not "adv_mean_sweep_rew" in run and not "holdout" in run:
                 tag = dirpath.split("/")[-1]
                 try:
                     run_results = np.load(os.path.join(dirpath, run))
@@ -86,13 +86,10 @@ def make_heatmap(results_path, exp_type, output_path, show=False, output_file_na
         print(file_name)
         _, _, _, _, means, _, _, _, dirpath = sweep_data[file_name]
 
-        if not output_path:
-            output_name = dirpath
-        else:
-            output_name = output_path
+        output_file_name = dirpath.split('/')[-2].split('_')[1]
 
-        if not output_file_name:
-            output_file_name = file_name.split("sweep")[0]
+        # if not output_name:
+        output_name = dirpath
 
         if exp_type == 'hopper':
             means = means.reshape(len(hopper_mass_sweep), len(hopper_friction_sweep))
@@ -110,39 +107,58 @@ def make_heatmap(results_path, exp_type, output_path, show=False, output_file_na
             means = means.reshape(len(cup_mass_sweep), len(ball_mass_sweep))
             save_heatmap(means, cup_mass_sweep, ball_mass_sweep, output_name,
                          output_file_name, show, exp_type, fontsize, title_fontsize)
+        elif exp_type == 'finger':
+            means = means.reshape(len(spinner_mass_sweep), len(proximal_damping_sweep))
+            save_heatmap(means, spinner_mass_sweep, proximal_damping_sweep, output_name,
+                         output_file_name, show, exp_type, fontsize, title_fontsize)
 
 
 
 def save_heatmap(means, mass_sweep, friction_sweep, output_path, file_name, show, exp_type, fontsize=14, title_fontsize=16):
     # with open('{}/{}_{}.png'.format(output_path, file_name, "transfer_heatmap"),'wb') as heatmap:
+    # import seaborn
     fig = plt.figure()
+    file_title = file_name
+    if not file_name:
+        import ipdb; ipdb.set_trace()
+    if file_name[0].isdigit():
+        file_title = file_name[0] + ' ' + file_name[1:]
+    # fontsize=22
+    # title_fontsize=24
     if exp_type == 'hopper':
         plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
-        plt.title(file_name, fontsize=title_fontsize)
+        plt.title(file_title, fontsize=title_fontsize)
         plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x * 3.53) for x in mass_sweep])
         plt.ylabel("Mass coef", fontsize=fontsize)
         plt.xticks(ticks=np.arange(len(friction_sweep))[0::2], labels=["{:0.2f}".format(x) for x in friction_sweep][0::2])
         plt.xlabel("Friction coef", fontsize=fontsize)
     elif exp_type == 'cheetah':
-        plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=2000, vmax=8000)
-        plt.title(file_name, fontsize=title_fontsize)
+        plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=2000, vmax=7000)
+        plt.title(file_title, fontsize=title_fontsize)
         plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x * 6.0) for x in mass_sweep])
         plt.ylabel("Mass coef", fontsize=fontsize)
-        plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
+        plt.xticks(ticks=np.arange(len(friction_sweep))[0::2], labels=["{:0.2f}".format(x) for x in friction_sweep][0::2])
         plt.xlabel("Friction coef", fontsize=fontsize)
     elif exp_type == 'ant':
         plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=8000)
-        plt.title(file_name, fontsize=title_fontsize)
+        plt.title(file_title, fontsize=title_fontsize)
         plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x * 6.0) for x in mass_sweep])
         plt.ylabel("Mass coef", fontsize=fontsize)
         plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
         plt.xlabel("Friction coef", fontsize=fontsize)
     elif exp_type == 'cup':
         plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=100, vmax=1000)
-        plt.title(file_name, fontsize=title_fontsize)
+        plt.title(file_title, fontsize=title_fontsize)
+        plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x) for x in mass_sweep])
+        plt.ylabel("Cup Mass Coeff", fontsize=fontsize)
+        plt.xticks(ticks=np.arange(len(friction_sweep))[0::2], labels=["{:0.2f}".format(x) for x in friction_sweep][0::2])
+        plt.xlabel("Ball Mass Coeff", fontsize=fontsize)
+    elif exp_type == 'finger':
+        plt.imshow(means.T, interpolation='nearest', cmap='seismic', aspect='equal', vmin=100, vmax=1000)
+        plt.title(file_title, fontsize=title_fontsize)
         plt.yticks(ticks=np.arange(len(mass_sweep)), labels=["{:0.2f}".format(x * 6.0) for x in mass_sweep])
         plt.ylabel("Mass coef", fontsize=fontsize)
-        plt.xticks(ticks=np.arange(len(friction_sweep)), labels=["{:0.2f}".format(x) for x in friction_sweep])
+        plt.xticks(ticks=np.arange(len(friction_sweep))[0::2], labels=["{:0.2f}".format(x) for x in friction_sweep][0::2])
         plt.xlabel("Friction coef", fontsize=fontsize)
     plt.colorbar()
     plt.tight_layout()

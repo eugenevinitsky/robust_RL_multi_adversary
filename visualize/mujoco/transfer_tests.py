@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 plt.rcParams["axes.grid"] = False
 import ray
 
+from gym_minigrid.minigrid import *
 from envs.multiarm_bandit import MultiarmBandit, PSEUDORANDOM_TRANSFER
 from utils.parsers import replay_parser
 from utils.rllib_utils import get_config
@@ -83,6 +84,11 @@ def make_bandit_transfer_example(means, stds):
     def set_env_transfer(env):
         env.transfer = [means, stds]
     return set_env_transfer
+
+def make_grid_transfer_example(grid_pos):
+    def set_pos(env):
+        env.put_obj(Goal(), int(grid_pos[0]), int(grid_pos[1]))
+    return set_pos
 
 def make_bandit_transfer_list(num_arms):
     run_list = [
@@ -203,6 +209,13 @@ finger_grid = np.meshgrid(spinner_mass_sweep, proximal_damping_sweep)
 for spinner_mass, proximal_damping in np.vstack((finger_grid[0].ravel(), finger_grid[1].ravel())).T:
     finger_run_list.append(['m_{}_f_{}'.format(spinner_mass, proximal_damping), make_set_mass_damp_finger(spinner_mass, proximal_damping)])
 
+grid_run_list = [
+    ['base', []]
+]
+grid_run_list.append(['top_left', make_grid_transfer_example([0, 0])])
+grid_run_list.append(['top_right', make_grid_transfer_example([0, 14])])
+grid_run_list.append(['bot_right', make_grid_transfer_example([14, 14])])
+grid_run_list.append(['bot_left', make_grid_transfer_example([14, 0])])
 
 def reset_env(env, num_active_adv=0):
     """Undo parameters that need to be off"""

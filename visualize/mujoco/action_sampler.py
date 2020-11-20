@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import ray
 from ray.rllib.env.base_env import _DUMMY_AGENT_ID
-from ray.rllib.evaluation.episode import _flatten_action
+# from ray.rllib.evaluation.episode import _flatten_action
+from ray.rllib.utils.spaces.space_utils import flatten_to_single_ndarray as _flatten_action
 from ray.rllib.models.tf.tf_action_dist import DiagGaussian
 
 from visualize.mujoco.run_rollout import instantiate_rollout, DefaultMapping

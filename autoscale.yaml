@@ -115,10 +115,10 @@ setup_commands:
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
     - cd ~/adversarial_sim2real && git fetch; git checkout code_release && git pull
-    - source activate sim2real && pip install psutil && pip install tensorflow==1.15.0 && pip install ray==0.8.0 && pip install seaborn
+    - source activate sim2real && pip install psutil && pip install tensorflow==1.15.0 && pip install ray==0.8.0 && pip install seaborn && pip install git+git://github.com/denisyarats/dmc2gym.git
     - echo PATH="$HOME/anaconda3/envs/sim2real/bin:$PATH" >> /home/ubuntu/.bashrc && source /home/ubuntu/.bashrc
-
-    # Consider uncommenting these if you also want to run apt-get commands during setup
+    - echo MUJOCO_GL=osmesa >> /home/ubuntu/.bashrc
+    - cp -r /home/ubuntu/.mujoco/mujoco200 /home/ubuntu/.mujoco/mujoco200_linux
     # - sudo pkill -9 apt-get || true
     # - sudo pkill -9 dpkg || true
     # - sudo dpkg --configure -a

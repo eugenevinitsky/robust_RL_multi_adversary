@@ -9,12 +9,12 @@ import numpy as np
 import psutil
 import pytz
 import ray
-from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
+from ray.rllib.agents.ppo.ppo_tf_policy import PPOTFPolicy
 from ray.rllib.agents.ppo.ppo import PPOTrainer, DEFAULT_CONFIG as DEFAULT_PPO_CONFIG
 from ray.rllib.agents.sac.sac import DEFAULT_CONFIG as DEFAULT_SAC_CONFIG
 
 from ray.rllib.agents.ddpg.td3 import TD3_DEFAULT_CONFIG as DEFAULT_TD3_CONFIG
-from ray.rllib.agents.ddpg.ddpg_policy import DDPGTFPolicy
+# from ray.rllib.agents.ddpg.ddpg_policy import DDPGTFPolicy
 
 from ray.rllib.models import ModelCatalog
 from ray import tune
@@ -297,8 +297,7 @@ def setup_exps(args):
     # ModelCatalog.register_custom_model("conv_lstm", ConvLSTM)
 
     if args.env_name == 'maze':
-        import ipdb; ipdb.set_trace()
-        config['model'] = {"dim": 5, "conv_filters": [[16, [2, 2], 1], [32, [2, 2], 1], [64, [2, 2], 1]]}
+        # config['model'] = {"dim": 5, "conv_filters": [[16, [2, 2], 1], [32, [2, 2], 1], [64, [2, 2], 1]]}
         if args.use_lstm:
             config['model']['use_lstm'] = True
     else:

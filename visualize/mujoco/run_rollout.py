@@ -5,7 +5,8 @@ import numpy as np
 from ray.rllib.env import MultiAgentEnv
 from ray.rllib.policy.sample_batch import DEFAULT_POLICY_ID
 from ray.rllib.env.base_env import _DUMMY_AGENT_ID
-from ray.rllib.evaluation.episode import _flatten_action
+# from ray.rllib.evaluation.episode import _flatten_action
+from ray.rllib.utils.spaces.space_utils import flatten_to_single_ndarray as _flatten_action
 
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
@@ -18,19 +19,19 @@ from envs.mujoco.adv_hopper import AdvMAHopper
 from envs.mujoco.adv_inverted_pendulum_env import AdvMAPendulumEnv
 from envs.mujoco.adv_cheetah import AdvMAHalfCheetahEnv
 from envs.mujoco.adv_ant import AdvMAAnt
-from envs.dmc.adv_cupcatch import AdvMABallInCup
-from envs.dmc.adv_finger import AdvMAFinger
+# from envs.dmc.adv_cupcatch import AdvMABallInCup
+# from envs.dmc.adv_finger import AdvMAFinger
 
 from envs.linear_env import LinearEnv
 from envs.multiarm_bandit import MultiarmBandit
 
 from utils.pendulum_env_creator import make_create_env
 
-from models.conv_lstm import ConvLSTM
-from models.recurrent_tf_model_v2 import LSTM
+# from models.conv_lstm import ConvLSTM
+# from models.recurrent_tf_model_v2 import LSTM
 
-ModelCatalog.register_custom_model("rnn", ConvLSTM)
-ModelCatalog.register_custom_model("rnn", LSTM)
+# ModelCatalog.register_custom_model("rnn", ConvLSTM)
+# ModelCatalog.register_custom_model("rnn", LSTM)
 
 class DefaultMapping(collections.defaultdict):
     """default_factory now takes as an argument the missing key."""
