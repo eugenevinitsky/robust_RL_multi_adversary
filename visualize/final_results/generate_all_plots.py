@@ -235,298 +235,298 @@ if __name__ == '__main__':
     ###################################################################################################################
     ######################################### CHEETAH #########################################################
     ###################################################################################################################
-
-    ###########################################################
-    curr_path = os.path.abspath(__file__)
-    data_dir = os.path.abspath(os.path.join(curr_path, '../../../data/cheetah')) + '/'
-
-    ##############################################################
-    # generate the bar charts comparing 0 adv, dr, and 5 adv for hopper
-    # generate validation set bar charts
-    test_names = []
-    cheetah_friction_sweep_good = np.linspace(0.5, 1.5, 11)
-    cheetah_friction_sweep_bad = np.linspace(0.1, 0.9, 11)
-    transfer_test_names_good = []
-    transfer_test_names_bad = []
-
-    cheetah_grid_good = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep_good)
-    for mass, fric in np.vstack((cheetah_grid_good[0].ravel(), cheetah_grid_good[1].ravel())).T:
-        transfer_test_names_good.append('m_{}_f_{}'.format(mass, fric))
-
-    cheetah_grid_bad = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep_bad)
-    for mass, fric in np.vstack((cheetah_grid_bad[0].ravel(), cheetah_grid_bad[1].ravel())).T:
-        transfer_test_names_bad.append('m_{}_f_{}'.format(mass, fric))
-
-    output_files = 'final_plots/cheetah/hc_compare_valid_all_seeds_good.png'
-    file_names_good = [data_dir + 'hc_0adv_concat1_seed_good/',
-                  data_dir + 'hc_0adv_concat1_seed_dr_good/',
-                  data_dir + 'hc_1adv_concat1_seed_str0p1_good/',
-                  data_dir + 'hc_3adv_concat1_seed_str0p1_norew_good/',
-                  data_dir + 'hc_5adv_concat1_seed_str0p1_norew_good/']
-    legend_names = ['0 Adv', 'DR', '1 Adv', '3 Adv', '5 Adv']
-    titles = ['Cheetah, Valid. Set Reward - Good Param.']
-
-    plot_across_seeds(file_names_good, transfer_test_names_good, output_files, legend_names, num_seeds=10, yaxis=[0, 7000], titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, validation_set=True, use_std=True)
-    output_files = ['final_plots/cheetah/hc_heat0adv_good.png', 'final_plots/cheetah/hc_heatdr_good.png', 'final_plots/cheetah/hc_heat1adv_good.png', 'final_plots/cheetah/hc_heat3adv_good.png', 'final_plots/cheetah/hc_heat5adv_good.png']
-    plot_across_seeds_heatmap(exp_type='cheetah', mass_sweep=cheetah_mass_sweep, friction_sweep=cheetah_friction_sweep_good,  outer_folder_list=file_names_good, test_names=transfer_test_names_good, file_name=output_files,
-                       titles=legend_names, num_seeds=10, title_fontsize=title_fontsize)
-
-
-    output_files = 'final_plots/cheetah/hc_compare_valid_all_seeds_bad.png'
-    file_names_bad = [data_dir + 'hc_0adv_concat1_seed_bad/',
-                  data_dir + 'hc_0adv_concat1_seed_dr_bad/',
-                  data_dir + 'hc_1adv_concat1_seed_str0p1_bad/',
-                  data_dir + 'hc_3adv_concat1_seed_str0p1_norew_bad/',
-                  data_dir + 'hc_5adv_concat1_seed_str0p1_norew_bad/']
-    legend_names = ['0 Adv', 'DR', '1 Adv', '3 Adv', '5 Adv']
-    titles = ['Cheetah, Valid. Set Reward - Bad Param.']
-
-    plot_across_seeds(file_names_bad, transfer_test_names_bad, output_files, legend_names, num_seeds=10, yaxis=[0, 7000], titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, validation_set=True, use_std=True)
-    output_files = ['final_plots/cheetah/hc_heat0adv_bad.png', 'final_plots/cheetah/hc_heatdr_bad.png', 'final_plots/cheetah/hc_heat1adv_bad.png', 'final_plots/cheetah/hc_heat3adv_bad.png', 'final_plots/cheetah/hc_heat5adv_bad.png']
-    plot_across_seeds_heatmap(exp_type='cheetah', mass_sweep=cheetah_mass_sweep, friction_sweep=cheetah_friction_sweep_bad,  outer_folder_list=file_names_bad, test_names=transfer_test_names_bad, file_name=output_files,
-                      titles=legend_names, num_seeds=10, title_fontsize=title_fontsize)
-
-    # generate the test set maps for the best validation set result
-    test_names = [
-        'friction_hard_torsoheadfthighmax',
-        'friction_hard_floorheadfshinmax',
-        'friction_hard_bthighbshinbfootmax',
-        'friction_hard_floortorsoheadmax',
-        'friction_hard_floorbshinffootmax',
-        'friction_hard_bthighbfootffootmax',
-        'friction_hard_bthighfthighfshinmax',
-        'friction_hard_headfshinffootmax'
-    ]
-
-    #good
-    output_files = 'final_plots/cheetah/hc_avg_test_all_seed_good.png'
-    titles = ['Cheetah, Test Set Reward - Good Param.']
-    plot_across_seeds(file_names_good, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 7000],
-                      titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize,avg_across_tests=True, use_std=True)
-
-    output_files = ['final_plots/cheetah/hc_seed_good_' + name for name in test_names]
-    output_files.append('final_plots/cheetah/compare_test_all_seed_good')
-    titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
-
-    plot_across_seeds(file_names_good, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000], titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize)
-    output_files[-1] = 'final_plots/cheetah/compare_test_all_seed_std_good'
-    plot_across_seeds(file_names_good, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000], titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize,use_std=True)
-
-    #bad
-    output_files = 'final_plots/cheetah/hc_avg_test_all_seed_bad.png'
-    titles = ['Cheetah, Test Set Reward - Bad Param.']
-    plot_across_seeds(file_names_bad, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 7000],
-                      titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, use_std=True)
-
-    output_files = ['final_plots/cheetah/hc_seed_bad_' + name for name in test_names]
-    output_files.append('final_plots/cheetah/compare_test_all_seed_bad')
-    titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
-
-    plot_across_seeds(file_names_bad, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000], titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize)
-    output_files[-1] = 'final_plots/cheetah/compare_test_all_seed_std_bad'
-    plot_across_seeds(file_names_bad, test_names, output_files, legend_names, num_seeds=10,yaxis=[0, 8000], titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
-
-    ###################################################################################################################
-    ######################################### ANT #########################################################
-    ###################################################################################################################
-
-    ###########################################################
-    curr_path = os.path.abspath(__file__)
-    data_dir = os.path.abspath(os.path.join(curr_path, '../../../data/ant')) + '/'
-
-    ##############################################################
-    # generate the bar charts comparing 0 adv, dr, and 5 adv for hopper
-    # generate validation set bar charts
-    transfer_test_names = []
-
-    ant_grid = np.meshgrid(ant_mass_sweep, ant_friction_sweep)
-    for mass, fric in np.vstack((ant_grid[0].ravel(), ant_grid[1].ravel())).T:
-        transfer_test_names.append('m_{}_f_{}'.format(mass, fric))
-
-
-    output_files = 'final_plots/ant/ant_compare_valid_all_seeds.png'
-    file_names = [data_dir + 'ant_0adv_concat1_seed/',
-                       data_dir + 'ant_0adv_concat1_seed_dr/',
-                       data_dir + 'ant_1adv_concat1_seed_str0p15/',
-                       data_dir + 'ant_3adv_concat1_seed_str0p15_norew/',
-                       data_dir + 'ant_5adv_concat1_seed_str0p15_norew/']
-    legend_names = ['0 Adv', 'DR', '1 Adv', '3 Adv', '5 Adv']
-    titles = ['Ant, Validation Set Reward']
-
-    plot_across_seeds(file_names, transfer_test_names, output_files, legend_names, num_seeds=10,
-                      yaxis=[0, 7000], titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, validation_set=True, use_std=True)
-    output_files = ['final_plots/ant/ant_heat0adv.png', 'final_plots/ant/ant_heatdr.png', 'final_plots/ant/ant_heat1adv.png', 'final_plots/ant/ant_heat3adv.png', 'final_plots/ant/ant_heat5adv.png']
-
-    plot_across_seeds_heatmap(exp_type='ant', mass_sweep=ant_mass_sweep, friction_sweep=ant_friction_sweep,  outer_folder_list=file_names, test_names=transfer_test_names, file_name=output_files,
-                      titles=legend_names, num_seeds=10, title_fontsize=title_fontsize)
-
-    # generate the test set maps for the best validation set result
-    test_names = [
-        'friction_hard_flla1a3max',
-        'friction_hard_torsoa1rblmax',
-        'friction_hard_frla2blmax',
-        'friction_hard_torsoflla1max',
-        'friction_hard_flla2a4max',
-        'friction_hard_frlbla4max',
-        'friction_hard_frla3rblmax',
-        'friction_hard_a1rbla4max'
-    ]
-
-    output_files = 'final_plots/ant/ant_avg_test_all_seed.png'
-    titles = ['Ant, Test Set Reward']
-    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 7000],
-                      titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, use_std=True)
-
-    output_files = ['final_plots/ant/ant_seed_' + name for name in test_names]
-    output_files.append('final_plots/ant/compare_test_all_seed')
-    titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
-
-    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000],
-                      titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize)
-    output_files[-1] = 'final_plots/ant/compare_test_all_seed_std'
-    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000],
-                      titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
-
-    ###################################################################################################################
-    ######################################### HOPPER #########################################################
-    ###################################################################################################################
-
-    ###########################################################
-    curr_path = os.path.abspath(__file__)
-    data_dir = os.path.abspath(os.path.join(curr_path, '../../../data/hopper')) + '/'
-
-    ##############################################################
-    # generate the bar charts comparing 0 adv, dr, and 5 adv for hopper
-    # generate validation set bar charts
-    transfer_test_names = []
-
-    hop_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
-    for mass, fric in np.vstack((hop_grid[0].ravel(), hop_grid[1].ravel())).T:
-        transfer_test_names.append('m_{}_f_{}'.format(mass, fric))
-
-    output_files = 'final_plots/hopper/hop_compare_valid_all_seeds.png'
-    file_names = [data_dir + 'hop_0adv_concat1_seed/',
-                       data_dir + 'hop_0adv_concat1_seed_dr/',
-                       data_dir + 'hop_1adv_concat1_seed_str0p25/',
-                       data_dir + 'hop_3adv_concat1_seed_str0p25/',
-                       data_dir + 'hop_5adv_concat1_seed_str0p25_norew/']
-    legend_names = ['0 Adv', 'DR', '1 Adv', '3 Adv', '5 Adv']
-    titles = ['Hopper, Validation Set Reward']
-
-    plot_across_seeds(file_names, transfer_test_names, output_files, legend_names, num_seeds=10,
-                      yaxis=[0, 3000], titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, validation_set=True, use_std=True)
-
-    # generate the test set maps for the best validation set result
-    test_names = [
-        'friction_hard_torsolegmax_floorthighfootmin',
-        'friction_hard_floorthighmax_torsolegfootmin',
-        'friction_hard_footlegmax_floortorsothighmin',
-        'friction_hard_torsothighfloormax_footlegmin',
-        'friction_hard_torsofootmax_floorthighlegmin',
-        'friction_hard_floorthighlegmax_torsofootmin',
-        'friction_hard_floorfootmax_torsothighlegmin',
-        'friction_hard_thighlegmax_floortorsofootmin',
-    ]
-
-    output_files = 'final_plots/hopper/hop_avg_test_all_seed.png'
-    titles = ['Hopper, Test Set Reward']
-    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
-                      titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, use_std=True)
-    output_files = ['final_plots/hopper/hop_heat0adv.png', 'final_plots/hopper/hop_heatdr.png', 'final_plots/hopper/hop_heat1adv.png', 'final_plots/hopper/hop_heat3adv.png', 'final_plots/hopper/hop_heat5adv.png']
-    plot_across_seeds_heatmap(exp_type='hopper', mass_sweep=hopper_mass_sweep, friction_sweep=hopper_friction_sweep,  outer_folder_list=file_names, test_names=transfer_test_names, file_name=output_files,
-                      titles=legend_names, num_seeds=10, title_fontsize=title_fontsize)
-
-    output_files = ['final_plots/hopper/hop_seed_' + name for name in test_names]
-    output_files.append('final_plots/hopper/compare_test_all_seed')
-    titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
-
-    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
-                      titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize)
-    output_files[-1] = 'final_plots/hopper/compare_test_all_seed_std'
-    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
-                      titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
-
-    ###################################################################################################################
-    ######################################### HOPPER NUMADV #########################################################
-    ###################################################################################################################
-
-    ###########################################################
+    #
+    # ###########################################################
+    # curr_path = os.path.abspath(__file__)
+    # data_dir = os.path.abspath(os.path.join(curr_path, '../../../data/cheetah')) + '/'
+    #
+    # ##############################################################
+    # # generate the bar charts comparing 0 adv, dr, and 5 adv for hopper
+    # # generate validation set bar charts
+    # test_names = []
+    # cheetah_friction_sweep_good = np.linspace(0.5, 1.5, 11)
+    # cheetah_friction_sweep_bad = np.linspace(0.1, 0.9, 11)
+    # transfer_test_names_good = []
+    # transfer_test_names_bad = []
+    #
+    # cheetah_grid_good = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep_good)
+    # for mass, fric in np.vstack((cheetah_grid_good[0].ravel(), cheetah_grid_good[1].ravel())).T:
+    #     transfer_test_names_good.append('m_{}_f_{}'.format(mass, fric))
+    #
+    # cheetah_grid_bad = np.meshgrid(cheetah_mass_sweep, cheetah_friction_sweep_bad)
+    # for mass, fric in np.vstack((cheetah_grid_bad[0].ravel(), cheetah_grid_bad[1].ravel())).T:
+    #     transfer_test_names_bad.append('m_{}_f_{}'.format(mass, fric))
+    #
+    # output_files = 'final_plots/cheetah/hc_compare_valid_all_seeds_good.png'
+    # file_names_good = [data_dir + 'hc_0adv_concat1_seed_good/',
+    #               data_dir + 'hc_0adv_concat1_seed_dr_good/',
+    #               data_dir + 'hc_1adv_concat1_seed_str0p1_good/',
+    #               data_dir + 'hc_3adv_concat1_seed_str0p1_norew_good/',
+    #               data_dir + 'hc_5adv_concat1_seed_str0p1_norew_good/']
+    # legend_names = ['0 Adv', 'DR', '1 Adv', '3 Adv', '5 Adv']
+    # titles = ['Cheetah, Valid. Set Reward - Good Param.']
+    #
+    # plot_across_seeds(file_names_good, transfer_test_names_good, output_files, legend_names, num_seeds=10, yaxis=[0, 7000], titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, validation_set=True, use_std=True)
+    # output_files = ['final_plots/cheetah/hc_heat0adv_good.png', 'final_plots/cheetah/hc_heatdr_good.png', 'final_plots/cheetah/hc_heat1adv_good.png', 'final_plots/cheetah/hc_heat3adv_good.png', 'final_plots/cheetah/hc_heat5adv_good.png']
+    # plot_across_seeds_heatmap(exp_type='cheetah', mass_sweep=cheetah_mass_sweep, friction_sweep=cheetah_friction_sweep_good,  outer_folder_list=file_names_good, test_names=transfer_test_names_good, file_name=output_files,
+    #                    titles=legend_names, num_seeds=10, title_fontsize=title_fontsize)
+    #
+    #
+    # output_files = 'final_plots/cheetah/hc_compare_valid_all_seeds_bad.png'
+    # file_names_bad = [data_dir + 'hc_0adv_concat1_seed_bad/',
+    #               data_dir + 'hc_0adv_concat1_seed_dr_bad/',
+    #               data_dir + 'hc_1adv_concat1_seed_str0p1_bad/',
+    #               data_dir + 'hc_3adv_concat1_seed_str0p1_norew_bad/',
+    #               data_dir + 'hc_5adv_concat1_seed_str0p1_norew_bad/']
+    # legend_names = ['0 Adv', 'DR', '1 Adv', '3 Adv', '5 Adv']
+    # titles = ['Cheetah, Valid. Set Reward - Bad Param.']
+    #
+    # plot_across_seeds(file_names_bad, transfer_test_names_bad, output_files, legend_names, num_seeds=10, yaxis=[0, 7000], titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, validation_set=True, use_std=True)
+    # output_files = ['final_plots/cheetah/hc_heat0adv_bad.png', 'final_plots/cheetah/hc_heatdr_bad.png', 'final_plots/cheetah/hc_heat1adv_bad.png', 'final_plots/cheetah/hc_heat3adv_bad.png', 'final_plots/cheetah/hc_heat5adv_bad.png']
+    # plot_across_seeds_heatmap(exp_type='cheetah', mass_sweep=cheetah_mass_sweep, friction_sweep=cheetah_friction_sweep_bad,  outer_folder_list=file_names_bad, test_names=transfer_test_names_bad, file_name=output_files,
+    #                   titles=legend_names, num_seeds=10, title_fontsize=title_fontsize)
+    #
+    # # generate the test set maps for the best validation set result
+    # test_names = [
+    #     'friction_hard_torsoheadfthighmax',
+    #     'friction_hard_floorheadfshinmax',
+    #     'friction_hard_bthighbshinbfootmax',
+    #     'friction_hard_floortorsoheadmax',
+    #     'friction_hard_floorbshinffootmax',
+    #     'friction_hard_bthighbfootffootmax',
+    #     'friction_hard_bthighfthighfshinmax',
+    #     'friction_hard_headfshinffootmax'
+    # ]
+    #
+    # #good
+    # output_files = 'final_plots/cheetah/hc_avg_test_all_seed_good.png'
+    # titles = ['Cheetah, Test Set Reward - Good Param.']
+    # plot_across_seeds(file_names_good, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 7000],
+    #                   titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize,avg_across_tests=True, use_std=True)
+    #
+    # output_files = ['final_plots/cheetah/hc_seed_good_' + name for name in test_names]
+    # output_files.append('final_plots/cheetah/compare_test_all_seed_good')
+    # titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
+    #
+    # plot_across_seeds(file_names_good, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000], titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize)
+    # output_files[-1] = 'final_plots/cheetah/compare_test_all_seed_std_good'
+    # plot_across_seeds(file_names_good, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000], titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize,use_std=True)
+    #
+    # #bad
+    # output_files = 'final_plots/cheetah/hc_avg_test_all_seed_bad.png'
+    # titles = ['Cheetah, Test Set Reward - Bad Param.']
+    # plot_across_seeds(file_names_bad, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 7000],
+    #                   titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, use_std=True)
+    #
+    # output_files = ['final_plots/cheetah/hc_seed_bad_' + name for name in test_names]
+    # output_files.append('final_plots/cheetah/compare_test_all_seed_bad')
+    # titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
+    #
+    # plot_across_seeds(file_names_bad, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000], titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize)
+    # output_files[-1] = 'final_plots/cheetah/compare_test_all_seed_std_bad'
+    # plot_across_seeds(file_names_bad, test_names, output_files, legend_names, num_seeds=10,yaxis=[0, 8000], titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
+    #
+    # ###################################################################################################################
+    # ######################################### ANT #########################################################
+    # ###################################################################################################################
+    #
+    # ###########################################################
+    # curr_path = os.path.abspath(__file__)
+    # data_dir = os.path.abspath(os.path.join(curr_path, '../../../data/ant')) + '/'
+    #
+    # ##############################################################
+    # # generate the bar charts comparing 0 adv, dr, and 5 adv for hopper
+    # # generate validation set bar charts
+    # transfer_test_names = []
+    #
+    # ant_grid = np.meshgrid(ant_mass_sweep, ant_friction_sweep)
+    # for mass, fric in np.vstack((ant_grid[0].ravel(), ant_grid[1].ravel())).T:
+    #     transfer_test_names.append('m_{}_f_{}'.format(mass, fric))
+    #
+    #
+    # output_files = 'final_plots/ant/ant_compare_valid_all_seeds.png'
+    # file_names = [data_dir + 'ant_0adv_concat1_seed/',
+    #                    data_dir + 'ant_0adv_concat1_seed_dr/',
+    #                    data_dir + 'ant_1adv_concat1_seed_str0p15/',
+    #                    data_dir + 'ant_3adv_concat1_seed_str0p15_norew/',
+    #                    data_dir + 'ant_5adv_concat1_seed_str0p15_norew/']
+    # legend_names = ['0 Adv', 'DR', '1 Adv', '3 Adv', '5 Adv']
+    # titles = ['Ant, Validation Set Reward']
+    #
+    # plot_across_seeds(file_names, transfer_test_names, output_files, legend_names, num_seeds=10,
+    #                   yaxis=[0, 7000], titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, validation_set=True, use_std=True)
+    # output_files = ['final_plots/ant/ant_heat0adv.png', 'final_plots/ant/ant_heatdr.png', 'final_plots/ant/ant_heat1adv.png', 'final_plots/ant/ant_heat3adv.png', 'final_plots/ant/ant_heat5adv.png']
+    #
+    # plot_across_seeds_heatmap(exp_type='ant', mass_sweep=ant_mass_sweep, friction_sweep=ant_friction_sweep,  outer_folder_list=file_names, test_names=transfer_test_names, file_name=output_files,
+    #                   titles=legend_names, num_seeds=10, title_fontsize=title_fontsize)
+    #
+    # # generate the test set maps for the best validation set result
+    # test_names = [
+    #     'friction_hard_flla1a3max',
+    #     'friction_hard_torsoa1rblmax',
+    #     'friction_hard_frla2blmax',
+    #     'friction_hard_torsoflla1max',
+    #     'friction_hard_flla2a4max',
+    #     'friction_hard_frlbla4max',
+    #     'friction_hard_frla3rblmax',
+    #     'friction_hard_a1rbla4max'
+    # ]
+    #
+    # output_files = 'final_plots/ant/ant_avg_test_all_seed.png'
+    # titles = ['Ant, Test Set Reward']
+    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 7000],
+    #                   titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, use_std=True)
+    #
+    # output_files = ['final_plots/ant/ant_seed_' + name for name in test_names]
+    # output_files.append('final_plots/ant/compare_test_all_seed')
+    # titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
+    #
+    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000],
+    #                   titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize)
+    # output_files[-1] = 'final_plots/ant/compare_test_all_seed_std'
+    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 8000],
+    #                   titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
+    #
+    # ###################################################################################################################
+    # ######################################### HOPPER #########################################################
+    # ###################################################################################################################
+    #
+    # ###########################################################
     curr_path = os.path.abspath(__file__)
     data_dir = os.path.abspath(os.path.join(curr_path, '../../../data/hopper')) + '/'
-
-    ##############################################################
-    # generate the bar charts comparing 0 adv, dr, and 5 adv for hopper
-    # generate validation set bar charts
-    transfer_test_names = []
-    for test in hopper_run_list:
-        transfer_test_names.append(test[0])
-
-    output_files = 'final_plots/hopper/hop_compare_valid_all_seeds_numadv.png'
-    file_names = [data_dir + 'hop_0adv_concat1_seed/',
-                  data_dir + 'hop_1adv_concat1_seed_str0p25/',
-                  data_dir + 'hop_2adv_concat1_seed_str0p25/',
-                  data_dir + 'hop_3adv_concat1_seed_str0p25/',
-                  data_dir + 'hop_5adv_concat1_seed_str0p25_norew/',
-                  data_dir + 'hop_7adv_concat1_seed_str0p25_norew/',
-                  data_dir + 'hop_9adv_concat1_seed_str0p25_norew/',
-                  data_dir + 'hop_11adv_concat1_seed_str0p25_norew/']
-    legend_names = ['0 Adv', '1 Adv', '2 Adv', '3 Adv', '5 Adv', '7 Adv', '9 Adv', '11 Adv']
-    titles = ['Hopper, Validation Set Reward']
-
-    plot_across_seeds(file_names, transfer_test_names, output_files, legend_names, num_seeds=10,
-                      yaxis=[0, 3000], titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, validation_set=True, use_std=True)
-
-    # generate the test set maps for the best validation set result
-    test_names = [
-        'friction_hard_torsolegmax_floorthighfootmin',
-        'friction_hard_floorthighmax_torsolegfootmin',
-        'friction_hard_footlegmax_floortorsothighmin',
-        'friction_hard_torsothighfloormax_footlegmin',
-        'friction_hard_torsofootmax_floorthighlegmin',
-        'friction_hard_floorthighlegmax_torsofootmin',
-        'friction_hard_floorfootmax_torsothighlegmin',
-        'friction_hard_thighlegmax_floortorsofootmin',
-    ]
-
-    # good
-    output_files = 'final_plots/hopper/hop_avg_test_all_seed_numadv.png'
-    titles = ['Hopper, Test Set Reward']
-    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
-                      titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, use_std=True)
-
-    output_files = ['final_plots/hopper/hop_test_seed_numadv_' + name for name in test_names]
-    output_files.append('final_plots/hopper/compare_test_all_seed_numadv')
-    titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
-
-    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
-                      titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize)
-    output_files[-1] = 'final_plots/hopper/compare_test_all_seed_std_numadv'
-    plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
-                      titles=titles,
-                      fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
-
-    ###################################################################################################################
-    ######################################### HOPPER POLICY CORRELATION MATRIX #########################################
-    ###################################################################################################################
+    #
+    # ##############################################################
+    # # generate the bar charts comparing 0 adv, dr, and 5 adv for hopper
+    # # generate validation set bar charts
+    # transfer_test_names = []
+    #
+    # hop_grid = np.meshgrid(hopper_mass_sweep, hopper_friction_sweep)
+    # for mass, fric in np.vstack((hop_grid[0].ravel(), hop_grid[1].ravel())).T:
+    #     transfer_test_names.append('m_{}_f_{}'.format(mass, fric))
+    #
+    # output_files = 'final_plots/hopper/hop_compare_valid_all_seeds.png'
+    # file_names = [data_dir + 'hop_0adv_concat1_seed/',
+    #                    data_dir + 'hop_0adv_concat1_seed_dr/',
+    #                    data_dir + 'hop_1adv_concat1_seed_str0p25/',
+    #                    data_dir + 'hop_3adv_concat1_seed_str0p25/',
+    #                    data_dir + 'hop_5adv_concat1_seed_str0p25_norew/']
+    # legend_names = ['0 Adv', 'DR', '1 Adv', '3 Adv', '5 Adv']
+    # titles = ['Hopper, Validation Set Reward']
+    #
+    # plot_across_seeds(file_names, transfer_test_names, output_files, legend_names, num_seeds=10,
+    #                   yaxis=[0, 3000], titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, validation_set=True, use_std=True)
+    #
+    # # generate the test set maps for the best validation set result
+    # test_names = [
+    #     'friction_hard_torsolegmax_floorthighfootmin',
+    #     'friction_hard_floorthighmax_torsolegfootmin',
+    #     'friction_hard_footlegmax_floortorsothighmin',
+    #     'friction_hard_torsothighfloormax_footlegmin',
+    #     'friction_hard_torsofootmax_floorthighlegmin',
+    #     'friction_hard_floorthighlegmax_torsofootmin',
+    #     'friction_hard_floorfootmax_torsothighlegmin',
+    #     'friction_hard_thighlegmax_floortorsofootmin',
+    # ]
+    #
+    # output_files = 'final_plots/hopper/hop_avg_test_all_seed.png'
+    # titles = ['Hopper, Test Set Reward']
+    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
+    #                   titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, use_std=True)
+    # output_files = ['final_plots/hopper/hop_heat0adv.png', 'final_plots/hopper/hop_heatdr.png', 'final_plots/hopper/hop_heat1adv.png', 'final_plots/hopper/hop_heat3adv.png', 'final_plots/hopper/hop_heat5adv.png']
+    # plot_across_seeds_heatmap(exp_type='hopper', mass_sweep=hopper_mass_sweep, friction_sweep=hopper_friction_sweep,  outer_folder_list=file_names, test_names=transfer_test_names, file_name=output_files,
+    #                   titles=legend_names, num_seeds=10, title_fontsize=title_fontsize)
+    #
+    # output_files = ['final_plots/hopper/hop_seed_' + name for name in test_names]
+    # output_files.append('final_plots/hopper/compare_test_all_seed')
+    # titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
+    #
+    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
+    #                   titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize)
+    # output_files[-1] = 'final_plots/hopper/compare_test_all_seed_std'
+    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
+    #                   titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
+    #
+    # ###################################################################################################################
+    # ######################################### HOPPER NUMADV #########################################################
+    # ###################################################################################################################
+    #
+    # ###########################################################
+    # curr_path = os.path.abspath(__file__)
+    # data_dir = os.path.abspath(os.path.join(curr_path, '../../../data/hopper')) + '/'
+    #
+    # ##############################################################
+    # # generate the bar charts comparing 0 adv, dr, and 5 adv for hopper
+    # # generate validation set bar charts
+    # transfer_test_names = []
+    # for test in hopper_run_list:
+    #     transfer_test_names.append(test[0])
+    #
+    # output_files = 'final_plots/hopper/hop_compare_valid_all_seeds_numadv.png'
+    # file_names = [data_dir + 'hop_0adv_concat1_seed/',
+    #               data_dir + 'hop_1adv_concat1_seed_str0p25/',
+    #               data_dir + 'hop_2adv_concat1_seed_str0p25/',
+    #               data_dir + 'hop_3adv_concat1_seed_str0p25/',
+    #               data_dir + 'hop_5adv_concat1_seed_str0p25_norew/',
+    #               data_dir + 'hop_7adv_concat1_seed_str0p25_norew/',
+    #               data_dir + 'hop_9adv_concat1_seed_str0p25_norew/',
+    #               data_dir + 'hop_11adv_concat1_seed_str0p25_norew/']
+    # legend_names = ['0 Adv', '1 Adv', '2 Adv', '3 Adv', '5 Adv', '7 Adv', '9 Adv', '11 Adv']
+    # titles = ['Hopper, Validation Set Reward']
+    #
+    # plot_across_seeds(file_names, transfer_test_names, output_files, legend_names, num_seeds=10,
+    #                   yaxis=[0, 3000], titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, validation_set=True, use_std=True)
+    #
+    # # generate the test set maps for the best validation set result
+    # test_names = [
+    #     'friction_hard_torsolegmax_floorthighfootmin',
+    #     'friction_hard_floorthighmax_torsolegfootmin',
+    #     'friction_hard_footlegmax_floortorsothighmin',
+    #     'friction_hard_torsothighfloormax_footlegmin',
+    #     'friction_hard_torsofootmax_floorthighlegmin',
+    #     'friction_hard_floorthighlegmax_torsofootmin',
+    #     'friction_hard_floorfootmax_torsothighlegmin',
+    #     'friction_hard_thighlegmax_floortorsofootmin',
+    # ]
+    #
+    # # good
+    # output_files = 'final_plots/hopper/hop_avg_test_all_seed_numadv.png'
+    # titles = ['Hopper, Test Set Reward']
+    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
+    #                   titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize, avg_across_tests=True, use_std=True)
+    #
+    # output_files = ['final_plots/hopper/hop_test_seed_numadv_' + name for name in test_names]
+    # output_files.append('final_plots/hopper/compare_test_all_seed_numadv')
+    # titles = ['blah' for i in range(len(test_names))] + ['Average reward on test set across 10 seeds']
+    #
+    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
+    #                   titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize)
+    # output_files[-1] = 'final_plots/hopper/compare_test_all_seed_std_numadv'
+    # plot_across_seeds(file_names, test_names, output_files, legend_names, num_seeds=10, yaxis=[0, 3000],
+    #                   titles=titles,
+    #                   fontsize=fontsize, title_fontsize=title_fontsize, use_std=True)
+    #
+    # ###################################################################################################################
+    # ######################################### HOPPER POLICY CORRELATION MATRIX #########################################
+    # ###################################################################################################################
     adv_1_file = data_dir + 'policy_correlation_data/results_1adv.txt'
 
     with open(adv_1_file, 'rb') as file:
@@ -542,8 +542,8 @@ if __name__ == '__main__':
     plt.xticks(ticks=np.arange(adv_1_results.shape[0]))
     plt.ylabel('agent seed index', fontsize=fontsize)
     plt.xlabel('adversary seed index', fontsize=fontsize)
-    plt.title('1 Adversary', fontsize=title_fontsize)
-    plt.savefig('final_results/final_plots/hopper/adv_1_correlation.png', bbox_inches="tight")
+    plt.title('RARL Agent v. RARL Adv', fontsize=title_fontsize)
+    plt.savefig('final_plots/hopper/1adv_v_1adv_r2.png', bbox_inches="tight")
 
     adv_3_file = data_dir + 'policy_correlation_data/results_3adv.txt'
 
@@ -560,5 +560,78 @@ if __name__ == '__main__':
     plt.xticks(ticks=np.arange(adv_3_results.shape[0]))
     plt.ylabel('agent seed index', fontsize=fontsize)
     plt.xlabel('adversary seed index', fontsize=fontsize)
-    plt.title('3 Adversaries', fontsize=title_fontsize)
-    plt.savefig('final_results/final_plots/hopper/adv_3_correlation.png', bbox_inches="tight")
+    plt.title('RAP Agent v. RAP Adv', fontsize=title_fontsize)
+    plt.savefig('final_plots/hopper/3adv_v_3adv_r2.png', bbox_inches="tight")
+
+    data_dir = os.path.expanduser('~/transfer_results/')
+    adv_1_file = data_dir + 'results_1adv_vs_3adv'
+
+    with open(adv_1_file, 'rb') as file:
+        adv_1_results = np.loadtxt(file)
+
+    plt.figure()
+    plt.tight_layout()
+    plt.imshow(adv_1_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+    plt.colorbar()
+    fontsize = 18
+    title_fontsize = 20
+    plt.yticks(ticks=np.arange(adv_1_results.shape[1]))
+    plt.xticks(ticks=np.arange(adv_1_results.shape[0]))
+    plt.ylabel('agent seed index', fontsize=fontsize)
+    plt.xlabel('adversary seed index', fontsize=fontsize)
+    plt.title('RARL Agent v. RAP Adv', fontsize=title_fontsize)
+    plt.savefig('final_plots/hopper/1adv_v_3adv_r2.png', bbox_inches="tight")
+
+    adv_3_file = data_dir + 'results_3adv_vs_1adv'
+
+    with open(adv_3_file, 'rb') as file:
+        adv_3_results = np.loadtxt(file)
+
+    plt.figure()
+    plt.imshow(adv_3_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+    plt.tight_layout()
+    plt.colorbar()
+    fontsize = 18
+    title_fontsize = 20
+    plt.yticks(ticks=np.arange(adv_3_results.shape[1]))
+    plt.xticks(ticks=np.arange(adv_3_results.shape[0]))
+    plt.ylabel('agent seed index', fontsize=fontsize)
+    plt.xlabel('adversary seed index', fontsize=fontsize)
+    plt.title('RAP Agent v. RARL Adv', fontsize=title_fontsize)
+    plt.savefig('final_plots/hopper/3adv_v_1adv_r2.png', bbox_inches="tight")
+
+    adv_3_file = data_dir + 'results_dr_vs_3adv'
+
+    with open(adv_3_file, 'rb') as file:
+        adv_3_results = np.loadtxt(file)
+
+    plt.figure()
+    plt.tight_layout()
+    plt.imshow(adv_3_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+    plt.colorbar()
+    fontsize = 18
+    title_fontsize = 20
+    plt.yticks(ticks=np.arange(adv_3_results.shape[1]))
+    plt.xticks(ticks=np.arange(adv_3_results.shape[0]))
+    plt.ylabel('agent seed index', fontsize=fontsize)
+    plt.xlabel('adversary seed index', fontsize=fontsize)
+    plt.title('DR Agent vs. RAP Adv', fontsize=title_fontsize)
+    plt.savefig('final_plots/hopper/DR_v_3adv_r2.png', bbox_inches="tight")
+
+    adv_1_file = data_dir + 'results_dr_vs_1adv'
+
+    with open(adv_1_file, 'rb') as file:
+        adv_1_results = np.loadtxt(file)
+
+    plt.figure()
+    plt.imshow(adv_1_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+    plt.tight_layout()
+    plt.colorbar()
+    fontsize = 18
+    title_fontsize = 20
+    plt.yticks(ticks=np.arange(adv_1_results.shape[1]))
+    plt.xticks(ticks=np.arange(adv_1_results.shape[0]))
+    plt.ylabel('agent seed index', fontsize=fontsize)
+    plt.xlabel('adversary seed index', fontsize=fontsize)
+    plt.title('DR Agent vs. RARL Adv', fontsize=title_fontsize)
+    plt.savefig('final_plots/hopper/DR_v_1adv_r2.png', bbox_inches="tight")

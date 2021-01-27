@@ -101,12 +101,18 @@ def visualize_adversaries(config_out_dir, checkpoint_num, num_rollouts, outdir, 
                                         agent_states[agent_id] = p_state
                                     else:
                                         prev_action = _flatten_action(prev_actions[agent_id])
-                                        flat_action = _flatten_action(a_obs)
-                                        a_action = agent_list[agent_row_index].compute_action(
-                                            flat_action,
-                                            prev_action=prev_action,
-                                            prev_reward=prev_rewards[agent_id],
-                                            policy_id=policy_id)
+                                        flat_obs = _flatten_action(a_obs)
+                                        try:
+                                            a_action = agent_list[agent_row_index].compute_action(
+                                                flat_obs,
+                                                prev_action=prev_action,
+                                                prev_reward=prev_rewards[agent_id],
+                                                policy_id=policy_id)
+                                        except:
+                                            a_action = agent_list[agent_row_index].compute_action(
+                                                flat_obs,
+                                                prev_action=prev_action,
+                                                prev_reward=prev_rewards[agent_id])
                             else:
                                 if a_obs is not None:
                                     policy_id = mapping_cache.setdefault(

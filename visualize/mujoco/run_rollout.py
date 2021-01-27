@@ -51,7 +51,7 @@ def instantiate_rollout(rllib_config, checkpoint):
     if rllib_config['env'] == "MAPendulumEnv":
         env_name = "MAPendulumEnv"
         create_env_fn = make_create_env(AdvMAPendulumEnv)
-    elif rllib_config['env'] == "MAHopperEnv":
+    elif rllib_config['env'] == "MAHopperEnv" or rllib_config['env'] == "MALerrelHopperEnv":
         env_name = "MAHopperEnv"
         create_env_fn = make_create_env(AdvMAHopper)
     elif rllib_config['env'] == "MACheetahEnv":
