@@ -20,23 +20,26 @@ def visualize_adversaries(config_out_dir, checkpoint_num, num_rollouts, outdir, 
 
     agent_list = []
     index = 0
+    max_index = 1
     multiagent = True
     for (dirpath, dirnames, filenames) in os.walk(config_out_dir):
         if "params.pkl" in filenames:
-            # if index > max_index:
-            #     break
+            if index > max_index:
+                break
             rllib_config, checkpoint = get_config_from_path(dirpath, checkpoint_num)
             env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
                 instantiate_rollout(rllib_config, checkpoint)
             agent_list.append(agent)
             # index += 1
 
+    index = 0
+
     if config_out_dir2:
         agent_2_list = []
         for (dirpath, dirnames, filenames) in os.walk(config_out_dir2):
             if "params.pkl" in filenames:
-                # if index > max_index:
-                #     break
+                if index > max_index:
+                    break
                 rllib_config, checkpoint = get_config_from_path(dirpath, checkpoint_num_2)
                 env, agent, multiagent, use_lstm, policy_agent_mapping, state_init, action_init = \
                     instantiate_rollout(rllib_config, checkpoint)
