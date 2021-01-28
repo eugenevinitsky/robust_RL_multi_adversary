@@ -59,6 +59,7 @@ auth:
     ssh_user: ubuntu
     ssh_private_key: /Users/yuqing_du/.ssh/ray-autoscaler_15_us-west-1.pem
 
+
 # By default Ray creates a new private keypair, but you can also use your own.
 # If you do so, make sure to also set "KeyName" in the head and worker node
 # configurations below.
@@ -68,9 +69,9 @@ auth:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
-    InstanceType: c4.8xlarge
+    InstanceType: c4.4xlarge
     ImageId: ami-0c8fdfeeac8555a43 # Adversarial w/ Mujoco Sim2Real AMI
-    KeyName: ray-autoscaler_15_us-west-1
+    KeyName: MyKeyPair2
 
     InstanceMarketOptions:
         MarketType: spot
@@ -87,9 +88,10 @@ head_node:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 worker_nodes:
-    InstanceType: c4.8xlarge
+
+    InstanceType: c4.4xlarge
     ImageId: ami-0c8fdfeeac8555a43 # Adversarial w/ Mujoco Sim2Real AMI
-    KeyName: ray-autoscaler_15_us-west-1
+    KeyName: MyKeyPair2
 
     # Run workers on spot by default. Comment this out to use on-demand.
     InstanceMarketOptions:
@@ -118,6 +120,7 @@ setup_commands:
     # has your Ray repo pre-cloned. Then, you can replace the pip installs
     # below with a git checkout <your_sha> (and possibly a recompile).
     - cd ~/robust_RL_multi_adversary && git fetch; git checkout dmc && git pull
+    - rm /home/ubuntu/.mujoco/mjkey.txt && cp /home/ubuntu/robust_RL_multi_adversary/mjkey.txt /home/ubuntu/.mujoco/
     - source activate sim2real && pip install psutil && pip install tensorflow==1.15.0 && pip install ray==0.8.0 && pip install seaborn && pip install dm_control && pip install git+git://github.com/denisyarats/dmc2gym.git
     - echo PATH="$HOME/anaconda3/envs/sim2real/bin:$PATH" >> /home/ubuntu/.bashrc && source /home/ubuntu/.bashrc
     - echo 'export MUJOCO_GL=osmesa' >> /home/ubuntu/.bashrc && source /home/ubuntu/.bashrc

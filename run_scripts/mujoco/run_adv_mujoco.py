@@ -23,6 +23,8 @@ from ray.tune.logger import pretty_print
 from ray.tune import run as run_tune
 from ray.tune.registry import register_env
 
+os.environ["MUJOCO_GL"] = "osmesa"
+
 from algorithms.multi_active_ppo import CustomPPOPolicy, CustomPPOTrainer
 from algorithms.custom_kl_distribution import LogitsDist
 from envs.mujoco.adv_hopper import AdvMAHopper
@@ -290,7 +292,7 @@ def setup_exps(args):
     config['model']['fcnet_hiddens'] = [64, 64]
     if args.use_lstm:
         config['model']['fcnet_hiddens'] = [64]
-        config['model']['use_lstm'] = False
+        config['model']['use_lstm'] = True
         config['model']['lstm_use_prev_action_reward'] = True
         config['model']['lstm_cell_size'] = 64
 
