@@ -210,7 +210,7 @@ def setup_exps(args):
                 config['lr'] = tune.grid_search([5e-5, 5e-4])
 
         elif args.seed_search:
-            config['seed'] = tune.grid_search([i for i in range(10)])
+            config['seed'] = tune.grid_search([i for i in range(4)])
             config['lr'] = args.lr
             config['lambda'] = args.lambda_val
         else:
