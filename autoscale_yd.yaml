@@ -57,7 +57,8 @@ provider:
 # How Ray will authenticate with newly launched nodes.
 auth:
     ssh_user: ubuntu
-    ssh_private_key: /Users/eugenevinitsky/.ssh/MyKeyPair2.pem
+    ssh_private_key: /Users/yuqing_du/.ssh/ray-autoscaler_15_us-west-1.pem
+
 
 # By default Ray creates a new private keypair, but you can also use your own.
 # If you do so, make sure to also set "KeyName" in the head and worker node
@@ -87,6 +88,7 @@ head_node:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 worker_nodes:
+
     InstanceType: c4.4xlarge
     ImageId: ami-0c8fdfeeac8555a43 # Adversarial w/ Mujoco Sim2Real AMI
     KeyName: MyKeyPair2
