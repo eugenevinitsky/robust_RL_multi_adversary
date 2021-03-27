@@ -527,14 +527,130 @@ if __name__ == '__main__':
     # ###################################################################################################################
     # ######################################### HOPPER POLICY CORRELATION MATRIX #########################################
     # ###################################################################################################################
-    adv_1_file = data_dir + 'policy_correlation_data/results_1adv.txt'
+    # adv_1_file = data_dir + 'policy_correlation_data/results_1adv.txt'
+    #
+    # with open(adv_1_file, 'rb') as file:
+    #     adv_1_results = np.loadtxt(file)
+    #
+    # plt.figure()
+    # plt.tight_layout()
+    # plt.imshow(adv_1_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+    # plt.colorbar()
+    # fontsize = 18
+    # title_fontsize = 20
+    # plt.yticks(ticks=np.arange(adv_1_results.shape[1]))
+    # plt.xticks(ticks=np.arange(adv_1_results.shape[0]))
+    # plt.ylabel('agent seed index', fontsize=fontsize)
+    # plt.xlabel('adversary seed index', fontsize=fontsize)
+    # plt.title('RARL Agent v. RARL Adv', fontsize=title_fontsize)
+    # plt.savefig('final_plots/hopper/1adv_v_1adv_r2.png', bbox_inches="tight")
+    #
+    # adv_3_file = data_dir + 'policy_correlation_data/results_3adv.txt'
+    #
+    # with open(adv_3_file, 'rb') as file:
+    #     adv_3_results = np.loadtxt(file)
+    #
+    # plt.figure()
+    # plt.imshow(adv_3_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+    # plt.tight_layout()
+    # plt.colorbar()
+    # fontsize = 18
+    # title_fontsize = 20
+    # plt.yticks(ticks=np.arange(adv_3_results.shape[1]))
+    # plt.xticks(ticks=np.arange(adv_3_results.shape[0]))
+    # plt.ylabel('agent seed index', fontsize=fontsize)
+    # plt.xlabel('adversary seed index', fontsize=fontsize)
+    # plt.title('RAP Agent v. RAP Adv', fontsize=title_fontsize)
+    # plt.savefig('final_plots/hopper/3adv_v_3adv_r2.png', bbox_inches="tight")
+    #
+    # data_dir = os.path.expanduser('~/transfer_results/')
+    # adv_1_file = data_dir + 'results_1adv_vs_3adv'
+    #
+    # with open(adv_1_file, 'rb') as file:
+    #     adv_1_results = np.loadtxt(file)
+    #
+    # plt.figure()
+    # plt.tight_layout()
+    # plt.imshow(adv_1_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+    # plt.colorbar()
+    # fontsize = 18
+    # title_fontsize = 20
+    # plt.yticks(ticks=np.arange(adv_1_results.shape[1]))
+    # plt.xticks(ticks=np.arange(adv_1_results.shape[0]))
+    # plt.ylabel('agent seed index', fontsize=fontsize)
+    # plt.xlabel('adversary seed index', fontsize=fontsize)
+    # plt.title('RARL Agent v. RAP Adv', fontsize=title_fontsize)
+    # plt.savefig('final_plots/hopper/1adv_v_3adv_r2.png', bbox_inches="tight")
+    #
+    # adv_3_file = data_dir + 'results_3adv_vs_1adv'
+    #
+    # with open(adv_3_file, 'rb') as file:
+    #     adv_3_results = np.loadtxt(file)
+    #
+    # plt.figure()
+    # plt.imshow(adv_3_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+    # plt.tight_layout()
+    # plt.colorbar()
+    # fontsize = 18
+    # title_fontsize = 20
+    # plt.yticks(ticks=np.arange(adv_3_results.shape[1]))
+    # plt.xticks(ticks=np.arange(adv_3_results.shape[0]))
+    # plt.ylabel('agent seed index', fontsize=fontsize)
+    # plt.xlabel('adversary seed index', fontsize=fontsize)
+    # plt.title('RAP Agent v. RARL Adv', fontsize=title_fontsize)
+    # plt.savefig('final_plots/hopper/3adv_v_1adv_r2.png', bbox_inches="tight")
+    #
+    # adv_3_file = data_dir + 'results_dr_vs_3adv'
+    #
+    # with open(adv_3_file, 'rb') as file:
+    #     adv_3_results = np.loadtxt(file)
+    #
+    # plt.figure()
+    # plt.tight_layout()
+    # plt.imshow(adv_3_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+    # plt.colorbar()
+    # fontsize = 18
+    # title_fontsize = 20
+    # plt.yticks(ticks=np.arange(adv_3_results.shape[1]))
+    # plt.xticks(ticks=np.arange(adv_3_results.shape[0]))
+    # plt.ylabel('agent seed index', fontsize=fontsize)
+    # plt.xlabel('adversary seed index', fontsize=fontsize)
+    # plt.title('DR Agent vs. RAP Adv', fontsize=title_fontsize)
+    # plt.savefig('final_plots/hopper/DR_v_3adv_r2.png', bbox_inches="tight")
+    #
+    # adv_1_file = data_dir + 'results_dr_vs_1adv'
+    #
+    # with open(adv_1_file, 'rb') as file:
+    #     adv_1_results = np.loadtxt(file)
+    #
+    # plt.figure()
+    # plt.imshow(adv_1_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+    # plt.tight_layout()
+    # plt.colorbar()
+    # fontsize = 18
+    # title_fontsize = 20
+    # plt.yticks(ticks=np.arange(adv_1_results.shape[1]))
+    # plt.xticks(ticks=np.arange(adv_1_results.shape[0]))
+    # plt.ylabel('agent seed index', fontsize=fontsize)
+    # plt.xlabel('adversary seed index', fontsize=fontsize)
+    # plt.title('DR Agent vs. RARL Adv', fontsize=title_fontsize)
+    # plt.savefig('final_plots/hopper/DR_v_1adv_r2.png', bbox_inches="tight")
+
+    # ###################################################################################################################
+    # ######################################### Cheetah POLICY CORRELATION MATRIX #########################################
+    # ###################################################################################################################
+
+    curr_path = os.path.abspath(__file__)
+    data_dir = os.path.abspath(os.path.join(curr_path, '../../../data/cheetah/policy_correlation_matrix')) + '/'
+
+    adv_1_file = data_dir + 'results_1adv_vs_1adv'
 
     with open(adv_1_file, 'rb') as file:
         adv_1_results = np.loadtxt(file)
 
     plt.figure()
+    plt.imshow(adv_1_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=2000, vmax=8000)
     plt.tight_layout()
-    plt.imshow(adv_1_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
     plt.colorbar()
     fontsize = 18
     title_fontsize = 20
@@ -542,89 +658,16 @@ if __name__ == '__main__':
     plt.xticks(ticks=np.arange(adv_1_results.shape[0]))
     plt.ylabel('agent seed index', fontsize=fontsize)
     plt.xlabel('adversary seed index', fontsize=fontsize)
-    plt.title('RARL Agent v. RARL Adv', fontsize=title_fontsize)
-    plt.savefig('final_plots/hopper/1adv_v_1adv_r2.png', bbox_inches="tight")
+    plt.title('RARL Agent vs. RARL Adv', fontsize=title_fontsize)
+    plt.savefig('final_plots/cheetah/1adv_v_1adv_r2.png', bbox_inches="tight")
 
-    adv_3_file = data_dir + 'policy_correlation_data/results_3adv.txt'
-
-    with open(adv_3_file, 'rb') as file:
-        adv_3_results = np.loadtxt(file)
-
-    plt.figure()
-    plt.imshow(adv_3_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
-    plt.tight_layout()
-    plt.colorbar()
-    fontsize = 18
-    title_fontsize = 20
-    plt.yticks(ticks=np.arange(adv_3_results.shape[1]))
-    plt.xticks(ticks=np.arange(adv_3_results.shape[0]))
-    plt.ylabel('agent seed index', fontsize=fontsize)
-    plt.xlabel('adversary seed index', fontsize=fontsize)
-    plt.title('RAP Agent v. RAP Adv', fontsize=title_fontsize)
-    plt.savefig('final_plots/hopper/3adv_v_3adv_r2.png', bbox_inches="tight")
-
-    data_dir = os.path.expanduser('~/transfer_results/')
-    adv_1_file = data_dir + 'results_1adv_vs_3adv'
+    adv_1_file = data_dir + 'results_5adv_vs_1adv'
 
     with open(adv_1_file, 'rb') as file:
         adv_1_results = np.loadtxt(file)
 
     plt.figure()
-    plt.tight_layout()
-    plt.imshow(adv_1_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
-    plt.colorbar()
-    fontsize = 18
-    title_fontsize = 20
-    plt.yticks(ticks=np.arange(adv_1_results.shape[1]))
-    plt.xticks(ticks=np.arange(adv_1_results.shape[0]))
-    plt.ylabel('agent seed index', fontsize=fontsize)
-    plt.xlabel('adversary seed index', fontsize=fontsize)
-    plt.title('RARL Agent v. RAP Adv', fontsize=title_fontsize)
-    plt.savefig('final_plots/hopper/1adv_v_3adv_r2.png', bbox_inches="tight")
-
-    adv_3_file = data_dir + 'results_3adv_vs_1adv'
-
-    with open(adv_3_file, 'rb') as file:
-        adv_3_results = np.loadtxt(file)
-
-    plt.figure()
-    plt.imshow(adv_3_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
-    plt.tight_layout()
-    plt.colorbar()
-    fontsize = 18
-    title_fontsize = 20
-    plt.yticks(ticks=np.arange(adv_3_results.shape[1]))
-    plt.xticks(ticks=np.arange(adv_3_results.shape[0]))
-    plt.ylabel('agent seed index', fontsize=fontsize)
-    plt.xlabel('adversary seed index', fontsize=fontsize)
-    plt.title('RAP Agent v. RARL Adv', fontsize=title_fontsize)
-    plt.savefig('final_plots/hopper/3adv_v_1adv_r2.png', bbox_inches="tight")
-
-    adv_3_file = data_dir + 'results_dr_vs_3adv'
-
-    with open(adv_3_file, 'rb') as file:
-        adv_3_results = np.loadtxt(file)
-
-    plt.figure()
-    plt.tight_layout()
-    plt.imshow(adv_3_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
-    plt.colorbar()
-    fontsize = 18
-    title_fontsize = 20
-    plt.yticks(ticks=np.arange(adv_3_results.shape[1]))
-    plt.xticks(ticks=np.arange(adv_3_results.shape[0]))
-    plt.ylabel('agent seed index', fontsize=fontsize)
-    plt.xlabel('adversary seed index', fontsize=fontsize)
-    plt.title('DR Agent vs. RAP Adv', fontsize=title_fontsize)
-    plt.savefig('final_plots/hopper/DR_v_3adv_r2.png', bbox_inches="tight")
-
-    adv_1_file = data_dir + 'results_dr_vs_1adv'
-
-    with open(adv_1_file, 'rb') as file:
-        adv_1_results = np.loadtxt(file)
-
-    plt.figure()
-    plt.imshow(adv_1_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=400, vmax=3600)
+    plt.imshow(adv_1_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=2000, vmax=8000)
     plt.tight_layout()
     plt.colorbar()
     fontsize = 18
@@ -633,5 +676,41 @@ if __name__ == '__main__':
     plt.xticks(ticks=np.arange(adv_1_results.shape[0]))
     plt.ylabel('agent seed index', fontsize=fontsize)
     plt.xlabel('adversary seed index', fontsize=fontsize)
-    plt.title('DR Agent vs. RARL Adv', fontsize=title_fontsize)
-    plt.savefig('final_plots/hopper/DR_v_1adv_r2.png', bbox_inches="tight")
+    plt.title('RAP Agent vs. RARL Adv', fontsize=title_fontsize)
+    plt.savefig('final_plots/cheetah/5adv_v_1adv_r2.png', bbox_inches="tight")
+
+    adv_1_file = data_dir + 'results_1adv_vs_5adv'
+
+    with open(adv_1_file, 'rb') as file:
+        adv_1_results = np.loadtxt(file)
+
+    plt.figure()
+    plt.imshow(adv_1_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=2000, vmax=8000)
+    plt.tight_layout()
+    plt.colorbar()
+    fontsize = 18
+    title_fontsize = 20
+    plt.yticks(ticks=np.arange(adv_1_results.shape[1]))
+    plt.xticks(ticks=np.arange(adv_1_results.shape[0]))
+    plt.ylabel('agent seed index', fontsize=fontsize)
+    plt.xlabel('adversary seed index', fontsize=fontsize)
+    plt.title('RARL Agent vs. RAP Adv', fontsize=title_fontsize)
+    plt.savefig('final_plots/cheetah/1adv_v_5adv_r2.png', bbox_inches="tight")
+
+    adv_1_file = data_dir + 'results_5adv_vs_5adv'
+
+    with open(adv_1_file, 'rb') as file:
+        adv_1_results = np.loadtxt(file)
+
+    plt.figure()
+    plt.imshow(adv_1_results, interpolation='nearest', cmap='seismic', aspect='equal', vmin=2000, vmax=8000)
+    plt.tight_layout()
+    plt.colorbar()
+    fontsize = 18
+    title_fontsize = 20
+    plt.yticks(ticks=np.arange(adv_1_results.shape[1]))
+    plt.xticks(ticks=np.arange(adv_1_results.shape[0]))
+    plt.ylabel('agent seed index', fontsize=fontsize)
+    plt.xlabel('adversary seed index', fontsize=fontsize)
+    plt.title('RAP Agent vs. RAP Adv', fontsize=title_fontsize)
+    plt.savefig('final_plots/cheetah/5adv_v_5adv_r2.png', bbox_inches="tight")
